@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: money-keeper
+
+server:
+  port: 8080

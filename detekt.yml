@@ -1,0 +1,300 @@
+# detekt.yml – адаптация вашего Checkstyle-конфига для Kotlin-проекта
+# Соответствует всем основным проверкам: форматирование, именование, сложность, стиль, исключения.
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+# Исключения (аналог suppressions)
+excludes:
+  - "**/test/**"                     # тестовые классы (как в checkstyle-suppressions)
+  - "**/generated/**"                # сгенерированный код
+  - "**/build/**"                    # директории сборки
+  - "**/*.kts"                       # скрипты (если не хотите проверять)
+
+# ----------------------------------------------------------------------------
+# 1. ПРАВИЛА ФОРМАТИРОВАНИЯ (аналог модуля форматирования Checkstyle)
+# ----------------------------------------------------------------------------
+formatting:
+  active: true
+  autoCorrect: true                  # исправлять автоматически (как вы любите)
+  Indentation:
+    active: true
+    indentSize: 4
+    continuationIndentSize: 8        # соответствует throwsIndent = 8 в checkstyle
+  LineLength:
+    active: true
+    maxLineLength: 140               # ваше значение
+  FileTabCharacter:
+    active: true
+  NewlineAtEndOfFile:
+    active: true
+  TrailingWhitespace:
+    active: true
+  MultipleSpaces:
+    active: true
+  NoLineBreakAfterElse:
+    active: true
+  NoTrailingSpaces:
+    active: true
+  SpacingAroundCurly:
+    active: true
+  SpacingAroundColon:
+    active: true
+  SpacingAroundComma:
+    active: true
+  SpacingAroundDot:
+    active: true
+  SpacingAroundKeyword:
+    active: true
+  SpacingAroundOperator:
+    active: true
+  SpacingAroundParens:
+    active: true
+  SpacingBetweenDeclarations:
+    active: true
+  UnnecessaryParentheses:
+    active: true
+  Wrapping:
+    active: true
+    maxLineLength: 140
+  # Дополнительно – аналоги ваших Regexp-проверок (некоторые специфические)
+  # Не все возможно перенести один-в-один, но базовый стиль покрыт.
+
+# ----------------------------------------------------------------------------
+# 2. ПРАВИЛА ИМЕНОВАНИЯ (аналог Naming Conventions)
+# ----------------------------------------------------------------------------
+naming:
+  active: true
+  ClassNaming:
+    active: true
+    pattern: '[A-Z][a-zA-Z0-9]*'
+  FunctionNaming:
+    active: true
+    pattern: '^[a-z](_?[a-zA-Z0-9]+)*$'  # ваша маска для методов
+  PropertyNaming:
+    active: true
+    pattern: '^(id)|([a-z][a-z0-9][a-zA-Z0-9]+)$'
+  VariableNaming:
+    active: true
+    pattern: '^(id)|([a-z][a-z0-9][a-zA-Z0-9]+)$'
+  LambdaParameterNaming:
+    active: true
+    pattern: '^(id)|([a-z][a-z0-9][a-zA-Z0-9]+)$'
+  CatchParameterNaming:
+    active: true
+    pattern: '^[a-z][a-z][a-zA-Z]+$'
+  ConstantNaming:
+    active: true
+    pattern: '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'
+  PackageNaming:
+    active: true
+    pattern: '^[a-z]+(\.[a-z][a-z0-9]*)*$'
+  TypeParameterNaming:
+    active: true
+    pattern: '^[A-Z][a-zA-Z0-9]*$'
+  NonBooleanPropertyPrefixedWithIs:
+    active: true                    # у вас было включено
+  BooleanPropertyNaming:
+    active: true                    # у вас было включено
+  # Отключаем некоторые, чтобы не конфликтовать с вашими настройками
+  FunctionParameterNaming:
+    active: true
+    pattern: '^(id)|([a-z][a-z0-9][a-zA-Z0-9]+)$'
+  # Нет аналога для AbstractClassName – в Kotlin нет абстрактных классов как в Java.
+
+# ----------------------------------------------------------------------------
+# 3. СЛОЖНОСТЬ (аналог Metrics и Size Violations)
+# ----------------------------------------------------------------------------
+complexity:
+  active: true
+  LongParameterList:
+    active: true
+    threshold: 10                    # ваше max = 10
+    ignoreDefaultParameters: false
+    ignoreDataClasses: true          # вы игнорируете data-классы (у вас было для LongParameterList, мы оставляем)
+  ComplexCondition:
+    active: true
+    threshold: 7                    # ваше BooleanExpressionComplexity max=7
+  ComplexInterface:
+    active: true
+    threshold: 10
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15                   # у вас не задано явно, но обычно по умолчанию 20, оставим 15
+  NestedBlockDepth:
+    active: true
+    threshold: 4                    # у вас NestedIfDepth=3, NestedForDepth=2 – возьмём среднее 4
+  MethodOverloading:
+    active: true
+    threshold: 5
+  NumberOfMethods:
+    active: true
+    threshold: 34                   # ваше MethodCount maxTotal = 34
+  LargeClass:
+    active: true
+    threshold: 600                  # аналог FileLength = 1000 строк, но для Kotlin обычно меньше – ставим 600
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 34            # дублирует NumberOfMethods, но для файлов
+  # Нет аналога для AnonInnerLength – можно игнорировать
+
+# ----------------------------------------------------------------------------
+# 4. СТИЛЬ (аналог Coding, Modifiers, Javadoc и др.)
+# ----------------------------------------------------------------------------
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2']
+    ignoreLocalVariableDeclaration: true   # ваше правило
+    ignoreRanges: true                     # ваше правило
+    ignorePropertyDeclaration: true        # ваше правило
+  ReturnCount:
+    active: true
+    max: 3                                 # ваше max=3 (для void был 1 – мы не можем разделить, но можно добавить исключения)
+    excludedFunctions: ['equals', 'hashCode']
+  ThrowsCount:
+    active: true
+    max: 2                                 # ваше max=2
+  UnusedImports:
+    active: true
+  DataClassShouldBeImmutable:
+    active: true
+  DataClassContainsFunctions:
+    active: true
+  UseIfEmptyOrIfBlank:
+    active: true
+  UseEmptyCounterpart:
+    active: true
+  UnnecessaryBackticks:
+    active: true
+  ClassOrdering:
+    active: true
+  CascadingCallWrapping:
+    active: true
+  CanBeNonNullable:
+    active: true
+  AlsoCouldBeApply:
+    active: true
+  SpacingBetweenPackageAndImports:
+    active: true
+  # Импорты
+  WildcardImport:
+    active: true
+    excludeImports: ['java.util.*', 'kotlinx.android.synthetic.*']  # аналог AvoidStarImport, но можно разрешить некоторые
+  # Модификаторы
+  ModifierOrder:
+    active: true                       # аналог ModifierOrder
+  RedundantModifier:
+    active: true                       # аналог RedundantModifier
+  # Visibility (аналог VisibilityModifier)
+  VisibilityModifier:
+    active: true
+    canBeProtected: true
+    canBePackage: true
+    canBePublic: true
+  # Проверка объявлений (аналог DeclarationOrder)
+  MemberNameEqualsClassName:
+    active: true
+  # Для запрета вложенных блоков (аналог AvoidNestedBlocks)
+  NestedClassesVisibility:
+    active: true
+  # Дополнительно – запрет пустых файлов (аналог noEmptyFile) - в Detekt есть EmptyFile
+  EmptyFile:
+    active: true
+  # Комментарии (аналог Javadoc)
+  CommentSpacing:
+    active: true
+  KDocStyle:
+    active: true
+  KDocMissingDocumentation:
+    active: true
+    excludes: ['**/test/**']         # не требовать KDoc в тестах
+  # Для аннотаций (аналог AnnotationLocation и др.) – в Detekt есть AnnotationOnSeparateLine и т.п.
+  AnnotationOnSeparateLine:
+    active: true
+  # Конструкторы
+  DataClassShouldBeImmutable – уже включено
+
+# ----------------------------------------------------------------------------
+# 5. ПОТЕНЦИАЛЬНЫЕ ОШИБКИ (аналог потенциальных багов)
+# ----------------------------------------------------------------------------
+potential-bugs:
+  active: true
+  DontDowncastCollectionTypes:
+    active: true
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+  EqualsWithHashCode:
+    active: true
+  ExplicitGarbageCollection:
+    active: true
+  InvalidRange:
+    active: true
+  IteratorHasNextCallsNextMethod:
+    active: true
+  IteratorNotThrowingNoSuchElementException:
+    active: true
+  LateinitUsage:
+    active: false                    # можно включить при желании
+  UnconditionalJumpStatementInLoop:
+    active: true
+  UnreachableCode:
+    active: true
+  UnusedPrivateClass:
+    active: true
+  UnsafeCast:
+    active: true
+
+# ----------------------------------------------------------------------------
+# 6. ИСКЛЮЧЕНИЯ (аналог Exception-правил)
+# ----------------------------------------------------------------------------
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: false                    # вы отключили – оставляем
+  TooGenericExceptionThrown:
+    active: false                    # вы отключили – оставляем
+  InstanceOfCheckForException:
+    active: true
+  NotImplementedDeclaration:
+    active: true
+  ObjectExtendsThrowable:
+    active: true
+  RethrowCaughtException:
+    active: true
+  ReturnFromFinally:
+    active: true
+  SwallowedException:
+    active: true
+  ThrowingExceptionFromFinally:
+    active: true
+  ThrowingExceptionWithMessageOrKey:
+    active: true
+  ThrowingNewInstanceOfSameException:
+    active: true
+  PrintStackTrace:
+    active: true                     # аналог вашего MatchXpath против printStackTrace
+
+# ----------------------------------------------------------------------------
+# 7. ПРОИЗВОДИТЕЛЬНОСТЬ (аналог некоторых ваших проверок)
+# ----------------------------------------------------------------------------
+performance:
+  active: true
+  CouldBeSequence:
+    active: true
+  SpreadOperator:
+    active: false                    # как у вас
+  ForEachOnRange:
+    active: true
+  UnnecessaryPartOfBinaryExpression:
+    active: true
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+# ----------------------------------------------------------------------------
+# 8. ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА (для полного покрытия)
+# ----------------------------------------------------------------------------
+# Включаем все остальные правила по умолчанию, но можно отключить некоторые.
+# Я добавил несколько ключевых, остальные можно оставить как есть.
