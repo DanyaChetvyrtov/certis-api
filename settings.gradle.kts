@@ -1,4 +1,4 @@
-rootProject.name = "money-keeper"
+rootProject.name = "certis-api"
 
 pluginManagement {
     repositories {

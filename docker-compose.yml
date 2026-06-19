@@ -1,0 +1,41 @@
+name:
+  money-keeper
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-money-keeper-container
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: money_keeper
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      PGDATA: /data/postgres
+    networks:
+      - money-keeper
+    volumes:
+      - postgres-money-keeper-volume:/data/postgres
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: minio-container
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=root1234
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-money-keeper-volume:/data
+    networks:
+      - money-keeper
+
+networks:
+  money-keeper:
+    driver: bridge
+volumes:
+  postgres-money-keeper-volume:
+  minio-money-keeper-volume:
