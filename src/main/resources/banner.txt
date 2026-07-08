@@ -1,0 +1,11 @@
+
+     _/_/_/                        _/      _/
+  _/          _/_/    _/  _/_/  _/_/_/_/        _/_/_/
+ _/        _/_/_/_/  _/_/        _/      _/  _/_/
+_/        _/        _/          _/      _/      _/_/
+ _/_/_/    _/_/_/  _/            _/_/  _/  _/_/_/
+
+
+${application.title} ${application.version}
+Powered by Spring Boot ${spring-boot.version}
+prod by dachet Digital-Hustle

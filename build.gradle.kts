@@ -35,6 +35,9 @@ val changelogFileName = "db.changelog-master.yaml"
 val changelogFilePath = "/db/changelog/$changelogFileName"
 val jooqPackageName = "ru.digitalhustle.moneykeeper.jooq"
 
+val lombokMapstructBindingVersion = "0.2.0"
+val jakartaPersistenceVersion = "3.2.0"
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -47,18 +50,34 @@ dependencies {
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.jooq)
+    implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.validation)
+
     implementation(libs.kotlin.reflect)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jooq.jackson.extensions)
 
     runtimeOnly(libs.postgresql)
-
     jooqGenerator(libs.postgresql)
-
     liquibaseRuntime(libs.bundles.liquibase.runtime)
 
     ksp("org.springframework.boot:spring-boot-configuration-processor")
+
+    // persist
+    implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+
+    // swagger
+    implementation(libs.springdoc)
+
+    // utils
+    implementation("io.github.oshai:kotlin-logging-jvm:8.0.02")
+
+    // mapper
+    implementation(libs.mapstruct)
+    annotationProcessor(libs.mapstruct.processor)
+
+    // JWT
+    implementation(libs.bundles.jwt)
 
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.kotlin.test.junit5)
