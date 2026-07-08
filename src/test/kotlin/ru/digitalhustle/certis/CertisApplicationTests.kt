@@ -1,10 +1,10 @@
-package ru.digitalhustle.moneykeeper
+package ru.digitalhustle.certis
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 
 @SpringBootTest
-class MoneyKeeperApplicationTests {
+class CertisApplicationTests {
 
     @Test
     fun contextLoads() {

@@ -1,11 +1,11 @@
-package ru.digitalhustle.moneykeeper
+package ru.digitalhustle.certis
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class MoneyKeeperApplication
+class CertisApplication
 
 fun main(args: Array<String>) {
-    runApplication<MoneyKeeperApplication>(*args)
+    runApplication<CertisApplication>(*args)
 }
