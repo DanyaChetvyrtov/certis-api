@@ -22,6 +22,9 @@ data class User(
     @Column(name = "preferred_currency", nullable = false)
     val preferredCurrency: Currency,
 
+    @Column(name = "last_login")
+    val lastLogin: LocalDateTime,
+
     @Column(name = "created_at")
     val createdAt: LocalDateTime,
 )

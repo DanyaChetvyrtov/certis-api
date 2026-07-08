@@ -4,7 +4,9 @@ import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import ru.digitalhustle.certis.config.BaseMapperConfig
 import ru.digitalhustle.certis.dto.UserDto
-import ru.digitalhustle.certis.dto.request.CreateUserRq
+import ru.digitalhustle.certis.dto.request.LoginRq
+import ru.digitalhustle.certis.dto.request.RegisterRq
+import ru.digitalhustle.certis.model.UserCredentials
 import ru.digitalhustle.certis.model.entity.User
 
 @Mapper(config = BaseMapperConfig::class)
@@ -12,7 +14,9 @@ interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    fun convert(createUserRq: CreateUserRq): User
+    fun convert(loginRq: LoginRq): User
+
+    fun convert(registerRq: RegisterRq): UserCredentials
 
     fun convert(user: User): UserDto
 }

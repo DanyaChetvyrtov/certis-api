@@ -11,6 +11,11 @@ class UserRepository(
     private val dsl: DSLContext
 ) {
 
+    fun findByEmail(email: String): User? =
+        dsl.selectFrom(Tables.USERS)
+            .where(Tables.USERS.EMAIL.eq(email))
+            .fetchOneInto(User::class.java)
+
     fun findById(id: UUID): User? =
         dsl.selectFrom(Tables.USERS)
             .where(Tables.USERS.ID.eq(id))

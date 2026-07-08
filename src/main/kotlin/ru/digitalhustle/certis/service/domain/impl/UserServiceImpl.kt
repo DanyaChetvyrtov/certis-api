@@ -1,7 +1,6 @@
 package ru.digitalhustle.certis.service.domain.impl
 
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
@@ -15,35 +14,31 @@ class UserServiceImpl(
     private val userRepository: UserRepository
 ) : UserService {
 
-    override fun getById(id: UUID): User =
-        userRepository.findById(id)
+    override fun getUser(email: String): User =
+        userRepository.findByEmail(email)
             ?: throw NotFoundException.entity("User")
 
-    @Transactional
-    override fun create(user: User): User {
-        val preparedUser = user.copy(
+    override fun save(email: String, password: String): User {
+        val preparedUser = User(
             id = UUID.randomUUID(),
-            createdAt = LocalDateTime.now(),
-            preferredCurrency = user.preferredCurrency ?: Currency.RUB,
+            email = email,
+            password = password,
+            preferredCurrency = Currency.RUB, // TODO вот отсюда скорее всего нужно будет потом перенести в профиль
+            lastLogin = LocalDateTime.now(),
+            createdAt = LocalDateTime.now()
         )
 
         return userRepository.save(preparedUser)
     }
 
-    @Transactional
-    override fun update(user: User): User {
-        val dbUser = userRepository.findById(user.id)
+    override fun updateLastLogin(id: UUID) {
+        val user = userRepository.findById(id)
             ?: throw NotFoundException.entity("User")
 
-        val updatedUser = user.copy(
-            id = dbUser.id,
-            createdAt = LocalDateTime.now(),
+        userRepository.save(
+            user.copy(
+                lastLogin = LocalDateTime.now(),
+            )
         )
-
-        return userRepository.save(updatedUser)
-    }
-
-    override fun deleteById(id: UUID) {
-        userRepository.deleteById(id)
     }
 }

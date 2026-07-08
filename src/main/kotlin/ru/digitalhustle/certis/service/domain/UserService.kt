@@ -1,15 +1,13 @@
 package ru.digitalhustle.certis.service.domain
 
 import ru.digitalhustle.certis.model.entity.User
-import java.util.UUID
+import java.util.*
 
 interface UserService {
 
-    fun getById(id: UUID): User
+    fun getUser(email: String): User
 
-    fun create(user: User): User
+    fun save(email: String, password: String): User
 
-    fun update(user: User): User
-
-    fun deleteById(id: UUID)
+    fun updateLastLogin(id: UUID)
 }

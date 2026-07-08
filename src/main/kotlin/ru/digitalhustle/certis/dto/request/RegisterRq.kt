@@ -2,9 +2,8 @@ package ru.digitalhustle.certis.dto.request
 
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
-import ru.digitalhustle.certis.enums.Currency
 
-data class CreateUserRq(
+data class RegisterRq(
 
     @Email
     @NotBlank
@@ -13,5 +12,6 @@ data class CreateUserRq(
     @NotBlank
     val password: String,
 
-    val preferredCurrency: Currency? = null,
+    @NotBlank
+    val passwordConfirmation: String,
 )
