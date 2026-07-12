@@ -13,6 +13,8 @@ import ru.digitalhustle.certis.model.entity.User
 interface UserMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "preferredCurrency", ignore = true)
+    @Mapping(target = "lastLogin", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     fun convert(loginRq: LoginRq): User
 

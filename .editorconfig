@@ -1,0 +1,18 @@
+root = true
+
+[*.{kt,kts}]
+
+indent_size = 4
+max_line_length = 140
+
+# Оставляем запятые - это хороший стиль Kotlin
+ktlint_standard_trailing-comma-on-declaration-site = enabled
+ktlint_standard_trailing-comma-on-call-site = enabled
+
+# Не заставляем контроллеры разъезжаться
+ktlint_standard_function-signature = disabled
+ktlint_standard_parameter-list-wrapping = disabled
+ktlint_standard_no-empty-first-line-in-class-body = disabled
+ktlint_standard_no-blank-line-in-list = disabled
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_multiline-expression-wrapping = disabled

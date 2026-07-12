@@ -9,7 +9,7 @@ import java.time.Duration
 
 @Service
 class JwtCookieManagerImpl(
-    private val jwtProperties: JwtProperties
+    private val jwtProperties: JwtProperties,
 ) : JwtCookieManager {
 
     companion object {

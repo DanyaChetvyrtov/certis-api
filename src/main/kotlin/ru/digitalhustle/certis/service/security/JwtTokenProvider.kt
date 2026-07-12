@@ -2,7 +2,7 @@ package ru.digitalhustle.certis.service.security
 
 import org.springframework.security.core.Authentication
 import ru.digitalhustle.certis.model.security.JwtData
-import java.util.*
+import java.util.UUID
 
 interface JwtTokenProvider {
 

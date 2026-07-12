@@ -8,6 +8,6 @@ class CertisApplicationTests {
 
     @Test
     fun contextLoads() {
+        // Test will be added pretty soon
     }
-
 }

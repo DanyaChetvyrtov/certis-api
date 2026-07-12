@@ -6,14 +6,16 @@ import java.sql.DriverManager
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
+
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
+
     alias(libs.plugins.liquibase)
     alias(libs.plugins.jooq.plugin)
 
-    alias(libs.plugins.detekt)
     alias(libs.plugins.ktlint)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.kotlin.kapt)
 
     jacoco
 }
@@ -33,10 +35,11 @@ val dbUrl = "jdbc:postgresql://$dbHost:$dbPort/$dbName"
 val changelogMasterPath = "src/main/resources/db/changelog"
 val changelogFileName = "db.changelog-master.yaml"
 val changelogFilePath = "/db/changelog/$changelogFileName"
-val jooqPackageName = "ru.digitalhustle.moneykeeper.jooq"
+val jooqPackageName = "ru.digitalhustle.certis.jooq"
 
 val lombokMapstructBindingVersion = "0.2.0"
 val jakartaPersistenceVersion = "3.2.0"
+val kotlinLoggingVersion = "8.0.02"
 
 java {
     toolchain {
@@ -61,8 +64,6 @@ dependencies {
     jooqGenerator(libs.postgresql)
     liquibaseRuntime(libs.bundles.liquibase.runtime)
 
-    ksp("org.springframework.boot:spring-boot-configuration-processor")
-
     // persist
     implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
 
@@ -70,11 +71,13 @@ dependencies {
     implementation(libs.springdoc)
 
     // utils
-    implementation("io.github.oshai:kotlin-logging-jvm:8.0.02")
+    implementation("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
 
     // mapper
     implementation(libs.mapstruct)
     annotationProcessor(libs.mapstruct.processor)
+    implementation("org.mapstruct:mapstruct:1.6.3")
+    kapt("org.mapstruct:mapstruct-processor:1.6.3")
 
     // JWT
     implementation(libs.bundles.jwt)
@@ -150,7 +153,6 @@ detekt {
     config.setFrom("$projectDir/detekt.yml")
     buildUponDefaultConfig = true
     allRules = false
-    autoCorrect = true
 }
 
 tasks.register("ensureSchemaExists") {
@@ -189,6 +191,11 @@ tasks.jacocoTestCoverageVerification {
         }
     }
 }
+
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
+}
+
+tasks.check {
+    dependsOn(tasks.detekt)
 }

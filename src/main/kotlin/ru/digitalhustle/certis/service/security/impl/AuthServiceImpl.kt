@@ -18,22 +18,23 @@ class AuthServiceImpl(
     private val userService: UserService,
     private val passwordEncoder: PasswordEncoder,
     private val jwtTokenProvider: JwtTokenProvider,
-    private val authenticationManager: AuthenticationManager
+    private val authenticationManager: AuthenticationManager,
 ) : AuthService {
 
     override fun register(userWithCredentials: UserCredentials): User {
-        if (userWithCredentials.password != userWithCredentials.passwordConfirmation)
+        if (userWithCredentials.password != userWithCredentials.passwordConfirmation) {
             throw PasswordsDoNotMatchException(ErrorMessages.PASSWORDS_MISMATCH)
+        }
 
         val encodedPassword = passwordEncoder.encode(userWithCredentials.password)
         return userService.save(userWithCredentials.email, encodedPassword)
     }
 
     override fun login(user: User): JwtData {
-        val dbUser = userService.getUser(user.email)
+        val dbUser = userService.getUserByEmail(user.email)
 
         authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(user.email, user.password)
+            UsernamePasswordAuthenticationToken(user.email, user.password),
         )
 
         userService.updateLastLogin(dbUser.id)
@@ -43,18 +44,16 @@ class AuthServiceImpl(
             email = dbUser.email,
             accessToken = jwtTokenProvider.createAccessToken(
                 dbUser.id,
-                dbUser.email
+                dbUser.email,
             ),
             refreshToken = jwtTokenProvider.createRefreshToken(
                 dbUser.id,
-                dbUser.email
-            )
+                dbUser.email,
+            ),
         )
     }
 
-    override fun refreshAccess(refreshToken: String): JwtData =
-        jwtTokenProvider.refreshUserTokens(refreshToken)
+    override fun refreshAccess(refreshToken: String): JwtData = jwtTokenProvider.refreshUserTokens(refreshToken)
 
-    override fun refreshTokens(refreshToken: String): JwtData =
-        jwtTokenProvider.refreshUserTokens(refreshToken)
+    override fun refreshTokens(refreshToken: String): JwtData = jwtTokenProvider.refreshUserTokens(refreshToken)
 }

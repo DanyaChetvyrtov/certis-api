@@ -13,7 +13,7 @@ import ru.digitalhustle.certis.service.security.JwtTokenProvider
 
 class JwtTokenFilter(
     private val cookieManager: JwtCookieManager,
-    private val jwtTokenProvider: JwtTokenProvider
+    private val jwtTokenProvider: JwtTokenProvider,
 ) : OncePerRequestFilter() {
 
     companion object {
@@ -24,7 +24,7 @@ class JwtTokenFilter(
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         val token = cookieManager
             .getAccessTokenFromRequest(request)

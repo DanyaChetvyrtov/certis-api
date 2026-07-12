@@ -15,13 +15,14 @@ import ru.digitalhustle.certis.model.security.JwtData
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.Date
+import java.util.UUID
 import javax.crypto.SecretKey
 
 @Service
 class JwtTokenProviderImpl(
     private val jwtProperties: JwtProperties,
-    private val userDetailsService: UserDetailsService
+    private val userDetailsService: UserDetailsService,
 ) : JwtTokenProvider {
 
     companion object {
@@ -79,26 +80,26 @@ class JwtTokenProviderImpl(
             id = userId,
             email = email,
             accessToken = createAccessToken(userId, email),
-            refreshToken = createRefreshToken(userId, email)
+            refreshToken = createRefreshToken(userId, email),
         )
     }
 
-    override fun isValid(token: String): Boolean =
-        getClaims(token).expiration.after(Date())
+    override fun isValid(token: String): Boolean = getClaims(token).expiration.after(Date())
 
     override fun getAuthentication(token: String): Authentication {
         val userDetails = userDetailsService.loadUserByUsername(getEmail(token))
 
         return UsernamePasswordAuthenticationToken(
-            userDetails, "", userDetails.authorities
+            userDetails,
+            "",
+            userDetails.authorities,
         )
     }
 
     private fun getId(token: String): UUID =
         UUID.fromString(getClaims(token).get(ID, String::class.java))
 
-    private fun getEmail(token: String): String =
-        getClaims(token).subject
+    private fun getEmail(token: String): String = getClaims(token).subject
 
     private fun getClaims(token: String): Claims =
         Jwts.parser()

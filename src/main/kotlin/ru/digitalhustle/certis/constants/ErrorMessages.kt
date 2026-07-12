@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.constants;
+package ru.digitalhustle.certis.constants
 
 object ErrorMessages {
     const val TOKEN_EXPIRED = "Token is expired"

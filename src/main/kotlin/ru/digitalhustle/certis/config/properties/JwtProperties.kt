@@ -5,9 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "digital-hustle.certis.security.jwt")
 data class JwtProperties(
 
-    var secret: String,
+    val secret: String,
 
     val accessDuration: Long,
 
-    val refreshDuration: Long
+    val refreshDuration: Long,
 )

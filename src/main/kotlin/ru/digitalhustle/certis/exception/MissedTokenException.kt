@@ -1,5 +1,5 @@
 package ru.digitalhustle.certis.exception
 
 class MissedTokenException(
-    message: String
+    message: String,
 ) : DomainException(message)

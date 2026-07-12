@@ -3,13 +3,17 @@ package ru.digitalhustle.certis.controller
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.dto.UserDto
 import ru.digitalhustle.certis.dto.request.LoginRq
 import ru.digitalhustle.certis.dto.request.RegisterRq
-import java.util.*
 
+// TODO Добавить reset пароля
+// TODO написать тесты
+// TODO протестировать всю логику авторизации
 @RequestMapping(PathConstants.AUTH)
 interface AuthController {
 

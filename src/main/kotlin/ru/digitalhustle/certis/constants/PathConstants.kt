@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.constants;
+package ru.digitalhustle.certis.constants
 
 object PathConstants {
     const val API = "/api"

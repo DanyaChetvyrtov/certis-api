@@ -1,7 +1,7 @@
 package ru.digitalhustle.certis.exception
 
 class NotFoundException(
-    message: String
+    message: String,
 ) : DomainException(message) {
 
     companion object {

@@ -7,14 +7,14 @@ import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.UserService
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Service
 class UserServiceImpl(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
 ) : UserService {
 
-    override fun getUser(email: String): User =
+    override fun getUserByEmail(email: String): User =
         userRepository.findByEmail(email)
             ?: throw NotFoundException.entity("User")
 
@@ -25,7 +25,7 @@ class UserServiceImpl(
             password = password,
             preferredCurrency = Currency.RUB, // TODO вот отсюда скорее всего нужно будет потом перенести в профиль
             lastLogin = LocalDateTime.now(),
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now(),
         )
 
         return userRepository.save(preparedUser)
@@ -38,7 +38,7 @@ class UserServiceImpl(
         userRepository.save(
             user.copy(
                 lastLogin = LocalDateTime.now(),
-            )
+            ),
         )
     }
 }

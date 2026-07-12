@@ -15,7 +15,7 @@ import ru.digitalhustle.certis.service.security.JwtCookieManager
 class AuthControllerImpl(
     private val userMapper: UserMapper,
     private val cookieManager: JwtCookieManager,
-    private val authService: AuthService
+    private val authService: AuthService,
 ) : AuthController {
 
     override fun login(loginRequest: LoginRq, response: HttpServletResponse) {

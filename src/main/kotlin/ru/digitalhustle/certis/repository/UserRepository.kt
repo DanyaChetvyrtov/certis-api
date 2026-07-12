@@ -1,14 +1,14 @@
-package ru.digitalhustle.certis.repository;
+package ru.digitalhustle.certis.repository
 
 import org.jooq.DSLContext
 import org.jooq.generated.Tables
 import org.springframework.stereotype.Repository
 import ru.digitalhustle.certis.model.entity.User
-import java.util.*
+import java.util.UUID
 
 @Repository
 class UserRepository(
-    private val dsl: DSLContext
+    private val dsl: DSLContext,
 ) {
 
     fun findByEmail(email: String): User? =

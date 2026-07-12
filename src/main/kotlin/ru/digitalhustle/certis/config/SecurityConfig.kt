@@ -21,22 +21,18 @@ import ru.digitalhustle.certis.service.security.JwtTokenProvider
 @Configuration
 class SecurityConfig(
     private val cookieManager: JwtCookieManager,
-    private val jwtTokenProvider: JwtTokenProvider
+    private val jwtTokenProvider: JwtTokenProvider,
 ) {
-
     companion object {
         private const val SINGLE_STAR = "*"
         private const val DOUBLE_STAR = "**"
     }
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder =
-        BCryptPasswordEncoder()
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     @Bean
-    fun authenticationManager(
-        authenticationConfiguration: AuthenticationConfiguration
-    ): AuthenticationManager =
+    fun authenticationManager(authenticationConfiguration: AuthenticationConfiguration): AuthenticationManager =
         authenticationConfiguration.authenticationManager
 
     @Bean
@@ -53,12 +49,10 @@ class SecurityConfig(
                 it.requestMatchers("/actuator/$DOUBLE_STAR").permitAll()
                 it.requestMatchers("${PathConstants.AUTH}/$DOUBLE_STAR").permitAll()
                 it.anyRequest().authenticated()
-            }
-            .addFilterBefore(
+            }.addFilterBefore(
                 JwtTokenFilter(cookieManager, jwtTokenProvider),
-                UsernamePasswordAuthenticationFilter::class.java
-            )
-            .build()
+                UsernamePasswordAuthenticationFilter::class.java,
+            ).build()
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
@@ -66,7 +60,7 @@ class SecurityConfig(
             allowedOrigins = listOf(
                 "http://localhost:3000",
                 "http://digital-hustle.ru",
-                "https://digital-hustle.ru"
+                "https://digital-hustle.ru",
             )
             addAllowedMethod(SINGLE_STAR)
             addAllowedHeader(SINGLE_STAR)
