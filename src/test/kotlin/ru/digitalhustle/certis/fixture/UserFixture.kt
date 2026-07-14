@@ -14,9 +14,8 @@ class UserFixture(
 ) {
 
     fun create(
-        block: User.() -> User = { this }
+        block: User.() -> User = { this },
     ): User {
-
         val user = User(
             id = UUID.randomUUID(),
             email = "user@test.com",

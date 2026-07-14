@@ -14,6 +14,5 @@ interface JwtTokenProvider {
 
     fun isValid(token: String): Boolean
 
-    // TODO не уверен, что метод, который возвращает Authentication должен тут валяться
     fun getAuthentication(token: String): Authentication
 }

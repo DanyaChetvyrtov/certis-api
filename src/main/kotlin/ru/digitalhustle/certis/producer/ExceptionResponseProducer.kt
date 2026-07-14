@@ -27,7 +27,7 @@ class ExceptionResponseProducer(
         createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = message,
-            errors = errors
+            errors = errors,
         )
 
     fun createUnauthorized(message: String): ExceptionRs =

@@ -1,0 +1,88 @@
+name: CI Pipeline for Spring Boot with Kotlin
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev, main ]
+
+env:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_NAME: certis_test
+  DB_USER: certis_user
+  DB_PASSWORD: certis_pass
+  DB_SCHEMA: keeper
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Apply Liquibase migrations
+        run: |
+          ./gradlew update \
+            -Pdb.host=${{ env.DB_HOST }} \
+            -Pdb.port=${{ env.DB_PORT }} \
+            -Pdb.name=${{ env.DB_NAME }} \
+            -Pdb.user=${{ env.DB_USER }} \
+            -Pdb.password=${{ env.DB_PASSWORD }} \
+            -Pdb.schema=${{ env.DB_SCHEMA }}
+
+      - name: Build and run checks (tests, detekt, jacoco)
+        run: |
+          ./gradlew check \
+            -Pdb.host=${{ env.DB_HOST }} \
+            -Pdb.port=${{ env.DB_PORT }} \
+            -Pdb.name=${{ env.DB_NAME }} \
+            -Pdb.user=${{ env.DB_USER }} \
+            -Pdb.password=${{ env.DB_PASSWORD }} \
+            -Pdb.schema=${{ env.DB_SCHEMA }} \
+            -Dspring.profiles.active=test
+
+      - name: Publish Detekt Results
+        if: always()
+        run: cat build/reports/detekt/detekt.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload SARIF to GitHub
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif

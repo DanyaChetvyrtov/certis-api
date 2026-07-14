@@ -9,12 +9,10 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.filter.JwtTokenFilter
 import ru.digitalhustle.certis.service.security.JwtCookieManager
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 
@@ -49,10 +47,7 @@ class SecurityConfig(
                 it.requestMatchers("/actuator/$DOUBLE_STAR").permitAll()
                 it.requestMatchers("${PathConstants.AUTH}/$DOUBLE_STAR").permitAll()
                 it.anyRequest().authenticated()
-            }.addFilterBefore(
-                JwtTokenFilter(cookieManager, jwtTokenProvider),
-                UsernamePasswordAuthenticationFilter::class.java,
-            ).build()
+            }.build()
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
