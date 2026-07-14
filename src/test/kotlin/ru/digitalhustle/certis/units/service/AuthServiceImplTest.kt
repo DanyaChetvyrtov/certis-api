@@ -17,13 +17,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
-import ru.digitalhustle.certis.model.UserCredentials
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtData
+import ru.digitalhustle.certis.model.security.UserCredentials
 import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 import ru.digitalhustle.certis.service.security.impl.AuthServiceImpl
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 class AuthServiceImplTest {
@@ -221,8 +221,8 @@ class AuthServiceImplTest {
             id = id,
             email = email,
             passwordHash = passwordHash,
-            lastLogin = LocalDateTime.now(),
-            createdAt = LocalDateTime.now(),
+            lastLogin = OffsetDateTime.now(),
+            createdAt = OffsetDateTime.now(),
         )
 
     private fun createJwtData(): JwtData =

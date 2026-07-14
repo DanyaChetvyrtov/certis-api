@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.model
+package ru.digitalhustle.certis.model.security
 
 data class UserCredentials(
 

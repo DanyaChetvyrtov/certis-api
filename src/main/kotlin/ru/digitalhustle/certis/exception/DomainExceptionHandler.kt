@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
 import ru.digitalhustle.certis.producer.ExceptionResponseProducer
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -34,6 +36,27 @@ class DomainExceptionHandler(
 
         return exceptionResponseProducer.createBadRequest(
             message = exception.message ?: ErrorMessages.PASSWORDS_MISMATCH,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InvalidPhotoException::class)
+    fun handleInvalidPhotoException(exception: InvalidPhotoException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProducer.createBadRequest(
+            message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    @ExceptionHandler(UnsupportedPhotoMediaTypeException::class)
+    fun handleUnsupportedPhotoMediaTypeException(exception: UnsupportedPhotoMediaTypeException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProducer.createResponse(
+            status = HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+            message = exception.message ?: HttpStatus.UNSUPPORTED_MEDIA_TYPE.reasonPhrase,
         )
     }
 

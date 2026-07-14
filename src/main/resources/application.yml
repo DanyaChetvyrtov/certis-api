@@ -2,6 +2,11 @@ spring:
   application:
     name: certis
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:certis}
     username: ${DB_USER:postgres}
@@ -16,8 +21,17 @@ server:
 
 digital-hustle:
   certis:
+    api:
+      public-url: ${PUBLIC_API_URL:http://localhost:8080}
+
     security:
       jwt:
         secret: ${JWT_SECRET:local-development-jwt-secret-with-at-least-32-bytes}
         access-duration: ${ACCESS_TOKEN_DURATION_HOURS:24}
         refresh-duration: ${REFRESH_TOKEN_DURATION_DAYS:7}
+
+    minio:
+      endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+      access-key: ${MINIO_ACCESS_KEY}
+      secret-key: ${MINIO_SECRET_KEY}
+      bucket-name: ${MINIO_BUCKET_NAME}

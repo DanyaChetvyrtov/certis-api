@@ -39,7 +39,11 @@ val jooqVersion = libs.versions.jooq.version.get()
 
 val lombokMapstructBindingVersion = "0.2.0"
 val jakartaPersistenceVersion = "3.2.0"
+val apacheCommonsIoVersion = "2.21.0"
 val kotlinLoggingVersion = "8.0.02"
+val apacheTikaVersion = "3.2.3"
+val twelveMonkeysImageioVersion = "3.14.0"
+val minioVersion = "8.5.7"
 
 val jacocoExcludes = listOf(
     "org/jooq/generated/**",
@@ -69,6 +73,9 @@ dependencies {
     liquibaseRuntime(libs.bundles.liquibase.runtime)
     implementation(libs.liquibase.core)
 
+    // minio
+    implementation("io.minio:minio:$minioVersion")
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // persist
@@ -78,7 +85,10 @@ dependencies {
     implementation(libs.springdoc)
 
     // utils
+    implementation("commons-io:commons-io:$apacheCommonsIoVersion")
     implementation("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
+    implementation("org.apache.tika:tika-core:$apacheTikaVersion")
+    implementation("com.twelvemonkeys.imageio:imageio-webp:$twelveMonkeysImageioVersion")
 
     // mapper
     implementation(libs.mapstruct)
