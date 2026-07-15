@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.config.properties.JwtProperties
+import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.service.security.JwtCookieManager
 import java.time.Duration
 
@@ -30,7 +31,7 @@ class JwtCookieManagerImpl(
     override fun createRefreshTokenCookie(refreshToken: String): ResponseCookie =
         ResponseCookie.from(REFRESH_TOKEN, refreshToken)
             .httpOnly(true)
-            .path(ALL_PATHS)
+            .path(PathConstants.AUTH_TOKEN)
             .sameSite(STRICT_SAME_SITE)
             .maxAge(Duration.ofDays(jwtProperties.refreshDuration))
             .build()

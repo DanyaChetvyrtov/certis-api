@@ -11,4 +11,6 @@ object PathConstants {
     const val TOKENS = "/tokens"
     const val TOKENS_ACCESS = "$TOKENS/access"
     const val TOKENS_BOTH = "$TOKENS/both"
+
+    const val AUTH_TOKEN = "$AUTH$TOKENS"
 }

@@ -1,0 +1,54 @@
+@path=http://localhost:8080/api/v1/auth
+@email=danil8@mail.ru
+@password=root
+
+### POST test registration
+POST {{ path }}/registration
+Content-Type: application/json
+
+{
+  "email": "{{ email }}",
+  "password": "{{ password }}",
+  "passwordConfirmation": "{{ password }}"
+}
+
+> {%
+    client.test("Registration should be successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+%}
+
+### POST test login
+POST {{ path }}
+Content-Type: application/json
+
+{
+  "email": "{{ email }}",
+  "password": "{{ password }}"
+}
+
+> {%
+    client.test("Login should be successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+    });
+%}
+
+### POST test refresh access
+POST {{ path }}/tokens/access
+Content-Type: application/json
+
+> {%
+    client.test("Refresh should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+### POST test refresh both
+POST {{ path }}/tokens/both
+Content-Type: application/json
+
+> {%
+    client.test("Refresh should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}

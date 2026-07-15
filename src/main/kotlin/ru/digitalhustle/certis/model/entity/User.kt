@@ -19,9 +19,6 @@ data class User(
     @Column(name = "password_hash", nullable = false)
     val password: String,
 
-    @Column(name = "preferred_currency", nullable = false)
-    val preferredCurrency: Currency,
-
     @Column(name = "last_login")
     val lastLogin: LocalDateTime,
 

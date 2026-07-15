@@ -23,7 +23,6 @@ class UserServiceImpl(
             id = UUID.randomUUID(),
             email = email,
             password = password,
-            preferredCurrency = Currency.RUB, // TODO вот отсюда скорее всего нужно будет потом перенести в профиль
             lastLogin = LocalDateTime.now(),
             createdAt = LocalDateTime.now(),
         )

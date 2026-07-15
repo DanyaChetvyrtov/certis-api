@@ -12,11 +12,8 @@ import ru.digitalhustle.certis.model.entity.User
 @Mapper(config = BaseMapperConfig::class)
 interface UserMapper {
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "preferredCurrency", ignore = true)
-    @Mapping(target = "lastLogin", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    fun convert(loginRq: LoginRq): User
+    @Mapping(target = "passwordConfirmation", ignore = true)
+    fun convert(loginRq: LoginRq): UserCredentials
 
     fun convert(registerRq: RegisterRq): UserCredentials
 
