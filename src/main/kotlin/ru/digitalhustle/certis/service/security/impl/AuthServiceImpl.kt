@@ -5,7 +5,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
 import ru.digitalhustle.certis.model.UserCredentials
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtData

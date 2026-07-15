@@ -10,7 +10,7 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.config.properties.JwtProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.InvalidTokenException
+import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.model.security.JwtData
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 import java.time.Instant

@@ -12,6 +12,9 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.request.LoginRq
 import ru.digitalhustle.certis.dto.request.RegisterRq
 
+// TODO при реге пользователя с email, который уже существует, бросать 409
+// TODO написать тесты
+// TODO Добавить reset пароля
 @RequestMapping(PathConstants.AUTH)
 interface AuthController {
 
