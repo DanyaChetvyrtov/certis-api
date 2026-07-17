@@ -3,8 +3,8 @@ name:
 
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: postgres-money-keeper-container
+    image: postgres:17-alpine
+    container_name: postgres-certis-container
     ports:
       - "5432:5432"
     environment:
@@ -13,9 +13,9 @@ services:
       POSTGRES_PASSWORD: root
       PGDATA: /data/postgres
     networks:
-      - money-keeper
+      - certis
     volumes:
-      - postgres-money-keeper-volume:/data/postgres
+      - postgres-certis-volume:/data/postgres
     restart: unless-stopped
 
   minio:
@@ -29,13 +29,13 @@ services:
       - MINIO_ROOT_PASSWORD=root1234
     command: server /data --console-address ":9001"
     volumes:
-      - minio-money-keeper-volume:/data
+      - minio-certis-volume:/data
     networks:
-      - money-keeper
+      - certis
 
 networks:
-  money-keeper:
+  certis:
     driver: bridge
 volumes:
-  postgres-money-keeper-volume:
-  minio-money-keeper-volume:
+  postgres-certis-volume:
+  minio-certis-volume:

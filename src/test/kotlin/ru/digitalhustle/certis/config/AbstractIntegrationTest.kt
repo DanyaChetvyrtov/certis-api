@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.servlet.MockMvc
+import ru.digitalhustle.certis.repository.UserRepository
 
 @AutoConfigureMockMvc
 @AutoConfigureEmbeddedDatabase(
@@ -16,18 +17,19 @@ import org.springframework.test.web.servlet.MockMvc
     type = AutoConfigureEmbeddedDatabase.DatabaseType.POSTGRES,
     refresh = AutoConfigureEmbeddedDatabase.RefreshMode.AFTER_EACH_TEST_METHOD,
 )
-@ActiveProfiles("test", "dev")
+@ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    classes = [MockMvcConfig::class],
 )
-abstract class AbstractIntegrationTest(
+abstract class AbstractIntegrationTest {
 
     @Autowired
-    protected var mvc: MockMvc,
+    protected lateinit var userRepository: UserRepository
 
     @Autowired
-    override var objectMapper: ObjectMapper,
+    protected lateinit var mvc: MockMvc
 
-    ) : AbstractResultActionsHelper(objectMapper)
+    @Autowired
+    protected lateinit var objectMapper: ObjectMapper
+}

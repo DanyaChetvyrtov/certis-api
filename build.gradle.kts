@@ -64,6 +64,9 @@ dependencies {
     runtimeOnly(libs.postgresql)
     jooqGenerator(libs.postgresql)
     liquibaseRuntime(libs.bundles.liquibase.runtime)
+    implementation(libs.liquibase.core)
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // persist
     implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
@@ -103,7 +106,7 @@ configurations.configureEach {
 
 buildscript {
     dependencies {
-        classpath("org.postgresql:postgresql:42.7.8")
+        classpath("org.postgresql:postgresql:42.7.11")
         classpath("org.liquibase:liquibase-core:4.33.0")
     }
 }
@@ -117,8 +120,6 @@ liquibase {
                 "username" to dbUser,
                 "password" to dbPassword,
                 "driver" to dbDriver,
-                "defaultSchemaName" to dbSchema,
-                "liquibaseSchemaName" to dbSchema,
             )
         }
     }
@@ -168,23 +169,6 @@ detekt {
     config.setFrom("$projectDir/detekt.yml")
     buildUponDefaultConfig = true
     allRules = false
-}
-
-tasks.register("ensureSchemaExists") {
-    group = "database"
-    description = "Creates the application schema in PostgreSQL before running Liquibase."
-
-    doLast {
-        DriverManager.getConnection(dbUrl, dbUser, dbPassword).use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $dbSchema")
-            }
-        }
-    }
-}
-
-tasks.named("update") {
-    dependsOn("ensureSchemaExists")
 }
 
 kotlin {

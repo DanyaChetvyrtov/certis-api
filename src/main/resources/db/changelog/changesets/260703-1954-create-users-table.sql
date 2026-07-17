@@ -1,7 +1,7 @@
 -- liquibase formatted sql
 
 -- changeset dasemenov:260703-1954-create-users-table
-CREATE TABLE IF NOT EXISTS users
+CREATE TABLE IF NOT EXISTS keeper.users
 (
     id            UUID PRIMARY KEY,
     email         VARCHAR(255) UNIQUE NOT NULL,

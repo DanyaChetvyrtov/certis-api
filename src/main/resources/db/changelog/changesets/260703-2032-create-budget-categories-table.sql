@@ -1,11 +1,11 @@
 -- liquibase formatted sql
 
 -- changeset dasemenov:260703-2031-create-budget-categories-table
-CREATE TABLE IF NOT EXISTS budget_categories
+CREATE TABLE IF NOT EXISTS keeper.budget_categories
 (
     id           UUID PRIMARY KEY,
-    budget_id    UUID REFERENCES budgets (id),
-    category_id  UUID REFERENCES categories (id),
+    budget_id    UUID REFERENCES keeper.budgets (id),
+    category_id  UUID REFERENCES keeper.categories (id),
 
     limit_amount NUMERIC(14, 2) NOT NULL,
     spent_amount NUMERIC(14, 2)

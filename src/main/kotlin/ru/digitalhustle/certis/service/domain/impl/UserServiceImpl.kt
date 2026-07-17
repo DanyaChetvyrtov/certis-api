@@ -26,7 +26,7 @@ class UserServiceImpl(
             User(
                 id = UUID.randomUUID(),
                 email = email,
-                password = password,
+                passwordHash = password,
                 lastLogin = LocalDateTime.now(),
                 createdAt = LocalDateTime.now(),
             ),

@@ -1,10 +1,10 @@
 -- liquibase formatted sql
 
 -- changeset dasemenov:260703-2059-create-budget-optimizations-table
-CREATE TABLE IF NOT EXISTS budget_optimizations
+CREATE TABLE IF NOT EXISTS keeper.budget_optimizations
 (
     id              UUID PRIMARY KEY,
-    user_id         UUID REFERENCES users (id),
+    user_id         UUID REFERENCES keeper.users (id),
 
     month           DATE,
     input_snapshot  JSONB, -- income, expenses, constraints
