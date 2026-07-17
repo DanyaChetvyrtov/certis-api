@@ -7,7 +7,7 @@ detekt = "2.0.0-alpha.1"
 ktlint = "13.0.0"
 liquibase = "4.33.0"
 
-jooq-version = "3.19.27"
+jooq-version = "3.20.9"
 jooq-gradle = "10.2.1"
 postgresql = "42.7.8"
 picocli = "4.7.5"

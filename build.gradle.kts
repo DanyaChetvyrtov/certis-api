@@ -36,6 +36,7 @@ val changelogMasterPath = "src/main/resources/db/changelog"
 val changelogFileName = "db.changelog-master.yaml"
 val changelogFilePath = "/db/changelog/$changelogFileName"
 val jooqPackageName = "ru.digitalhustle.certis.jooq"
+val jooqVersion = libs.versions.jooq.version.get()
 
 val lombokMapstructBindingVersion = "0.2.0"
 val jakartaPersistenceVersion = "3.2.0"
@@ -83,8 +84,21 @@ dependencies {
     implementation(libs.bundles.jwt)
 
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation(libs.kotlin.test.junit5)
+    testImplementation("org.assertj:assertj-core")
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    testImplementation("io.zonky.test:embedded-postgres:2.2.0")
+    testImplementation("io.zonky.test:embedded-database-spring-test:2.7.1")
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jooq") {
+            useVersion(jooqVersion)
+        }
+    }
 }
 
 buildscript {
@@ -112,7 +126,7 @@ liquibase {
 }
 
 jooq {
-    version.set(libs.versions.jooq.version.get())
+    version.set(jooqVersion)
     configurations {
         create("main") {
             jooqConfiguration.apply {
@@ -135,6 +149,7 @@ jooq {
                         isRecords = true
                         isImmutablePojos = false
                         isFluentSetters = false
+                        isImplicitJoinPathsToMany = false
                     }
                     target = org.jooq.meta.jaxb.Target().apply {
                         packageName = "org.jooq.generated"
