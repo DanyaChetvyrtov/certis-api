@@ -25,7 +25,7 @@ class JwtCookieManagerImpl(
             .httpOnly(true)
             .path(ALL_PATHS)
             .sameSite(STRICT_SAME_SITE)
-            .maxAge(Duration.ofMinutes(jwtProperties.accessDuration))
+            .maxAge(Duration.ofHours(jwtProperties.accessDuration))
             .build()
 
     override fun createRefreshTokenCookie(refreshToken: String): ResponseCookie =

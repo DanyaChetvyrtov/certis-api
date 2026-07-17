@@ -6,5 +6,4 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
-class DomainExceptionHandler {
-}
+class DomainExceptionHandler

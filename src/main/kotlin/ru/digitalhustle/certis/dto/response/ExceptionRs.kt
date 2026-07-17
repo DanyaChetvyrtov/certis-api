@@ -5,14 +5,9 @@ import java.time.OffsetDateTime
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ExceptionRs(
-
     val status: Int,
-
     val error: String,
-
     val message: String,
-
     val timestamp: OffsetDateTime,
-
-    val errors: Map<String, String>?ф,
+    val errors: Map<String, String>?,
 )

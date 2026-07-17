@@ -19,18 +19,18 @@ class UserServiceImpl(
             ?: throw NotFoundException.entity("User")
 
     override fun save(email: String, password: String): User {
-        userRepository.findByEmail(email)
-            ?: throw EntityAlreadyExistsException.entity("User", "email")
-
-        val preparedUser = User(
-            id = UUID.randomUUID(),
-            email = email,
-            password = password,
-            lastLogin = LocalDateTime.now(),
-            createdAt = LocalDateTime.now(),
+        userRepository.findByEmail(email)?.let {
+            throw EntityAlreadyExistsException.entity("User", "email")
+        }
+        return userRepository.save(
+            User(
+                id = UUID.randomUUID(),
+                email = email,
+                password = password,
+                lastLogin = LocalDateTime.now(),
+                createdAt = LocalDateTime.now(),
+            ),
         )
-
-        return userRepository.save(preparedUser)
     }
 
     override fun updateLastLogin(id: UUID) {

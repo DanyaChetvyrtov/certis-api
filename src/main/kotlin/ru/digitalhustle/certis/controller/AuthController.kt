@@ -23,7 +23,7 @@ interface AuthController {
 
     @PostMapping(PathConstants.REGISTRATION)
     @ResponseStatus(HttpStatus.CREATED)
-    fun register(@RequestBody registerRq: RegisterRq)
+    fun register(@RequestBody registerRq: @Valid RegisterRq)
 
     @PostMapping(PathConstants.TOKENS_ACCESS)
     @ResponseStatus(HttpStatus.NO_CONTENT)

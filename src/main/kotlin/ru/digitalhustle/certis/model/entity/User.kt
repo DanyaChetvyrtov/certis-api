@@ -3,7 +3,6 @@ package ru.digitalhustle.certis.model.entity
 import jakarta.persistence.Column
 import jakarta.persistence.Id
 import jakarta.persistence.Table
-import ru.digitalhustle.certis.enums.Currency
 import java.time.LocalDateTime
 import java.util.UUID
 

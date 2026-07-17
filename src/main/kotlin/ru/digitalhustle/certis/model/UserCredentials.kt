@@ -6,5 +6,5 @@ data class UserCredentials(
 
     val password: String,
 
-    val passwordConfirmation: String?
+    val passwordConfirmation: String?,
 )

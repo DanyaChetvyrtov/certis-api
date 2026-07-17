@@ -43,7 +43,7 @@ class JwtTokenProviderImpl(
             .build()
 
         val validity = Instant.now()
-            .plus(jwtProperties.accessDuration, ChronoUnit.MINUTES)
+            .plus(jwtProperties.accessDuration, ChronoUnit.HOURS)
 
         return Jwts.builder()
             .claims(claims)

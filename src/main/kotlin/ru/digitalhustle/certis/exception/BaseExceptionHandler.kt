@@ -1,5 +1,6 @@
 package ru.digitalhustle.certis.exception
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
@@ -7,120 +8,127 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.InvalidTokenException
+import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
+import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
 import java.time.Clock
+import java.time.OffsetDateTime
 
 @RestControllerAdvice
 class BaseExceptionHandler(
     private val clock: Clock,
 ) {
 
-    @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleMethodArgumentNotValidException(
-        exception: MethodArgumentNotValidException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    companion object {
+        private val log = KotlinLogging.logger {}
+    }
 
-        return ExceptionResponseFactory.create(
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    fun handleMethodArgumentNotValidException(exception: MethodArgumentNotValidException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = ErrorMessages.VALIDATION_FAILED,
-            clock = clock,
-            errors = exception.extractFieldErrors()
+            errors = exception.extractFieldErrors(),
         )
     }
 
     @ExceptionHandler(HandlerMethodValidationException::class)
-    fun handleHandlerMethodValidationException(
-        exception: HandlerMethodValidationException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
+        return createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = ErrorMessages.VALIDATION_FAILED,
-            clock = clock,
-            errors = exception.extractFieldErrors()
+            errors = exception.extractFieldErrors(),
         )
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleHttpMessageNotReadableException(
-        exception: HttpMessageNotReadableException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleHttpMessageNotReadableException(exception: HttpMessageNotReadableException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
+        return createResponse(
             status = HttpStatus.BAD_REQUEST,
-            message = "${ErrorMessages.VALIDATION_FAILED} Invalid value.",
-            clock = clock
+            message = "${ErrorMessages.VALIDATION_FAILED}. Invalid value.",
         )
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    fun handleMethodArgumentTypeMismatchException(
-        exception: MethodArgumentTypeMismatchException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleMethodArgumentTypeMismatchException(exception: MethodArgumentTypeMismatchException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
+        return createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
-            clock = clock
         )
     }
 
     @ExceptionHandler(NotFoundException::class)
-    fun handleNotFoundException(
-        exception: NotFoundException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleNotFoundException(exception: NotFoundException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
+        return createResponse(
             status = HttpStatus.NOT_FOUND,
             message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
-            clock = clock
         )
     }
 
     @ExceptionHandler(EntityAlreadyExistsException::class)
-    fun handleConflictException(
-        exception: NotFoundException
-    ): ExceptionRs {
-        log.warn(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleEntityAlreadyExistsException(exception: EntityAlreadyExistsException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
-            status = HttpStatus.NOT_FOUND,
-            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
-            clock = clock
+        return createResponse(
+            status = HttpStatus.CONFLICT,
+            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
+        )
+    }
+
+    @ExceptionHandler(PasswordsDoNotMatchException::class)
+    fun handlePasswordsDoNotMatchException(exception: PasswordsDoNotMatchException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return createResponse(
+            status = HttpStatus.BAD_REQUEST,
+            message = exception.message ?: HttpStatus.BAD_REQUEST.reasonPhrase,
+        )
+    }
+
+    @ExceptionHandler(InvalidTokenException::class, MissedTokenException::class)
+    fun handleTokenException(exception: RuntimeException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return createResponse(
+            status = HttpStatus.UNAUTHORIZED,
+            message = exception.message ?: HttpStatus.UNAUTHORIZED.reasonPhrase,
         )
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleException(
-        exception: Exception
-    ): ExceptionRs {
-        log.error(exception) {
-            ExceptionConstants.LOG_MESSAGE.format(exception.message)
-        }
+    fun handleException(exception: Exception): ExceptionRs {
+        log.error(exception) { exception.message.orEmpty() }
 
-        return ExceptionResponseFactory.create(
+        return createResponse(
             status = HttpStatus.INTERNAL_SERVER_ERROR,
             message = HttpStatus.INTERNAL_SERVER_ERROR.reasonPhrase,
-            clock = clock
         )
     }
+
+    private fun createResponse(
+        status: HttpStatus,
+        message: String,
+        errors: Map<String, String>? = null,
+    ): ExceptionRs =
+        ExceptionRs(
+            status = status.value(),
+            error = status.reasonPhrase,
+            message = message,
+            timestamp = OffsetDateTime.now(clock),
+            errors = errors,
+        )
 }

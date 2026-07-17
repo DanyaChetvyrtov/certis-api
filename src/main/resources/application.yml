@@ -15,6 +15,6 @@ digital-hustle:
   certis:
     security:
       jwt:
-        secret: ${JWT_SECRET}
-        access-duration: ${ACCESS_TOKEN_DURATION_HOURS}
-        refresh-duration: ${REFRESH_TOKEN_DURATION_DAYS}
+        secret: ${JWT_SECRET:local-development-jwt-secret-with-at-least-32-bytes}
+        access-duration: ${ACCESS_TOKEN_DURATION_HOURS:24}
+        refresh-duration: ${REFRESH_TOKEN_DURATION_DAYS:7}

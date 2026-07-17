@@ -104,7 +104,7 @@ liquibase {
                 "password" to dbPassword,
                 "driver" to dbDriver,
                 "defaultSchemaName" to dbSchema,
-                "liquibaseSchemaName" to dbSchema
+                "liquibaseSchemaName" to dbSchema,
             )
         }
     }
