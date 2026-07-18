@@ -3,8 +3,10 @@ package ru.digitalhustle.certis.exception
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.http.HttpStatus
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
@@ -27,6 +29,7 @@ class BaseExceptionHandler(
         private val log = KotlinLogging.logger {}
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleMethodArgumentNotValidException(exception: MethodArgumentNotValidException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
@@ -38,6 +41,7 @@ class BaseExceptionHandler(
         )
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(HandlerMethodValidationException::class)
     fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
@@ -49,6 +53,7 @@ class BaseExceptionHandler(
         )
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleHttpMessageNotReadableException(exception: HttpMessageNotReadableException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
@@ -59,6 +64,7 @@ class BaseExceptionHandler(
         )
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
     fun handleMethodArgumentTypeMismatchException(exception: MethodArgumentTypeMismatchException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
@@ -69,26 +75,7 @@ class BaseExceptionHandler(
         )
     }
 
-    @ExceptionHandler(NotFoundException::class)
-    fun handleNotFoundException(exception: NotFoundException): ExceptionRs {
-        log.warn(exception) { exception.message.orEmpty() }
-
-        return createResponse(
-            status = HttpStatus.NOT_FOUND,
-            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
-        )
-    }
-
-    @ExceptionHandler(EntityAlreadyExistsException::class)
-    fun handleEntityAlreadyExistsException(exception: EntityAlreadyExistsException): ExceptionRs {
-        log.warn(exception) { exception.message.orEmpty() }
-
-        return createResponse(
-            status = HttpStatus.CONFLICT,
-            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
-        )
-    }
-
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(PasswordsDoNotMatchException::class)
     fun handlePasswordsDoNotMatchException(exception: PasswordsDoNotMatchException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
@@ -99,16 +86,45 @@ class BaseExceptionHandler(
         )
     }
 
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(InvalidTokenException::class, MissedTokenException::class)
     fun handleTokenException(exception: RuntimeException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
+        return createUnauthorizedResponse(exception)
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(BadCredentialsException::class)
+    fun handleBadCredentialsException(exception: BadCredentialsException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return createUnauthorizedResponse(exception)
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NotFoundException::class)
+    fun handleNotFoundException(exception: NotFoundException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
         return createResponse(
-            status = HttpStatus.UNAUTHORIZED,
-            message = exception.message ?: HttpStatus.UNAUTHORIZED.reasonPhrase,
+            status = HttpStatus.NOT_FOUND,
+            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
         )
     }
 
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(EntityAlreadyExistsException::class)
+    fun handleEntityAlreadyExistsException(exception: EntityAlreadyExistsException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return createResponse(
+            status = HttpStatus.CONFLICT,
+            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception::class)
     fun handleException(exception: Exception): ExceptionRs {
         log.error(exception) { exception.message.orEmpty() }
@@ -118,6 +134,12 @@ class BaseExceptionHandler(
             message = HttpStatus.INTERNAL_SERVER_ERROR.reasonPhrase,
         )
     }
+
+    private fun createUnauthorizedResponse(exception: RuntimeException): ExceptionRs =
+        createResponse(
+            status = HttpStatus.UNAUTHORIZED,
+            message = exception.message ?: HttpStatus.UNAUTHORIZED.reasonPhrase,
+        )
 
     private fun createResponse(
         status: HttpStatus,

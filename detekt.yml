@@ -62,8 +62,16 @@ naming:
   FunctionNaming:
     active: true
     functionPattern: '[a-z][a-zA-Z0-9]*'
-    excludes:
-      - '.*/test/.*'
+    ignoreAnnotated:
+      - 'Test'
+      - 'ParameterizedTest'
+      - 'RepeatedTest'
+      - 'TestFactory'
+      - 'TestTemplate'
+      - 'BeforeEach'
+      - 'AfterEach'
+      - 'BeforeAll'
+      - 'AfterAll'
 
   FunctionParameterNaming:
     active: true

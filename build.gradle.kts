@@ -42,6 +42,10 @@ val lombokMapstructBindingVersion = "0.2.0"
 val jakartaPersistenceVersion = "3.2.0"
 val kotlinLoggingVersion = "8.0.02"
 
+val jacocoExcludes = listOf(
+    "org/jooq/generated/**",
+)
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -181,7 +185,21 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.jacocoTestCoverageVerification {
+tasks.withType<JacocoReport> {
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it).apply { exclude(jacocoExcludes) }
+        })
+    )
+}
+
+tasks.withType<JacocoCoverageVerification> {
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it).apply { exclude(jacocoExcludes) }
+        })
+    )
+
     violationRules {
         rule {
             limit {
@@ -193,8 +211,6 @@ tasks.jacocoTestCoverageVerification {
 
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
-}
-
-tasks.check {
     dependsOn(tasks.detekt)
+    dependsOn(tasks.ktlintCheck)
 }
