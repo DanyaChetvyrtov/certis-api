@@ -16,7 +16,7 @@ class JwtUserDetailsService(
             JwtDetails(
                 id = user.id,
                 username = user.email,
-                password = user.password,
+                password = user.passwordHash,
             )
         }
 }

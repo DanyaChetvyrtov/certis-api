@@ -1,8 +1,8 @@
 package ru.digitalhustle.certis.service.domain.impl
 
 import org.springframework.stereotype.Service
-import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.NotFoundException
+import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.UserService
@@ -19,16 +19,18 @@ class UserServiceImpl(
             ?: throw NotFoundException.entity("User")
 
     override fun save(email: String, password: String): User {
-        val preparedUser = User(
-            id = UUID.randomUUID(),
-            email = email,
-            password = password,
-            preferredCurrency = Currency.RUB, // TODO вот отсюда скорее всего нужно будет потом перенести в профиль
-            lastLogin = LocalDateTime.now(),
-            createdAt = LocalDateTime.now(),
+        userRepository.findByEmail(email)?.let {
+            throw EntityAlreadyExistsException.entity("User", "email")
+        }
+        return userRepository.save(
+            User(
+                id = UUID.randomUUID(),
+                email = email,
+                passwordHash = password,
+                lastLogin = LocalDateTime.now(),
+                createdAt = LocalDateTime.now(),
+            ),
         )
-
-        return userRepository.save(preparedUser)
     }
 
     override fun updateLastLogin(id: UUID) {

@@ -3,6 +3,7 @@ package ru.digitalhustle.certis.controller
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.CookieValue
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -11,9 +12,9 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.request.LoginRq
 import ru.digitalhustle.certis.dto.request.RegisterRq
 
-// TODO Добавить reset пароля
+// TODO при реге пользователя с email, который уже существует, бросать 409
 // TODO написать тесты
-// TODO протестировать всю логику авторизации
+// TODO Добавить reset пароля
 @RequestMapping(PathConstants.AUTH)
 interface AuthController {
 
@@ -22,13 +23,13 @@ interface AuthController {
 
     @PostMapping(PathConstants.REGISTRATION)
     @ResponseStatus(HttpStatus.CREATED)
-    fun register(@RequestBody registerRq: RegisterRq)
+    fun register(@RequestBody registerRq: @Valid RegisterRq)
 
     @PostMapping(PathConstants.TOKENS_ACCESS)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun refreshAccess(@RequestBody refreshToken: String, response: HttpServletResponse)
+    fun refreshAccess(@CookieValue("refresh_token") refreshToken: String, response: HttpServletResponse)
 
     @PostMapping(PathConstants.TOKENS_BOTH)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun refreshBothTokens(@RequestBody refreshToken: String, response: HttpServletResponse)
+    fun refreshBothTokens(@CookieValue("refresh_token") refreshToken: String, response: HttpServletResponse)
 }

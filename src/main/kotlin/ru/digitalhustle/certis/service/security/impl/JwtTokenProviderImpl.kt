@@ -10,9 +10,10 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.config.properties.JwtProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.InvalidTokenException
+import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.model.security.JwtData
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
+import java.time.Clock
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Date
@@ -23,6 +24,7 @@ import javax.crypto.SecretKey
 class JwtTokenProviderImpl(
     private val jwtProperties: JwtProperties,
     private val userDetailsService: UserDetailsService,
+    private val clock: Clock,
 ) : JwtTokenProvider {
 
     companion object {
@@ -42,8 +44,8 @@ class JwtTokenProviderImpl(
             .add(ID, userId)
             .build()
 
-        val validity = Instant.now()
-            .plus(jwtProperties.accessDuration, ChronoUnit.MINUTES)
+        val validity = Instant.now(clock)
+            .plus(jwtProperties.accessDuration, ChronoUnit.HOURS)
 
         return Jwts.builder()
             .claims(claims)
@@ -58,7 +60,7 @@ class JwtTokenProviderImpl(
             .add(ID, userId)
             .build()
 
-        val validity = Instant.now()
+        val validity = Instant.now(clock)
             .plus(jwtProperties.refreshDuration, ChronoUnit.DAYS)
 
         return Jwts.builder()
@@ -84,7 +86,10 @@ class JwtTokenProviderImpl(
         )
     }
 
-    override fun isValid(token: String): Boolean = getClaims(token).expiration.after(Date())
+    override fun isValid(token: String): Boolean =
+        runCatching {
+            getClaims(token).expiration.after(Date.from(Instant.now(clock)))
+        }.getOrDefault(false)
 
     override fun getAuthentication(token: String): Authentication {
         val userDetails = userDetailsService.loadUserByUsername(getEmail(token))
@@ -104,6 +109,7 @@ class JwtTokenProviderImpl(
     private fun getClaims(token: String): Claims =
         Jwts.parser()
             .verifyWith(secretKey)
+            .clock { Date.from(Instant.now(clock)) }
             .build()
             .parseSignedClaims(token)
             .payload

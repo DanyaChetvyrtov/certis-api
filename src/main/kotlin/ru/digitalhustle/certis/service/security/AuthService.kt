@@ -6,9 +6,9 @@ import ru.digitalhustle.certis.model.security.JwtData
 
 interface AuthService {
 
-    fun register(userWithCredentials: UserCredentials): User
+    fun register(userCredentials: UserCredentials): User
 
-    fun login(user: User): JwtData
+    fun login(userCredentials: UserCredentials): JwtData
 
     fun refreshAccess(refreshToken: String): JwtData
 

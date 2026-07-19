@@ -1,10 +1,10 @@
 -- liquibase formatted sql
 
 -- changeset dasemenov:260703-2102-create-transaction-attachments-table
-CREATE TABLE IF NOT EXISTS transaction_attachments
+CREATE TABLE IF NOT EXISTS keeper.transaction_attachments
 (
     id             UUID PRIMARY KEY,
-    transaction_id UUID REFERENCES transactions (id),
+    transaction_id UUID REFERENCES keeper.transactions (id),
     file_url       TEXT,
     file_type      TEXT
 )

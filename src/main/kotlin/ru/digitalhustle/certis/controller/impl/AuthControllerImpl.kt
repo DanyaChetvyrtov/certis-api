@@ -34,7 +34,7 @@ class AuthControllerImpl(
     override fun refreshAccess(refreshToken: String, response: HttpServletResponse) {
         val jwtData = authService.refreshAccess(refreshToken)
 
-        addCookieToResponse(jwtData, response)
+        addAccessCookieToResponse(jwtData, response)
     }
 
     override fun refreshBothTokens(refreshToken: String, response: HttpServletResponse) {
@@ -44,10 +44,15 @@ class AuthControllerImpl(
     }
 
     private fun addCookieToResponse(jwtData: JwtData, response: HttpServletResponse) {
-        val accessCookie = cookieManager.createAccessTokenCookie(jwtData.accessToken)
         val refreshCookie = cookieManager.createRefreshTokenCookie(jwtData.refreshToken)
 
-        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString())
+        addAccessCookieToResponse(jwtData, response)
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+    }
+
+    private fun addAccessCookieToResponse(jwtData: JwtData, response: HttpServletResponse) {
+        val accessCookie = cookieManager.createAccessTokenCookie(jwtData.accessToken)
+
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString())
     }
 }

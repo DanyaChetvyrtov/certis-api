@@ -5,7 +5,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
 import ru.digitalhustle.certis.model.UserCredentials
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtData
@@ -21,20 +21,20 @@ class AuthServiceImpl(
     private val authenticationManager: AuthenticationManager,
 ) : AuthService {
 
-    override fun register(userWithCredentials: UserCredentials): User {
-        if (userWithCredentials.password != userWithCredentials.passwordConfirmation) {
+    override fun register(userCredentials: UserCredentials): User {
+        if (userCredentials.password != userCredentials.passwordConfirmation) {
             throw PasswordsDoNotMatchException(ErrorMessages.PASSWORDS_MISMATCH)
         }
 
-        val encodedPassword = passwordEncoder.encode(userWithCredentials.password)
-        return userService.save(userWithCredentials.email, encodedPassword)
+        val encodedPassword = passwordEncoder.encode(userCredentials.password)
+        return userService.save(userCredentials.email, encodedPassword)
     }
 
-    override fun login(user: User): JwtData {
-        val dbUser = userService.getUserByEmail(user.email)
+    override fun login(userCredentials: UserCredentials): JwtData {
+        val dbUser = userService.getUserByEmail(userCredentials.email)
 
         authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(user.email, user.password),
+            UsernamePasswordAuthenticationToken(userCredentials.email, userCredentials.password),
         )
 
         userService.updateLastLogin(dbUser.id)

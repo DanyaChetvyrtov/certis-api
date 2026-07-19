@@ -28,8 +28,8 @@ class JwtTokenFilter(
     ) {
         val token = cookieManager
             .getAccessTokenFromRequest(request)
-            ?.takeIf { it.startsWith(BEARER_PREFIX) }
             ?.removePrefix(BEARER_PREFIX)
+            ?.takeIf { it.isNotBlank() }
 
         if (token == null) {
             filterChain.doFilter(request, response)

@@ -36,10 +36,15 @@ val changelogMasterPath = "src/main/resources/db/changelog"
 val changelogFileName = "db.changelog-master.yaml"
 val changelogFilePath = "/db/changelog/$changelogFileName"
 val jooqPackageName = "ru.digitalhustle.certis.jooq"
+val jooqVersion = libs.versions.jooq.version.get()
 
 val lombokMapstructBindingVersion = "0.2.0"
 val jakartaPersistenceVersion = "3.2.0"
 val kotlinLoggingVersion = "8.0.02"
+
+val jacocoExcludes = listOf(
+    "org/jooq/generated/**",
+)
 
 java {
     toolchain {
@@ -63,6 +68,9 @@ dependencies {
     runtimeOnly(libs.postgresql)
     jooqGenerator(libs.postgresql)
     liquibaseRuntime(libs.bundles.liquibase.runtime)
+    implementation(libs.liquibase.core)
+
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // persist
     implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
@@ -83,13 +91,26 @@ dependencies {
     implementation(libs.bundles.jwt)
 
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation("org.springframework.security:spring-security-test")
     testImplementation(libs.kotlin.test.junit5)
+    testImplementation("org.assertj:assertj-core")
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    testImplementation("io.zonky.test:embedded-postgres:2.2.0")
+    testImplementation("io.zonky.test:embedded-database-spring-test:2.7.1")
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jooq") {
+            useVersion(jooqVersion)
+        }
+    }
 }
 
 buildscript {
     dependencies {
-        classpath("org.postgresql:postgresql:42.7.8")
+        classpath("org.postgresql:postgresql:42.7.11")
         classpath("org.liquibase:liquibase-core:4.33.0")
     }
 }
@@ -103,8 +124,6 @@ liquibase {
                 "username" to dbUser,
                 "password" to dbPassword,
                 "driver" to dbDriver,
-                "defaultSchemaName" to dbSchema,
-                "liquibaseSchemaName" to dbSchema
             )
         }
     }
@@ -112,7 +131,7 @@ liquibase {
 }
 
 jooq {
-    version.set(libs.versions.jooq.version.get())
+    version.set(jooqVersion)
     configurations {
         create("main") {
             jooqConfiguration.apply {
@@ -135,6 +154,7 @@ jooq {
                         isRecords = true
                         isImmutablePojos = false
                         isFluentSetters = false
+                        isImplicitJoinPathsToMany = false
                     }
                     target = org.jooq.meta.jaxb.Target().apply {
                         packageName = "org.jooq.generated"
@@ -155,23 +175,6 @@ detekt {
     allRules = false
 }
 
-tasks.register("ensureSchemaExists") {
-    group = "database"
-    description = "Creates the application schema in PostgreSQL before running Liquibase."
-
-    doLast {
-        DriverManager.getConnection(dbUrl, dbUser, dbPassword).use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $dbSchema")
-            }
-        }
-    }
-}
-
-tasks.named("update") {
-    dependsOn("ensureSchemaExists")
-}
-
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
@@ -182,7 +185,21 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.jacocoTestCoverageVerification {
+tasks.withType<JacocoReport> {
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it).apply { exclude(jacocoExcludes) }
+        })
+    )
+}
+
+tasks.withType<JacocoCoverageVerification> {
+    classDirectories.setFrom(
+        files(classDirectories.files.map {
+            fileTree(it).apply { exclude(jacocoExcludes) }
+        })
+    )
+
     violationRules {
         rule {
             limit {
@@ -194,8 +211,6 @@ tasks.jacocoTestCoverageVerification {
 
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
-}
-
-tasks.check {
     dependsOn(tasks.detekt)
+    dependsOn(tasks.ktlintCheck)
 }
