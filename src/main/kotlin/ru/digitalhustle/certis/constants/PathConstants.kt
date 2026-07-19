@@ -1,5 +1,7 @@
 package ru.digitalhustle.certis.constants
 
+import java.util.UUID
+
 object PathConstants {
     const val API = "/api"
 
@@ -7,8 +9,38 @@ object PathConstants {
 
     const val AUTH = "$API_V1/auth"
     const val REGISTRATION = "/registration"
-
     const val TOKENS = "/tokens"
-    const val TOKENS_ACCESS = "$TOKENS/access"
-    const val TOKENS_BOTH = "$TOKENS/both"
+    const val LOGOUT = "/logout"
+    const val SESSIONS = "/sessions"
+    const val SESSION_ID = "/{sessionId}"
+
+    const val AUTH_REGISTRATION = "$AUTH$REGISTRATION"
+    const val AUTH_TOKEN = "$AUTH$TOKENS"
+    const val AUTH_LOGOUT = "$AUTH$LOGOUT"
+    const val AUTH_SESSIONS = "$AUTH$SESSIONS"
+    const val SESSIONS_WITH_ID = "${SESSIONS}${SESSION_ID}"
+
+    const val PROFILES = "$API_V1/profiles"
+    const val PROFILE_ID = "/{profileId}"
+    const val MY_PROFILE = "/me"
+    const val PROFILE_PHOTO = "$PROFILE_ID/photo"
+
+    fun profilePhoto(profileId: UUID): String = "$PROFILES/$profileId/photo"
+
+    const val ACCOUNTS = "$API_V1/accounts"
+    const val ACCOUNT_ID = "/{accountId}"
+
+    const val CATEGORIES = "$API_V1/categories"
+    const val CATEGORY_ID = "/{categoryId}"
+    const val CATEGORY_RESTORE = "$CATEGORY_ID/restore"
+
+    const val TRANSACTIONS = "$API_V1/transactions"
+    const val TRANSACTION_ID = "/{transactionId}"
+
+    const val TRANSFERS = "$API_V1/transfers"
+    const val TRANSFER_ID = "/{transferId}"
+    const val TRANSFER_REVERSAL = "$TRANSFER_ID/reversal"
+
+    const val RECURRING_TRANSACTIONS = "$API_V1/recurring-transactions"
+    const val RECURRING_TRANSACTION_ID = "/{recurringTransactionId}"
 }

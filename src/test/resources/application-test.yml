@@ -1,0 +1,29 @@
+spring:
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+
+digital-hustle:
+  certis:
+    recurring-transactions:
+      scheduler:
+        enabled: false
+
+    security:
+      jwt:
+        secret: "01234567890123456789012345678901"
+
+      rate-limit:
+        login:
+          capacity: 1000
+        registration:
+          capacity: 1000
+        refresh:
+          capacity: 1000
+
+    minio:
+      endpoint: http://localhost:9000
+      access-key: test-access-key
+      secret-key: test-secret-key
+      bucket-name: test-bucket
+      bucket-initializer-enabled: false

@@ -9,5 +9,9 @@ interface JwtCookieManager {
 
     fun createRefreshTokenCookie(refreshToken: String): ResponseCookie
 
+    fun createAccessTokenRemovalCookie(): ResponseCookie
+
+    fun createRefreshTokenRemovalCookie(): ResponseCookie
+
     fun getAccessTokenFromRequest(request: HttpServletRequest): String?
 }

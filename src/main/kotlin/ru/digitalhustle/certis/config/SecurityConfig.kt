@@ -2,8 +2,10 @@ package ru.digitalhustle.certis.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -17,11 +19,14 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.filter.JwtTokenFilter
 import ru.digitalhustle.certis.service.security.JwtCookieManager
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
+import ru.digitalhustle.certis.util.security.RestSecurityErrorHandler
 
 @Configuration
+@EnableMethodSecurity
 class SecurityConfig(
     private val cookieManager: JwtCookieManager,
     private val jwtTokenProvider: JwtTokenProvider,
+    private val restSecurityErrorHandler: RestSecurityErrorHandler,
 ) {
     companion object {
         private const val SINGLE_STAR = "*"
@@ -40,19 +45,28 @@ class SecurityConfig(
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http
             .csrf { it.disable() }
-            .anonymous { it.disable() }
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .exceptionHandling {
+                it.authenticationEntryPoint(restSecurityErrorHandler)
+                it.accessDeniedHandler(restSecurityErrorHandler)
+            }
             .authorizeHttpRequests {
-                it.requestMatchers("/swagger-ui/$DOUBLE_STAR").permitAll()
-                it.requestMatchers("/v3/api-docs/$DOUBLE_STAR").permitAll()
-                it.requestMatchers("/actuator/$DOUBLE_STAR").permitAll()
-                it.requestMatchers("${PathConstants.AUTH}/$DOUBLE_STAR").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/$DOUBLE_STAR").permitAll()
+                it.requestMatchers(HttpMethod.POST, PathConstants.AUTH).permitAll()
+                it.requestMatchers(HttpMethod.POST, PathConstants.AUTH_REGISTRATION).permitAll()
+                it.requestMatchers(HttpMethod.POST, PathConstants.AUTH_TOKEN).permitAll()
+                it.requestMatchers(HttpMethod.POST, PathConstants.AUTH_LOGOUT).permitAll()
                 it.anyRequest().authenticated()
-            }.addFilterBefore(
-                JwtTokenFilter(cookieManager, jwtTokenProvider),
+            }
+            .addFilterBefore(
+                JwtTokenFilter(
+                    cookieManager = cookieManager,
+                    jwtTokenProvider = jwtTokenProvider,
+                ),
                 UsernamePasswordAuthenticationFilter::class.java,
-            ).build()
+            )
+            .build()
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {

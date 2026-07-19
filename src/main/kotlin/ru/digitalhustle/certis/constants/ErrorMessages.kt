@@ -1,6 +1,44 @@
 package ru.digitalhustle.certis.constants
 
 object ErrorMessages {
-    const val TOKEN_EXPIRED = "Token is expired"
+
+    const val BUCKET_CREATION_FAILED = "Bucket creation failed"
+    const val PHOTO_UPLOAD_FAILED = "Photo upload failed"
+    const val PHOTO_DOWNLOAD_FAILED = "Photo download failed"
+    const val PHOTO_DELETE_FAILED = "Photo delete failed"
+    const val PHOTO_STORAGE_UNAVAILABLE = "Photo storage is unavailable"
+    const val EMPTY_PHOTO = "Photo is empty"
+    const val PHOTO_TOO_LARGE = "Photo size must not exceed 5 MB"
+    const val PHOTO_DIMENSIONS_TOO_LARGE = "Photo dimensions are too large"
+    const val INVALID_FILE_NAME = "Failed to read file name"
+    const val INVALID_FILE_EXTENSION = "Invalid file extension"
+    const val INVALID_CONTENT_TYPE = "Invalid content type"
+    const val FILE_EXTENSION_CONTENT_TYPE_MISMATCH = "File extension does not match its content type"
+    const val INVALID_IMAGE_DIMENSIONS = "Failed to read image dimensions"
+
+    const val INVALID_TOKEN = "Invalid or expired token"
+    const val INVALID_CREDENTIALS = "Invalid email or password"
+    const val AUTHENTICATION_REQUIRED = "Authentication is required"
+    const val ACCESS_DENIED = "Access denied"
+    const val TOO_MANY_REQUESTS = "Too many requests"
     const val PASSWORDS_MISMATCH = "Passwords don't match"
+
+    const val ACCOUNT_CLOSED = "Closed account cannot be updated"
+    const val ACCOUNT_IN_USE = "Account is used by an active or paused recurring transaction"
+    const val CATEGORY_ARCHIVED = "Archived category cannot be updated"
+    const val CATEGORY_IN_USE = "Category is used by an active budget or recurring transaction template"
+    const val TRANSACTION_ACCOUNT_CLOSED = "Closed account cannot be used for a new transaction"
+    const val TRANSACTION_CATEGORY_ARCHIVED = "Archived category cannot be assigned to a transaction"
+    const val TRANSACTION_CATEGORY_TYPE_MISMATCH = "Transaction and category types must match"
+    const val TRANSFER_SAME_ACCOUNT = "Source and destination accounts must be different"
+    const val TRANSFER_CURRENCY_MISMATCH = "Source and destination account currencies must match"
+    const val TRANSFER_ACCOUNT_CLOSED = "Closed account cannot be used for a transfer"
+    const val TRANSFER_TRANSACTION_IMMUTABLE = "Transfer transactions cannot be modified independently"
+    const val TRANSFER_REVERSAL_OF_REVERSAL = "A transfer reversal cannot be reversed"
+    const val RECURRING_TRANSACTION_DATE_RANGE = "End date must not be before start date or last run date"
+    const val RECURRING_TRANSACTION_TERMINAL = "Completed or cancelled recurring transaction cannot be updated"
+    const val RECURRING_TRANSACTION_STATUS = "Recurring transaction status must be ACTIVE or PAUSED"
+
+    const val ERROR_MESSAGES_SEPARATOR = "; "
+    const val VALIDATION_FAILED = "Validation failed"
 }

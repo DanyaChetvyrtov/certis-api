@@ -21,6 +21,14 @@ class UserRepository(
             .where(Tables.USERS.ID.eq(id))
             .fetchOneInto(User::class.java)
 
+    fun create(user: User): User? =
+        dsl.insertInto(Tables.USERS)
+            .set(dsl.newRecord(Tables.USERS, user))
+            .onConflict(Tables.USERS.EMAIL)
+            .doNothing()
+            .returning()
+            .fetchOneInto(User::class.java)
+
     fun save(user: User): User =
         dsl.insertInto(Tables.USERS)
             .set(dsl.newRecord(Tables.USERS, user))
@@ -29,15 +37,6 @@ class UserRepository(
             .set(dsl.newRecord(Tables.USERS, user))
             .returning()
             .fetchOneInto(User::class.java)!!
-
-    fun saveAll(users: List<User>): List<User> {
-        val records = users.map {
-            dsl.newRecord(Tables.USERS, it)
-        }
-
-        dsl.batchStore(records).execute()
-        return users
-    }
 
     fun deleteById(id: UUID) {
         dsl.deleteFrom(Tables.USERS)

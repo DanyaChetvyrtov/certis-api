@@ -1,0 +1,127 @@
+name: CI Pipeline for Spring Boot with Kotlin
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+    branches: [ dev, master ]
+
+permissions:
+  contents: read
+  checks: write
+  security-events: write
+
+env:
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_NAME: certis_test
+  DB_USER: certis_user
+  DB_PASSWORD: certis_pass
+  DB_SCHEMA: keeper
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Apply Liquibase migrations
+        run: ./gradlew update
+
+      - name: Build and run checks (tests, detekt, ktlint, jacoco)
+        run: ./gradlew check --continue -Dspring.profiles.active=test
+
+      - name: Publish JUnit Test Report
+        if: ${{ always() && hashFiles('build/test-results/test/TEST-*.xml') != '' }}
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: 'build/test-results/test/TEST-*.xml'
+          check_name: JUnit Test Report
+          detailed_summary: true
+          include_time_in_summary: true
+          require_tests: true
+          fail_on_parse_error: true
+          fail_on_failure: false
+
+      - name: Publish Detekt Summary
+        if: ${{ always() && hashFiles('build/reports/detekt/detekt.md') != '' }}
+        run: |
+          cat build/reports/detekt/detekt.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Detekt SARIF
+        if: ${{ always() && hashFiles('build/reports/detekt/detekt.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif
+          category: detekt
+
+      - name: Merge ktlint SARIF reports
+        if: ${{ always() && hashFiles('build/reports/ktlint/**/*.sarif') != '' }}
+        run: |
+          jq -s '
+            {
+              version: "2.1.0",
+              "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+              runs: [.[].runs[]]
+            }
+          ' \
+            build/reports/ktlint/ktlintMainSourceSetCheck/ktlintMainSourceSetCheck.sarif \
+            build/reports/ktlint/ktlintTestSourceSetCheck/ktlintTestSourceSetCheck.sarif \
+            build/reports/ktlint/ktlintKotlinScriptCheck/ktlintKotlinScriptCheck.sarif \
+            > build/reports/ktlint/ktlint-combined.sarif
+
+      - name: Set up reviewdog
+        if: ${{ always() && hashFiles('build/reports/ktlint/ktlint-combined.sarif') != '' }}
+        uses: reviewdog/action-setup@v1.5.0
+        with:
+          reviewdog_version: v0.21.0
+
+      - name: Publish ktlint Check
+        if: ${{ always() && hashFiles('build/reports/ktlint/ktlint-combined.sarif') != '' }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          reviewdog \
+            -f=sarif \
+            -name=ktlint \
+            -reporter=github-check \
+            -filter-mode=nofilter \
+            -level=error \
+            -fail-level=none \
+            < build/reports/ktlint/ktlint-combined.sarif

@@ -2,19 +2,78 @@ spring:
   application:
     name: certis
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:certis}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
+  liquibase:
+    enabled: false
+
 server:
   port: 8080
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
 digital-hustle:
   certis:
+    api:
+      public-url: ${PUBLIC_API_URL:http://localhost:8080}
+
+    time:
+      zone-id: ${APPLICATION_TIME_ZONE:UTC}
+
+    recurring-transactions:
+      scheduler:
+        enabled: ${RECURRING_TRANSACTION_SCHEDULER_ENABLED:true}
+        delay: ${RECURRING_TRANSACTION_SCHEDULER_DELAY:1m}
+        batch-size: ${RECURRING_TRANSACTION_SCHEDULER_BATCH_SIZE:100}
+        max-catch-up-per-template: ${RECURRING_TRANSACTION_SCHEDULER_MAX_CATCH_UP_PER_TEMPLATE:10}
+        retry-initial-delay: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_INITIAL_DELAY:1m}
+        retry-max-delay: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_MAX_DELAY:1h}
+
     security:
       jwt:
         secret: ${JWT_SECRET}
-        access-duration: ${ACCESS_TOKEN_DURATION_HOURS}
-        refresh-duration: ${REFRESH_TOKEN_DURATION_DAYS}
+        access-duration: ${ACCESS_TOKEN_DURATION:30m}
+        refresh-duration: ${REFRESH_TOKEN_DURATION:7d}
+
+      rate-limit:
+        cache-maximum-size: ${AUTH_RATE_LIMIT_CACHE_MAXIMUM_SIZE:10000}
+        cache-expire-after: ${AUTH_RATE_LIMIT_CACHE_EXPIRE_MINUTES:10}m
+        login:
+          capacity: ${LOGIN_RATE_LIMIT_CAPACITY:10}
+          refill-period: ${LOGIN_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
+        registration:
+          capacity: ${REGISTRATION_RATE_LIMIT_CAPACITY:5}
+          refill-period: ${REGISTRATION_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
+        refresh:
+          capacity: ${REFRESH_RATE_LIMIT_CAPACITY:30}
+          refill-period: ${REFRESH_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
+
+    minio:
+      endpoint: http://${MINIO_HOST}:${MINIO_PORT}
+      access-key: ${MINIO_ACCESS_KEY}
+      secret-key: ${MINIO_SECRET_KEY}
+      bucket-name: ${MINIO_BUCKET_NAME}

@@ -1,16 +1,24 @@
 package ru.digitalhustle.certis.service.security
 
-import ru.digitalhustle.certis.model.UserCredentials
+import ru.digitalhustle.certis.model.entity.RefreshSession
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtData
+import ru.digitalhustle.certis.model.security.UserCredentials
+import java.util.UUID
 
 interface AuthService {
 
-    fun register(userWithCredentials: UserCredentials): User
+    fun getSessions(userId: UUID): List<RefreshSession>
 
-    fun login(user: User): JwtData
+    fun register(userCredentials: UserCredentials): User
 
-    fun refreshAccess(refreshToken: String): JwtData
+    fun login(userCredentials: UserCredentials): JwtData
 
-    fun refreshTokens(refreshToken: String): JwtData
+    fun refreshTokens(refreshToken: String?): JwtData
+
+    fun logout(refreshToken: String?)
+
+    fun revokeSession(userId: UUID, sessionId: UUID)
+
+    fun revokeAllSessions(userId: UUID)
 }

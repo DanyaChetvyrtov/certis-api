@@ -6,17 +6,27 @@ spring-dependency-management = "1.1.7"
 detekt = "2.0.0-alpha.1"
 ktlint = "13.0.0"
 liquibase = "4.33.0"
+liquibase-gradle = "3.1.0"
 
-jooq-version = "3.19.27"
+jooq-version = "3.20.9"
 jooq-gradle = "10.2.1"
-postgresql = "42.7.8"
+postgresql = "42.7.11"
 picocli = "4.7.5"
 snakeyaml = "2.4"
 springdoc = "2.8.13"
 mapstruct = "1.6.3"
 jjwt = "0.12.6"
-
-liquibase-gradle = "3.1.0"
+bucket4j = "8.19.0"
+caffeine = "3.2.4"
+minio = "8.5.7"
+jakarta-persistence = "3.2.0"
+commons-io = "2.21.0"
+kotlin-logging = "8.0.02"
+tika = "3.2.3"
+twelvemonkeys = "3.14.0"
+zonky-embedded-postgres = "2.2.0"
+zonky-embedded-database-spring-test = "2.7.1"
+sarif4k = "0.6.0"
 
 [libraries]
 spring-boot-bom = { group = "org.springframework.boot", name = "spring-boot-dependencies", version.ref = "spring-boot" }
@@ -26,10 +36,13 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 
 spring-boot-starter-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
 spring-boot-starter-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
+spring-boot-starter-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 spring-boot-starter-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-jdbc" }
 spring-boot-starter-jooq = { group = "org.springframework.boot", name = "spring-boot-starter-jooq" }
 spring-boot-starter-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation" }
 spring-boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
+spring-security-test = { group = "org.springframework.security", name = "spring-security-test" }
+assertj-core = { group = "org.assertj", name = "assertj-core" }
 
 springdoc = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
@@ -42,6 +55,13 @@ jooq-jackson-extensions = { group = "org.jooq", name = "jooq-jackson-extensions"
 picocli = { group = "info.picocli", name = "picocli", version.ref = "picocli" }
 snakeyaml = { group = "org.yaml", name = "snakeyaml", version.ref = "snakeyaml" }
 
+minio = { group = "io.minio", name = "minio", version.ref = "minio" }
+jakarta-persistence = { group = "jakarta.persistence", name = "jakarta.persistence-api", version.ref = "jakarta-persistence" }
+commons-io = { group = "commons-io", name = "commons-io", version.ref = "commons-io" }
+kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging-jvm", version.ref = "kotlin-logging" }
+tika-core = { group = "org.apache.tika", name = "tika-core", version.ref = "tika" }
+twelvemonkeys-imageio-webp = { group = "com.twelvemonkeys.imageio", name = "imageio-webp", version.ref = "twelvemonkeys" }
+
 mapstruct = { group = "org.mapstruct", name = "mapstruct", version.ref = "mapstruct" }
 mapstruct-processor = { group = "org.mapstruct", name = "mapstruct-processor", version.ref = "mapstruct" }
 
@@ -49,8 +69,13 @@ jjwt-api = { group = "io.jsonwebtoken", name = "jjwt-api", version.ref = "jjwt" 
 jjwt-impl = { group = "io.jsonwebtoken", name = "jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref = "jjwt" }
 
+bucket4j-core = { group = "com.bucket4j", name = "bucket4j_jdk17-core", version.ref = "bucket4j" }
+caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
+
 kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }
+zonky-embedded-postgres = { group = "io.zonky.test", name = "embedded-postgres", version.ref = "zonky-embedded-postgres" }
+zonky-embedded-database-spring-test = { group = "io.zonky.test", name = "embedded-database-spring-test", version.ref = "zonky-embedded-database-spring-test" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

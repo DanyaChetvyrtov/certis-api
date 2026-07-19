@@ -10,5 +10,5 @@ data class JwtData(
 
     val accessToken: String,
 
-    val refreshToken: String
+    val refreshToken: String,
 )

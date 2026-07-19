@@ -1,4 +1,8 @@
 package ru.digitalhustle.certis.enums
 
-// cash, bank, card, investment
-enum class AccountType
+enum class AccountType {
+    CASH,
+    BANK,
+    CARD,
+    INVESTMENT,
+}
