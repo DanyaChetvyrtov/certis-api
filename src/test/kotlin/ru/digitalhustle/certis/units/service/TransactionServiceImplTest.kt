@@ -9,18 +9,20 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.transaction.NewTransaction
-import ru.digitalhustle.certis.model.transaction.TransactionFilter
-import ru.digitalhustle.certis.model.transaction.TransactionPage
-import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
-import ru.digitalhustle.certis.repository.TransactionRepository
-import ru.digitalhustle.certis.service.domain.impl.TransactionServiceImpl
+import ru.digitalhustle.certis.features.transaction.command.model.AssignTransactionsCategory
+import ru.digitalhustle.certis.features.transaction.command.model.NewTransaction
+import ru.digitalhustle.certis.features.transaction.command.model.TransactionCategoryAssignment
+import ru.digitalhustle.certis.features.transaction.command.model.UpdateTransactionData
+import ru.digitalhustle.certis.features.transaction.command.repository.TransactionRepository
+import ru.digitalhustle.certis.features.transaction.command.service.impl.TransactionServiceImpl
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.features.transaction.model.Transaction
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -33,41 +35,11 @@ class TransactionServiceImplTest {
 
     private val transactionRepository = mock(TransactionRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-08T19:00:00Z"), ZoneOffset.UTC)
-    private val transactionService = TransactionServiceImpl(transactionRepository, clock)
+    private val transactionService = TransactionServiceImpl(transactionRepository, ApplicationClock(clock))
 
     private companion object {
         private val AMOUNT = BigDecimal("42.50")
         private val TRANSACTION_DATE = OffsetDateTime.parse("2026-08-07T12:30:00Z")
-    }
-
-    @Test
-    fun `should get transaction owned by user`() {
-        // given
-        val transaction = createTransaction()
-
-        `when`(transactionRepository.findByIdAndUserId(transaction.id, transaction.userId))
-            .thenReturn(transaction)
-
-        // when
-        val result = transactionService.getById(transaction.id, transaction.userId)
-
-        // then
-        assertThat(result).isEqualTo(transaction)
-    }
-
-    @Test
-    fun `should throw not found for transaction owned by another user`() {
-        // given
-        val transactionId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-
-        `when`(transactionRepository.findByIdAndUserId(transactionId, userId))
-            .thenReturn(null)
-
-        // when, then
-        assertThatThrownBy {
-            transactionService.getById(transactionId, userId)
-        }.isInstanceOf(NotFoundException::class.java)
     }
 
     @Test
@@ -116,25 +88,39 @@ class TransactionServiceImplTest {
     }
 
     @Test
-    fun `should get filtered transaction page`() {
+    fun `should lock all requested transactions`() {
         // given
         val userId = UUID.randomUUID()
-        val filter = createFilter()
-        val page = TransactionPage(
-            items = listOf(createTransaction(userId = userId)),
-            page = filter.page,
-            size = filter.size,
-            totalElements = 1,
+        val transactions = listOf(
+            createTransaction(userId = userId),
+            createTransaction(userId = userId),
         )
+        val ids = transactions.map(Transaction::id)
 
-        `when`(transactionRepository.findAllByUserId(userId, filter))
-            .thenReturn(page)
+        `when`(transactionRepository.findAllByIdsAndUserIdForUpdate(ids, userId))
+            .thenReturn(transactions)
 
         // when
-        val result = transactionService.getAllByUserId(userId, filter)
+        val result = transactionService.getAllByIdsForUpdate(ids, userId)
 
         // then
-        assertThat(result).isEqualTo(page)
+        assertThat(result).isEqualTo(transactions)
+    }
+
+    @Test
+    fun `should reject batch when any requested transaction is unavailable`() {
+        // given
+        val userId = UUID.randomUUID()
+        val availableTransaction = createTransaction(userId = userId)
+        val ids = listOf(availableTransaction.id, UUID.randomUUID())
+
+        `when`(transactionRepository.findAllByIdsAndUserIdForUpdate(ids, userId))
+            .thenReturn(listOf(availableTransaction))
+
+        // when, then
+        assertThatThrownBy {
+            transactionService.getAllByIdsForUpdate(ids, userId)
+        }.isInstanceOf(NotFoundException::class.java)
     }
 
     @Test
@@ -246,6 +232,63 @@ class TransactionServiceImplTest {
     }
 
     @Test
+    fun `should assign categories to requested transactions`() {
+        // given
+        val assignment = AssignTransactionsCategory(
+            userId = UUID.randomUUID(),
+            assignments = listOf(
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+            ),
+        )
+
+        `when`(
+            transactionRepository.assignCategories(
+                assignment.assignments,
+                assignment.userId,
+                OffsetDateTime.now(clock),
+            ),
+        ).thenReturn(assignment.assignments.size)
+
+        // when
+        transactionService.assignCategories(assignment)
+
+        // then
+        verify(transactionRepository).assignCategories(
+            assignment.assignments,
+            assignment.userId,
+            OffsetDateTime.now(clock),
+        )
+    }
+
+    @Test
+    fun `should fail when category assignment batch is incomplete`() {
+        // given
+        val assignment = AssignTransactionsCategory(
+            userId = UUID.randomUUID(),
+            assignments = listOf(
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+            ),
+        )
+
+        `when`(
+            transactionRepository.assignCategories(
+                assignment.assignments,
+                assignment.userId,
+                OffsetDateTime.now(clock),
+            ),
+        ).thenReturn(1)
+
+        // when, then
+        assertThatThrownBy {
+            transactionService.assignCategories(assignment)
+        }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessage(TransactionErrorMessages.TRANSACTION_CATEGORY_ASSIGNMENT_FAILED)
+    }
+
+    @Test
     fun `should soft delete transaction`() {
         // given
         val transaction = createTransaction()
@@ -294,17 +337,6 @@ class TransactionServiceImplTest {
             transactionService.delete(transactionId, userId)
         }.isInstanceOf(NotFoundException::class.java)
     }
-
-    private fun createFilter(): TransactionFilter =
-        TransactionFilter(
-            accountId = null,
-            categoryId = null,
-            type = null,
-            from = null,
-            to = null,
-            page = 0,
-            size = 20,
-        )
 
     private fun createNewTransaction(
         userId: UUID = UUID.randomUUID(),

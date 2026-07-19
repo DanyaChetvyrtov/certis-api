@@ -55,7 +55,7 @@ digital-hustle:
 
     security:
       jwt:
-        secret: ${JWT_SECRET}
+        secret: ${JWT_SECRET:long-random-secret-for-local-testing}
         access-duration: ${ACCESS_TOKEN_DURATION:30m}
         refresh-duration: ${REFRESH_TOKEN_DURATION:7d}
 
@@ -73,7 +73,7 @@ digital-hustle:
           refill-period: ${REFRESH_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
 
     minio:
-      endpoint: http://${MINIO_HOST}:${MINIO_PORT}
-      access-key: ${MINIO_ACCESS_KEY}
-      secret-key: ${MINIO_SECRET_KEY}
-      bucket-name: ${MINIO_BUCKET_NAME}
+      endpoint: http://${MINIO_HOST:localhost}:${MINIO_PORT:9000}
+      access-key: ${MINIO_ACCESS_KEY:admin}
+      secret-key: ${MINIO_SECRET_KEY:root1234}
+      bucket-name: ${MINIO_BUCKET_NAME:profile}

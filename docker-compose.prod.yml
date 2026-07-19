@@ -1,0 +1,141 @@
+name: certis-prod
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 768m
+    networks:
+      - backend
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+    volumes:
+      - minio-data:/data
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 768m
+    networks:
+      - backend
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_SCHEMA: ${DB_SCHEMA:-keeper}
+
+      SPRING_LIQUIBASE_ENABLED: "true"
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+
+      PUBLIC_API_URL: ${PUBLIC_API_URL:?PUBLIC_API_URL is required}
+      APPLICATION_TIME_ZONE: ${APPLICATION_TIME_ZONE:-UTC}
+
+      RECURRING_TRANSACTION_SCHEDULER_ENABLED: ${RECURRING_TRANSACTION_SCHEDULER_ENABLED:-true}
+      RECURRING_TRANSACTION_SCHEDULER_DELAY: ${RECURRING_TRANSACTION_SCHEDULER_DELAY:-1m}
+      RECURRING_TRANSACTION_SCHEDULER_BATCH_SIZE: ${RECURRING_TRANSACTION_SCHEDULER_BATCH_SIZE:-100}
+      RECURRING_TRANSACTION_SCHEDULER_MAX_CATCH_UP_PER_TEMPLATE: ${RECURRING_TRANSACTION_SCHEDULER_MAX_CATCH_UP_PER_TEMPLATE:-10}
+      RECURRING_TRANSACTION_SCHEDULER_RETRY_INITIAL_DELAY: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_INITIAL_DELAY:-1m}
+      RECURRING_TRANSACTION_SCHEDULER_RETRY_MAX_DELAY: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_MAX_DELAY:-1h}
+
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ACCESS_TOKEN_DURATION: ${ACCESS_TOKEN_DURATION:-30m}
+      REFRESH_TOKEN_DURATION: ${REFRESH_TOKEN_DURATION:-7d}
+
+      MINIO_HOST: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:?MINIO_BUCKET_NAME is required}
+
+      JAVA_TOOL_OPTIONS: >-
+        -XX:InitialRAMPercentage=25.0
+        -XX:MaxRAMPercentage=70.0
+        -XX:+ExitOnOutOfMemoryError
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:8080/actuator/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 1536m
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+      - backend
+
+  web:
+    build:
+      context: ${CERTIS_WEB_BUILD_CONTEXT:-https://github.com/DanyaChetvyrtov/certis-web.git#main}
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 10s
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres-data:
+  minio-data:

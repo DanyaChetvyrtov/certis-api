@@ -11,11 +11,14 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.Profile
-import ru.digitalhustle.certis.model.profile.NewProfile
-import ru.digitalhustle.certis.model.profile.UpdateProfileData
-import ru.digitalhustle.certis.repository.ProfileRepository
-import ru.digitalhustle.certis.service.domain.impl.ProfileServiceImpl
+import ru.digitalhustle.certis.features.profile.command.model.NewProfile
+import ru.digitalhustle.certis.features.profile.command.model.UpdateProfileData
+import ru.digitalhustle.certis.features.profile.command.repository.ProfileRepository
+import ru.digitalhustle.certis.features.profile.command.service.impl.ProfileServiceImpl
+import ru.digitalhustle.certis.features.profile.model.Profile
+import ru.digitalhustle.certis.features.profile.query.repository.ProfileQueryRepository
+import ru.digitalhustle.certis.features.profile.query.service.impl.ProfileRecordQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -25,10 +28,13 @@ import java.util.UUID
 
 class ProfileServiceImplTest {
 
+    private val profileQueryRepository = mock(ProfileQueryRepository::class.java)
+    private val profileQueryService = ProfileRecordQueryServiceImpl(profileQueryRepository)
+
     private val profileRepository = mock(ProfileRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profileService = ProfileServiceImpl(profileRepository, clock)
+    private val profileService = ProfileServiceImpl(profileRepository, ApplicationClock(clock))
 
     private companion object {
         private const val NAME = "John"
@@ -40,16 +46,16 @@ class ProfileServiceImplTest {
         // given
         val profile = createProfile()
 
-        `when`(profileRepository.findById(profile.id))
+        `when`(profileQueryRepository.findById(profile.id))
             .thenReturn(profile)
 
         // when
-        val foundProfile = profileService.getById(profile.id)
+        val foundProfile = profileQueryService.getById(profile.id)
 
         // then
         assertThat(foundProfile).isEqualTo(profile)
 
-        verify(profileRepository)
+        verify(profileQueryRepository)
             .findById(profile.id)
     }
 
@@ -58,15 +64,15 @@ class ProfileServiceImplTest {
         // given
         val id = UUID.randomUUID()
 
-        `when`(profileRepository.findById(id))
+        `when`(profileQueryRepository.findById(id))
             .thenReturn(null)
 
         // when, then
         assertThatThrownBy {
-            profileService.getById(id)
+            profileQueryService.getById(id)
         }.isInstanceOf(NotFoundException::class.java)
 
-        verify(profileRepository)
+        verify(profileQueryRepository)
             .findById(id)
     }
 

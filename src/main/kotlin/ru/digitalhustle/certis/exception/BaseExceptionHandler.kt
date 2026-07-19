@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -12,10 +13,11 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.api.constants.ApiErrorMessages
+import ru.digitalhustle.certis.api.dto.response.ExceptionRs
+import ru.digitalhustle.certis.features.profile.constants.ProfileErrorMessages
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
+import ru.digitalhustle.certis.features.security.constants.SecurityErrorMessages
 
 @RestControllerAdvice
 class BaseExceptionHandler(
@@ -32,7 +34,7 @@ class BaseExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
-            message = ErrorMessages.VALIDATION_FAILED,
+            message = ApiErrorMessages.VALIDATION_FAILED,
             errors = exception.extractFieldErrors(),
         )
     }
@@ -43,7 +45,7 @@ class BaseExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
-            message = ErrorMessages.VALIDATION_FAILED,
+            message = ApiErrorMessages.VALIDATION_FAILED,
             errors = exception.extractFieldErrors(),
         )
     }
@@ -55,7 +57,7 @@ class BaseExceptionHandler(
 
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.BAD_REQUEST,
-            message = "${ErrorMessages.VALIDATION_FAILED}. Invalid value.",
+            message = "${ApiErrorMessages.VALIDATION_FAILED}. Invalid value.",
         )
     }
 
@@ -66,7 +68,18 @@ class BaseExceptionHandler(
 
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.BAD_REQUEST,
-            message = ErrorMessages.VALIDATION_FAILED,
+            message = ApiErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun handleMissingServletRequestParameterException(exception: MissingServletRequestParameterException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createResponse(
+            status = HttpStatus.BAD_REQUEST,
+            message = ApiErrorMessages.VALIDATION_FAILED,
         )
     }
 
@@ -77,7 +90,7 @@ class BaseExceptionHandler(
 
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.PAYLOAD_TOO_LARGE,
-            message = ErrorMessages.PHOTO_TOO_LARGE,
+            message = ProfileErrorMessages.PHOTO_TOO_LARGE,
         )
     }
 
@@ -88,7 +101,7 @@ class BaseExceptionHandler(
 
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.FORBIDDEN,
-            message = ErrorMessages.ACCESS_DENIED,
+            message = SecurityErrorMessages.ACCESS_DENIED,
         )
     }
 
@@ -99,7 +112,7 @@ class BaseExceptionHandler(
 
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.SERVICE_UNAVAILABLE,
-            message = ErrorMessages.PHOTO_STORAGE_UNAVAILABLE,
+            message = ProfileErrorMessages.PHOTO_STORAGE_UNAVAILABLE,
         )
     }
 

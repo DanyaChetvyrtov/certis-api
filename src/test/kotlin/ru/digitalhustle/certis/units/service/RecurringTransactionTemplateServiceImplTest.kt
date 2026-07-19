@@ -6,13 +6,14 @@ import org.junit.jupiter.api.assertAll
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.model.transaction.NewRecurringTransactionTemplate
-import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
-import ru.digitalhustle.certis.service.domain.impl.RecurringTransactionTemplateServiceImpl
+import ru.digitalhustle.certis.features.transaction.command.model.NewRecurringTransactionTemplate
+import ru.digitalhustle.certis.features.transaction.command.repository.RecurringTransactionTemplateRepository
+import ru.digitalhustle.certis.features.transaction.command.service.impl.RecurringTransactionTemplateServiceImpl
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -25,7 +26,7 @@ class RecurringTransactionTemplateServiceImplTest {
 
     private val repository = mock(RecurringTransactionTemplateRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-12T18:00:00Z"), ZoneOffset.UTC)
-    private val service = RecurringTransactionTemplateServiceImpl(repository, clock)
+    private val service = RecurringTransactionTemplateServiceImpl(repository, ApplicationClock(clock))
 
     @Test
     fun `should save active recurring transaction starting on requested date`() {

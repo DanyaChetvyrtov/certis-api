@@ -7,12 +7,13 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.Transfer
-import ru.digitalhustle.certis.model.transfer.NewTransfer
-import ru.digitalhustle.certis.repository.TransferRepository
-import ru.digitalhustle.certis.service.domain.impl.TransferServiceImpl
+import ru.digitalhustle.certis.features.transaction.command.model.NewTransfer
+import ru.digitalhustle.certis.features.transaction.command.repository.TransferRepository
+import ru.digitalhustle.certis.features.transaction.command.service.impl.TransferServiceImpl
+import ru.digitalhustle.certis.features.transaction.model.Transfer
+import ru.digitalhustle.certis.shared.enums.Currency
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -24,35 +25,7 @@ class TransferServiceImplTest {
 
     private val transferRepository = mock(TransferRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
-    private val transferService = TransferServiceImpl(transferRepository, clock)
-
-    @Test
-    fun `should get transfer owned by user`() {
-        // given
-        val transfer = createTransfer()
-        `when`(transferRepository.findByIdAndUserId(transfer.id, transfer.userId))
-            .thenReturn(transfer)
-
-        // when
-        val result = transferService.getById(transfer.id, transfer.userId)
-
-        // then
-        assertThat(result).isEqualTo(transfer)
-    }
-
-    @Test
-    fun `should reject missing transfer`() {
-        // given
-        val transferId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-
-        // when, then
-        assertThatThrownBy {
-            transferService.getById(transferId, userId)
-        }
-            .isInstanceOf(NotFoundException::class.java)
-            .hasMessage("Transfer not found")
-    }
+    private val transferService = TransferServiceImpl(transferRepository, ApplicationClock(clock))
 
     @Test
     fun `should get transfer for update`() {

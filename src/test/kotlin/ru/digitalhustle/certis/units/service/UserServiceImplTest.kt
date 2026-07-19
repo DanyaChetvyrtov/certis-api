@@ -8,9 +8,13 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.repository.UserRepository
-import ru.digitalhustle.certis.service.domain.impl.UserServiceImpl
+import ru.digitalhustle.certis.features.security.command.repository.UserRepository
+import ru.digitalhustle.certis.features.security.command.service.impl.UserServiceImpl
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.security.query.repository.UserQueryRepository
+import ru.digitalhustle.certis.features.security.query.service.impl.UserQueryServiceImpl
+import ru.digitalhustle.certis.shared.enums.Currency
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -19,22 +23,39 @@ import java.util.UUID
 
 class UserServiceImplTest {
 
+    private val userQueryRepository = mock(UserQueryRepository::class.java)
+    private val userQueryService = UserQueryServiceImpl(userQueryRepository)
+
     private val repository = mock(UserRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
-    private val service = UserServiceImpl(repository, clock)
+    private val service = UserServiceImpl(repository, ApplicationClock(clock))
+
+    @Test
+    fun `should read user by id`() {
+        // given
+        val user = createUser()
+        `when`(userQueryRepository.findById(user.id)).thenReturn(user)
+
+        // when
+        val result = userQueryService.getUserById(user.id)
+
+        // then
+        assertThat(result).isEqualTo(user)
+        verify(userQueryRepository).findById(user.id)
+    }
 
     @Test
     fun `should normalize email when reading user`() {
         // given
         val user = createUser()
-        `when`(repository.findByEmail(EMAIL)).thenReturn(user)
+        `when`(userQueryRepository.findByEmail(EMAIL)).thenReturn(user)
 
         // when
-        val result = service.getUserByEmail("  USER@TEST.COM ")
+        val result = userQueryService.getUserByEmail("  USER@TEST.COM ")
 
         // then
         assertThat(result).isEqualTo(user)
-        verify(repository).findByEmail(EMAIL)
+        verify(userQueryRepository).findByEmail(EMAIL)
     }
 
     @Test
@@ -48,6 +69,7 @@ class UserServiceImplTest {
 
         // then
         assertThat(result.email).isEqualTo(EMAIL)
+        assertThat(result.preferredCurrency).isEqualTo(Currency.USD)
         assertThat(result.lastLogin).isEqualTo(OffsetDateTime.now(clock))
         assertThat(result.createdAt).isEqualTo(OffsetDateTime.now(clock))
         verify(repository).create(anyUser())
@@ -76,6 +98,19 @@ class UserServiceImplTest {
 
         // then
         verify(repository).save(user.copy(lastLogin = OffsetDateTime.now(clock)))
+    }
+
+    @Test
+    fun `should update preferred currency`() {
+        // given
+        val user = createUser()
+        `when`(repository.findById(user.id)).thenReturn(user)
+
+        // when
+        service.updatePreferredCurrency(user.id, Currency.EUR)
+
+        // then
+        verify(repository).save(user.copy(preferredCurrency = Currency.EUR))
     }
 
     private fun anyUser(): User {

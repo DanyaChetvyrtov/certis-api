@@ -27,6 +27,7 @@ twelvemonkeys = "3.14.0"
 zonky-embedded-postgres = "2.2.0"
 zonky-embedded-database-spring-test = "2.7.1"
 sarif4k = "0.6.0"
+archunit = "1.5.0"
 
 [libraries]
 spring-boot-bom = { group = "org.springframework.boot", name = "spring-boot-dependencies", version.ref = "spring-boot" }
@@ -43,6 +44,7 @@ spring-boot-starter-validation = { group = "org.springframework.boot", name = "s
 spring-boot-starter-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 spring-security-test = { group = "org.springframework.security", name = "spring-security-test" }
 assertj-core = { group = "org.assertj", name = "assertj-core" }
+archunit = { group = "com.tngtech.archunit", name = "archunit", version.ref = "archunit" }
 
 springdoc = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 
