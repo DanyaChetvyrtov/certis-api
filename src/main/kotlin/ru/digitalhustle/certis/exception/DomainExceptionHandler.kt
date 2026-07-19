@@ -10,7 +10,11 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.exception.custom.*
+import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.InvalidTokenException
+import ru.digitalhustle.certis.exception.custom.MissedTokenException
+import ru.digitalhustle.certis.exception.custom.NotFoundException
+import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
 import ru.digitalhustle.certis.producer.ExceptionResponseProducer
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -59,7 +63,7 @@ class DomainExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProducer.createNotFound(
-            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase
+            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
         )
     }
 
@@ -69,7 +73,7 @@ class DomainExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProducer.createConflict(
-            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase
+            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
         )
     }
 }

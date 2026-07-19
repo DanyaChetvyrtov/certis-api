@@ -30,14 +30,13 @@ class AuthControllerIT : AbstractIntegrationTest() {
         mvc.perform(
             post(PathConstants.AUTH + PathConstants.REGISTRATION)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsBytes(request))
+                .content(objectMapper.writeValueAsBytes(request)),
         )
-
             // then
             .andExpect(status().isCreated)
 
         val user = requireNotNull(
-            userRepository.findByEmail("john@test.com")
+            userRepository.findByEmail("john@test.com"),
         )
 
         assertThat(user.email)
@@ -63,7 +62,6 @@ class AuthControllerIT : AbstractIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(request)),
         )
-
             // then
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.status").value(409))
@@ -86,7 +84,6 @@ class AuthControllerIT : AbstractIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(request)),
         )
-
             // then
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.status").value(400))
@@ -144,7 +141,6 @@ class AuthControllerIT : AbstractIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(request)),
         )
-
             // then
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.status").value(401))
@@ -165,7 +161,6 @@ class AuthControllerIT : AbstractIntegrationTest() {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsBytes(request)),
         )
-
             // then
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.status").value(404))
@@ -250,7 +245,6 @@ class AuthControllerIT : AbstractIntegrationTest() {
                     ),
                 ),
         )
-
             // then
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.status").value(401))

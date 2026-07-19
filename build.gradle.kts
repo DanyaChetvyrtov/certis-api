@@ -1,7 +1,6 @@
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
 import org.jooq.meta.jaxb.Logging
-import java.sql.DriverManager
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -187,17 +186,21 @@ tasks.withType<Test> {
 
 tasks.withType<JacocoReport> {
     classDirectories.setFrom(
-        files(classDirectories.files.map {
-            fileTree(it).apply { exclude(jacocoExcludes) }
-        })
+        files(
+            classDirectories.files.map {
+                fileTree(it).apply { exclude(jacocoExcludes) }
+            },
+        ),
     )
 }
 
 tasks.withType<JacocoCoverageVerification> {
     classDirectories.setFrom(
-        files(classDirectories.files.map {
-            fileTree(it).apply { exclude(jacocoExcludes) }
-        })
+        files(
+            classDirectories.files.map {
+                fileTree(it).apply { exclude(jacocoExcludes) }
+            },
+        ),
     )
 
     violationRules {

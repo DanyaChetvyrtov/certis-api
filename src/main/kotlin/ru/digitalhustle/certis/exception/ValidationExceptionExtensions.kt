@@ -4,7 +4,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import ru.digitalhustle.certis.constants.ErrorMessages
 
-// TODO протестировать с валидацией
 fun MethodArgumentNotValidException.extractFieldErrors(): Map<String, String> =
     bindingResult.fieldErrors
         .mapNotNull { error ->
