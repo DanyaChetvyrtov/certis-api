@@ -1,6 +1,6 @@
 package ru.digitalhustle.certis.model.entity
 
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 data class User(
@@ -11,7 +11,7 @@ data class User(
 
     val passwordHash: String,
 
-    val lastLogin: LocalDateTime,
+    val lastLogin: OffsetDateTime?,
 
-    val createdAt: LocalDateTime,
+    val createdAt: OffsetDateTime,
 )

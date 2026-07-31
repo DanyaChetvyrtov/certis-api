@@ -1,0 +1,116 @@
+@path=http://localhost:8080/api/v1/profiles
+
+### POST test create profile
+POST {{ path }}
+Content-Type: application/json
+
+{
+  "name": "Danil",
+  "surname": "Semenov",
+  "dateOfBirth": "2000-01-01"
+}
+
+> {%
+    client.test("Profile creation should be successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+        client.assert(response.body.id !== undefined, "Profile id is missing");
+    });
+
+    client.global.set("profileId", response.body.id);
+%}
+
+### GET test profile by id
+GET {{ path }}/{{ profileId }}
+Content-Type: application/json
+
+> {%
+    client.test("Profile should be found", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.id === client.global.get("profileId"), "Profile id does not match");
+    });
+%}
+
+### PUT test update profile
+PUT {{ path }}/{{ profileId }}
+Content-Type: application/json
+
+{
+  "name": "Danil",
+  "surname": "Updated",
+  "dateOfBirth": "2000-01-01"
+}
+
+> {%
+    client.test("Profile update should be successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.surname === "Updated", "Profile surname was not updated");
+    });
+%}
+
+### POST test upload profile photo
+POST {{ path }}/{{ profileId }}/photo
+Content-Type: multipart/form-data; boundary=profile-photo-boundary
+
+--profile-photo-boundary
+Content-Disposition: form-data; name="photo"; filename="profile-photo.jpg"
+Content-Type: image/jpeg
+
+< ./profile-photo.jpg
+--profile-photo-boundary--
+
+> {%
+    client.test("Profile photo upload should be successful", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+        client.assert(response.body.id !== undefined, "Photo meta id is missing");
+        client.assert(response.body.profileId === client.global.get("profileId"), "Photo profile id does not match");
+    });
+%}
+
+### GET test profile photo
+GET {{ path }}/{{ profileId }}/photo
+
+> {%
+    client.test("Profile photo should be found", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.contentType.mimeType === "image/jpeg", "Photo content type does not match");
+    });
+%}
+
+### PUT test update profile photo
+PUT {{ path }}/{{ profileId }}/photo
+Content-Type: multipart/form-data; boundary=profile-photo-boundary
+
+--profile-photo-boundary
+Content-Disposition: form-data; name="photo"; filename="profile-photo.jpg"
+Content-Type: image/jpeg
+
+< ./profile-photo.jpg
+--profile-photo-boundary--
+
+> {%
+    client.test("Profile photo update should be successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(response.body.id !== undefined, "Photo meta id is missing");
+        client.assert(response.body.profileId === client.global.get("profileId"), "Photo profile id does not match");
+    });
+%}
+
+### DELETE test profile photo
+DELETE {{ path }}/{{ profileId }}/photo
+Content-Type: application/json
+
+> {%
+    client.test("Profile photo deletion should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+### DELETE test profile
+DELETE {{ path }}/{{ profileId }}
+Content-Type: application/json
+
+> {%
+    client.test("Profile deletion should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}

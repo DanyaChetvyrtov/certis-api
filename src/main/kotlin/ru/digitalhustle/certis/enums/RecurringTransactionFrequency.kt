@@ -1,4 +1,8 @@
 package ru.digitalhustle.certis.enums
 
-// -- daily | weekly | monthly | yearly
-enum class RecurringTransactionFrequency
+enum class RecurringTransactionFrequency {
+    DAILY,
+    WEEKLY,
+    MONTHLY,
+    YEARLY,
+}

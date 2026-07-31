@@ -10,7 +10,7 @@ import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtDetails
 import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.security.impl.JwtUserDetailsService
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 class JwtUserDetailsServiceTest {
@@ -30,8 +30,8 @@ class JwtUserDetailsServiceTest {
             id = UUID.randomUUID(),
             email = EMAIL,
             passwordHash = PASSWORD_HASH,
-            lastLogin = LocalDateTime.now(),
-            createdAt = LocalDateTime.now(),
+            lastLogin = OffsetDateTime.now(),
+            createdAt = OffsetDateTime.now(),
         )
 
         `when`(userService.getUserByEmail(EMAIL))

@@ -1,4 +1,8 @@
 package ru.digitalhustle.certis.enums
 
-// -- active | completed | paused
-enum class GoalStatus
+enum class GoalStatus {
+    ACTIVE,
+    PAUSED,
+    ACHIEVED,
+    CANCELLED,
+}

@@ -10,4 +10,6 @@ interface UserService {
     fun save(email: String, password: String): User
 
     fun updateLastLogin(id: UUID)
+
+    fun delete(id: UUID)
 }

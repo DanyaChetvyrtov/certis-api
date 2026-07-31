@@ -6,7 +6,7 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.UserService
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
@@ -22,13 +22,14 @@ class UserServiceImpl(
         userRepository.findByEmail(email)?.let {
             throw EntityAlreadyExistsException.entity("User", "email")
         }
+
         return userRepository.save(
             User(
                 id = UUID.randomUUID(),
                 email = email,
                 passwordHash = password,
-                lastLogin = LocalDateTime.now(),
-                createdAt = LocalDateTime.now(),
+                lastLogin = OffsetDateTime.now(),
+                createdAt = OffsetDateTime.now(),
             ),
         )
     }
@@ -39,8 +40,11 @@ class UserServiceImpl(
 
         userRepository.save(
             user.copy(
-                lastLogin = LocalDateTime.now(),
+                lastLogin = OffsetDateTime.now(),
             ),
         )
     }
+
+    override fun delete(id: UUID): Unit =
+        userRepository.deleteById(id)
 }

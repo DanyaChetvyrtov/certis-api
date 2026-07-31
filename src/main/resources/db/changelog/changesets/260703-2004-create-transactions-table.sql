@@ -1,20 +1,36 @@
--- liquibase formatted sql
+--liquibase formatted sql
 
--- changeset dasemenov:260703-2004-create-transactions-table
-CREATE TABLE IF NOT EXISTS keeper.transactions
+--changeset dasemenov:260703-2004-create-transactions-table
+CREATE TABLE keeper.transactions
 (
     id          UUID PRIMARY KEY,
-    user_id     UUID REFERENCES keeper.users (id),
-    account_id  UUID REFERENCES keeper.accounts (id),
+    user_id     UUID           NOT NULL,
+    account_id  UUID           NOT NULL,
 
-    type        VARCHAR(50)    NOT NULL,
-    amount      NUMERIC(14, 2) NOT NULL,
+    type        VARCHAR(20)    NOT NULL,
+    amount      NUMERIC(19, 4) NOT NULL,
 
     category_id UUID,
     merchant    VARCHAR(255),
     note        TEXT,
 
-    date        TIMESTAMP      NOT NULL,
-    created_at  TIMESTAMP
-)
--- rollback DROP TABLE transactions;
+    date        TIMESTAMPTZ    NOT NULL,
+    created_at  TIMESTAMPTZ    NOT NULL,
+
+    CONSTRAINT uq_transactions_id_user
+        UNIQUE (id, user_id),
+    CONSTRAINT fk_transactions_account_user
+        FOREIGN KEY (account_id, user_id)
+            REFERENCES keeper.accounts (id, user_id),
+    CONSTRAINT fk_transactions_category_user
+        FOREIGN KEY (category_id, user_id)
+            REFERENCES keeper.categories (id, user_id),
+    CONSTRAINT chk_transactions_type
+        CHECK (type IN ('INCOME', 'EXPENSE')),
+    CONSTRAINT chk_transactions_amount_positive
+        CHECK (amount > 0),
+    CONSTRAINT chk_transactions_merchant_not_blank
+        CHECK (merchant IS NULL OR btrim(merchant) <> '')
+);
+
+--rollback DROP TABLE keeper.transactions;

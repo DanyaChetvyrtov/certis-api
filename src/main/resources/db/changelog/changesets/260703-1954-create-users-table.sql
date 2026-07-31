@@ -1,12 +1,18 @@
--- liquibase formatted sql
+--liquibase formatted sql
 
--- changeset dasemenov:260703-1954-create-users-table
-CREATE TABLE IF NOT EXISTS keeper.users
+--changeset dasemenov:260703-1954-create-users-table
+CREATE TABLE keeper.users
 (
     id            UUID PRIMARY KEY,
-    email         VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR             NOT NULL,
-    last_login    TIMESTAMP,
-    created_at    TIMESTAMP
-)
--- rollback DROP TABLE users;
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT         NOT NULL,
+    last_login    TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ  NOT NULL,
+
+    CONSTRAINT chk_users_email_not_blank
+        CHECK (btrim(email) <> ''),
+    CONSTRAINT chk_users_password_hash_not_blank
+        CHECK (btrim(password_hash) <> '')
+);
+
+--rollback DROP TABLE keeper.users;

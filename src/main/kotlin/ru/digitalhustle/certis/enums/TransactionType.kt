@@ -1,4 +1,6 @@
 package ru.digitalhustle.certis.enums
 
-// -- income | expense | transfer
-enum class TransactionType
+enum class TransactionType {
+    INCOME,
+    EXPENSE,
+}

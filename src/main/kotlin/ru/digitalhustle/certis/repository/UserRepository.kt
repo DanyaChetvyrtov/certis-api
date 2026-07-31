@@ -30,15 +30,6 @@ class UserRepository(
             .returning()
             .fetchOneInto(User::class.java)!!
 
-    fun saveAll(users: List<User>): List<User> {
-        val records = users.map {
-            dsl.newRecord(Tables.USERS, it)
-        }
-
-        dsl.batchStore(records).execute()
-        return users
-    }
-
     fun deleteById(id: UUID) {
         dsl.deleteFrom(Tables.USERS)
             .where(Tables.USERS.ID.eq(id))
