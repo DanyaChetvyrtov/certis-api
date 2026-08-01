@@ -11,12 +11,10 @@ import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
@@ -32,26 +30,14 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.gateway.MinioGateway
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.objectName
-import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
-import ru.digitalhustle.certis.repository.ProfileRepository
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import javax.imageio.ImageIO
 
 class ProfileControllerIT : AbstractIntegrationTest() {
-
-    @Autowired
-    private lateinit var profileRepository: ProfileRepository
-
-    @Autowired
-    private lateinit var profilePhotoMetaRepository: ProfilePhotoMetaRepository
-
-    @MockitoBean
-    private lateinit var minioGateway: MinioGateway
 
     private companion object {
         private const val ACCESS_TOKEN_COOKIE = "access_token"
@@ -157,6 +143,8 @@ class ProfileControllerIT : AbstractIntegrationTest() {
             // then
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.status").value(HttpStatus.FORBIDDEN.value()))
+            .andExpect(jsonPath("$.error").value(HttpStatus.FORBIDDEN.reasonPhrase))
+            .andExpect(jsonPath("$.message").value(ErrorMessages.ACCESS_DENIED))
     }
 
     @Test

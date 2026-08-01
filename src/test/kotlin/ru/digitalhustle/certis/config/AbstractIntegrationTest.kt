@@ -8,8 +8,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import ru.digitalhustle.certis.fixture.UserFixture
+import ru.digitalhustle.certis.gateway.MinioGateway
+import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
+import ru.digitalhustle.certis.repository.ProfileRepository
+import ru.digitalhustle.certis.repository.RefreshSessionRepository
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 
@@ -27,6 +32,15 @@ abstract class AbstractIntegrationTest {
     protected lateinit var userRepository: UserRepository
 
     @Autowired
+    protected lateinit var refreshSessionRepository: RefreshSessionRepository
+
+    @Autowired
+    protected lateinit var profileRepository: ProfileRepository
+
+    @Autowired
+    protected lateinit var profilePhotoMetaRepository: ProfilePhotoMetaRepository
+
+    @Autowired
     protected lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -40,4 +54,7 @@ abstract class AbstractIntegrationTest {
 
     @Autowired
     protected lateinit var objectMapper: ObjectMapper
+
+    @MockitoBean
+    protected lateinit var minioGateway: MinioGateway
 }

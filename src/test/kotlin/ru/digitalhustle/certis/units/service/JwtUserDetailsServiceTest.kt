@@ -1,11 +1,16 @@
 package ru.digitalhustle.certis.units.service
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+import ru.digitalhustle.certis.constants.ErrorMessages
+import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtDetails
 import ru.digitalhustle.certis.service.domain.UserService
@@ -51,5 +56,19 @@ class JwtUserDetailsServiceTest {
 
         verify(userService)
             .getUserByEmail(EMAIL)
+    }
+
+    @Test
+    fun `should translate missing user to username not found exception`() {
+        // given
+        doThrow(NotFoundException.entity("User"))
+            .`when`(userService)
+            .getUserByEmail(EMAIL)
+
+        // when, then
+        assertThatThrownBy {
+            jwtUserDetailsService.loadUserByUsername(EMAIL)
+        }.isInstanceOf(UsernameNotFoundException::class.java)
+            .hasMessage(ErrorMessages.INVALID_CREDENTIALS)
     }
 }

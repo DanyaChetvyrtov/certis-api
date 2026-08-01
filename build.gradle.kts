@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.jooq)
     implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.validation)
 
     implementation(libs.kotlin.reflect)
@@ -89,6 +90,8 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
     implementation("org.apache.tika:tika-core:$apacheTikaVersion")
     implementation("com.twelvemonkeys.imageio:imageio-webp:$twelveMonkeysImageioVersion")
+    implementation(libs.bucket4j.core)
+    implementation(libs.caffeine)
 
     // mapper
     implementation(libs.mapstruct)

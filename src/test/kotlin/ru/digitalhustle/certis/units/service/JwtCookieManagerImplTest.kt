@@ -24,8 +24,8 @@ class JwtCookieManagerImplTest {
         private const val ACCESS_TOKEN = "access_token_value"
         private const val REFRESH_TOKEN = "refresh_token_value"
         private const val JWT_SECRET = "01234567890123456789012345678901"
-        private const val ACCESS_DURATION = 1L
-        private const val REFRESH_DURATION = 30L
+        private val REFRESH_DURATION = Duration.ofDays(30)
+        private val ACCESS_DURATION = Duration.ofMinutes(30)
     }
 
     @Test
@@ -40,7 +40,7 @@ class JwtCookieManagerImplTest {
             { assertThat(cookie.isHttpOnly).isTrue() },
             { assertThat(cookie.path).isEqualTo("/") },
             { assertThat(cookie.sameSite).isEqualTo("Strict") },
-            { assertThat(cookie.maxAge).isEqualTo(Duration.ofHours(ACCESS_DURATION)) },
+            { assertThat(cookie.maxAge).isEqualTo(ACCESS_DURATION) },
         )
     }
 
@@ -54,9 +54,37 @@ class JwtCookieManagerImplTest {
             { assertThat(cookie.name).isEqualTo("refresh_token") },
             { assertThat(cookie.value).isEqualTo(REFRESH_TOKEN) },
             { assertThat(cookie.isHttpOnly).isTrue() },
-            { assertThat(cookie.path).isEqualTo(PathConstants.AUTH_TOKEN) },
+            { assertThat(cookie.path).isEqualTo(PathConstants.AUTH) },
             { assertThat(cookie.sameSite).isEqualTo("Strict") },
-            { assertThat(cookie.maxAge).isEqualTo(Duration.ofDays(REFRESH_DURATION)) },
+            { assertThat(cookie.maxAge).isEqualTo(REFRESH_DURATION) },
+        )
+    }
+
+    @Test
+    fun `should create access token removal cookie`() {
+        // when
+        val cookie = jwtCookieManager.createAccessTokenRemovalCookie()
+
+        // then
+        assertAll(
+            { assertThat(cookie.name).isEqualTo("access_token") },
+            { assertThat(cookie.value).isEmpty() },
+            { assertThat(cookie.path).isEqualTo("/") },
+            { assertThat(cookie.maxAge).isEqualTo(Duration.ZERO) },
+        )
+    }
+
+    @Test
+    fun `should create refresh token removal cookie`() {
+        // when
+        val cookie = jwtCookieManager.createRefreshTokenRemovalCookie()
+
+        // then
+        assertAll(
+            { assertThat(cookie.name).isEqualTo("refresh_token") },
+            { assertThat(cookie.value).isEmpty() },
+            { assertThat(cookie.path).isEqualTo(PathConstants.AUTH) },
+            { assertThat(cookie.maxAge).isEqualTo(Duration.ZERO) },
         )
     }
 

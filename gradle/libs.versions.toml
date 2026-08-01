@@ -15,6 +15,8 @@ snakeyaml = "2.4"
 springdoc = "2.8.13"
 mapstruct = "1.6.3"
 jjwt = "0.12.6"
+bucket4j = "8.19.0"
+caffeine = "3.2.4"
 
 liquibase-gradle = "3.1.0"
 
@@ -26,6 +28,7 @@ jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackso
 
 spring-boot-starter-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
 spring-boot-starter-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
+spring-boot-starter-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 spring-boot-starter-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-jdbc" }
 spring-boot-starter-jooq = { group = "org.springframework.boot", name = "spring-boot-starter-jooq" }
 spring-boot-starter-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation" }
@@ -48,6 +51,9 @@ mapstruct-processor = { group = "org.mapstruct", name = "mapstruct-processor", v
 jjwt-api = { group = "io.jsonwebtoken", name = "jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { group = "io.jsonwebtoken", name = "jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { group = "io.jsonwebtoken", name = "jjwt-jackson", version.ref = "jjwt" }
+
+bucket4j-core = { group = "com.bucket4j", name = "bucket4j_jdk17-core", version.ref = "bucket4j" }
+caffeine = { group = "com.github.ben-manes.caffeine", name = "caffeine", version.ref = "caffeine" }
 
 kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit5" }
 junit-platform-launcher = { group = "org.junit.platform", name = "junit-platform-launcher" }

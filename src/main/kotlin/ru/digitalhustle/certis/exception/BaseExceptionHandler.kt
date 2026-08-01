@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.multipart.MaxUploadSizeExceededException
+import org.springframework.web.servlet.resource.NoResourceFoundException
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
@@ -87,7 +88,7 @@ class BaseExceptionHandler(
 
         return exceptionResponseProducer.createResponse(
             status = HttpStatus.FORBIDDEN,
-            message = exception.message ?: HttpStatus.FORBIDDEN.reasonPhrase,
+            message = ErrorMessages.ACCESS_DENIED,
         )
     }
 
@@ -99,6 +100,16 @@ class BaseExceptionHandler(
         return exceptionResponseProducer.createResponse(
             status = HttpStatus.SERVICE_UNAVAILABLE,
             message = ErrorMessages.PHOTO_STORAGE_UNAVAILABLE,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFoundException(exception: NoResourceFoundException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProducer.createNotFound(
+            message = HttpStatus.NOT_FOUND.reasonPhrase,
         )
     }
 

@@ -14,13 +14,14 @@ import org.mockito.Mockito.`when`
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import ru.digitalhustle.certis.config.properties.JwtProperties
+import ru.digitalhustle.certis.enums.JwtTokenType
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 import ru.digitalhustle.certis.service.security.impl.JwtTokenProviderImpl
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.UUID
 import javax.crypto.SecretKey
@@ -37,9 +38,9 @@ class JwtTokenProviderImplTest {
         private const val EMAIL = "user@test.com"
         private const val PASSWORD = "password"
         private const val JWT_SECRET = "01234567890123456789012345678901"
-        private const val ACCESS_DURATION = 1L
-        private const val REFRESH_DURATION = 30L
 
+        private val ACCESS_DURATION: Duration = Duration.ofMinutes(30)
+        private val REFRESH_DURATION = Duration.ofDays(30)
         private val NOW: Instant = Instant.parse("2026-07-19T12:00:00Z")
     }
 
@@ -50,94 +51,102 @@ class JwtTokenProviderImplTest {
     }
 
     @Test
-    fun `should create access token with user claims and access expiration`() {
+    fun `should create access token with access type and expiration`() {
         // given
         val userId = UUID.randomUUID()
 
         // when
-        val token = jwtTokenProvider.createAccessToken(
-            userId = userId,
-            email = EMAIL,
-        )
+        val token = jwtTokenProvider.createAccessToken(userId, EMAIL)
 
         // then
         val claims = parseClaims(token)
 
         assertAll(
-            { assertThat(jwtTokenProvider.isValid(token)).isTrue() },
+            { assertThat(jwtTokenProvider.isValidAccessToken(token)).isTrue() },
             { assertThat(claims.subject).isEqualTo(EMAIL) },
             { assertThat(claims["id"]).isEqualTo(userId.toString()) },
-            { assertThat(claims.expiration).isEqualTo(Date.from(NOW.plus(ACCESS_DURATION, ChronoUnit.HOURS))) },
+            { assertThat(claims["type"]).isEqualTo(JwtTokenType.ACCESS.name) },
+            { assertThat(claims.issuedAt).isEqualTo(Date.from(NOW)) },
+            { assertThat(claims.expiration).isEqualTo(Date.from(NOW.plus(ACCESS_DURATION))) },
         )
     }
 
     @Test
-    fun `should create refresh token with user claims and refresh expiration`() {
+    fun `should create refresh token with refresh type and session id`() {
         // given
         val userId = UUID.randomUUID()
+        val sessionId = UUID.randomUUID()
+        val expiresAt = NOW.plus(REFRESH_DURATION)
 
         // when
+        val token = jwtTokenProvider.createRefreshToken(userId, EMAIL, sessionId, expiresAt)
+
+        // then
+        val claims = parseClaims(token)
+
+        assertAll(
+            { assertThat(jwtTokenProvider.isValidAccessToken(token)).isFalse() },
+            { assertThat(claims.subject).isEqualTo(EMAIL) },
+            { assertThat(claims.id).isEqualTo(sessionId.toString()) },
+            { assertThat(claims["id"]).isEqualTo(userId.toString()) },
+            { assertThat(claims["type"]).isEqualTo(JwtTokenType.REFRESH.name) },
+            { assertThat(claims.expiration).isEqualTo(Date.from(expiresAt)) },
+        )
+    }
+
+    @Test
+    fun `should parse refresh token payload`() {
+        // given
+        val userId = UUID.randomUUID()
+        val sessionId = UUID.randomUUID()
         val token = jwtTokenProvider.createRefreshToken(
             userId = userId,
             email = EMAIL,
-        )
-
-        // then
-        val claims = parseClaims(token)
-
-        assertAll(
-            { assertThat(jwtTokenProvider.isValid(token)).isTrue() },
-            { assertThat(claims.subject).isEqualTo(EMAIL) },
-            { assertThat(claims["id"]).isEqualTo(userId.toString()) },
-            { assertThat(claims.expiration).isEqualTo(Date.from(NOW.plus(REFRESH_DURATION, ChronoUnit.DAYS))) },
-        )
-    }
-
-    @Test
-    fun `should refresh user tokens`() {
-        // given
-        val userId = UUID.randomUUID()
-        val refreshToken = jwtTokenProvider.createRefreshToken(
-            userId = userId,
-            email = EMAIL,
+            sessionId = sessionId,
+            expiresAt = NOW.plus(REFRESH_DURATION),
         )
 
         // when
-        val jwtData = jwtTokenProvider.refreshUserTokens(refreshToken)
+        val payload = jwtTokenProvider.parseRefreshToken(token)
 
         // then
         assertAll(
-            { assertThat(jwtData.id).isEqualTo(userId) },
-            { assertThat(jwtData.email).isEqualTo(EMAIL) },
-            { assertThat(parseClaims(jwtData.accessToken).subject).isEqualTo(EMAIL) },
-            { assertThat(parseClaims(jwtData.refreshToken).subject).isEqualTo(EMAIL) },
-            { assertThat(jwtTokenProvider.isValid(jwtData.accessToken)).isTrue() },
-            { assertThat(jwtTokenProvider.isValid(jwtData.refreshToken)).isTrue() },
+            { assertThat(payload.sessionId).isEqualTo(sessionId) },
+            { assertThat(payload.userId).isEqualTo(userId) },
+            { assertThat(payload.email).isEqualTo(EMAIL) },
         )
     }
 
     @Test
-    fun `should return false when token is expired`() {
+    fun `should reject access token as refresh token`() {
         // given
-        val token = jwtTokenProvider.createAccessToken(
-            userId = UUID.randomUUID(),
-            email = EMAIL,
-        )
+        val accessToken = jwtTokenProvider.createAccessToken(UUID.randomUUID(), EMAIL)
+
+        // when, then
+        assertThatThrownBy {
+            jwtTokenProvider.parseRefreshToken(accessToken)
+        }.isInstanceOf(InvalidTokenException::class.java)
+    }
+
+    @Test
+    fun `should return false when access token is expired`() {
+        // given
+        val token = jwtTokenProvider.createAccessToken(UUID.randomUUID(), EMAIL)
         val expiredTokenProvider = createTokenProvider(
-            Clock.fixed(NOW.plus(ACCESS_DURATION + 1, ChronoUnit.HOURS), ZoneOffset.UTC),
+            Clock.fixed(NOW.plus(ACCESS_DURATION).plusSeconds(1), ZoneOffset.UTC),
         )
 
         // when
-        val isValid = expiredTokenProvider.isValid(token)
+        val isValid = expiredTokenProvider.isValidAccessToken(token)
 
         // then
         assertThat(isValid).isFalse()
     }
 
     @Test
-    fun `should return false when token is malformed`() {
+    fun `should return false when access token is malformed`() {
         // when
-        val isValid = jwtTokenProvider.isValid("malformed_token")
+        val isValid = jwtTokenProvider.isValidAccessToken("malformed_token")
 
         // then
         assertThat(isValid).isFalse()
@@ -146,17 +155,14 @@ class JwtTokenProviderImplTest {
     @Test
     fun `should throw invalid token exception when refresh token is malformed`() {
         assertThatThrownBy {
-            jwtTokenProvider.refreshUserTokens("malformed_token")
+            jwtTokenProvider.parseRefreshToken("malformed_token")
         }.isInstanceOf(InvalidTokenException::class.java)
     }
 
     @Test
-    fun `should return authentication by token subject`() {
+    fun `should return authentication by access token subject`() {
         // given
-        val token = jwtTokenProvider.createAccessToken(
-            userId = UUID.randomUUID(),
-            email = EMAIL,
-        )
+        val token = jwtTokenProvider.createAccessToken(UUID.randomUUID(), EMAIL)
         val userDetails = User.withUsername(EMAIL)
             .password(PASSWORD)
             .authorities(emptyList())

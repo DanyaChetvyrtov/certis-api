@@ -28,27 +28,126 @@ Content-Type: application/json
 }
 
 > {%
+    const authCookies = response.headers.valuesOf("Set-Cookie")
+        .map(header => header.split(";")[0])
+        .join("; ");
+
     client.test("Login should be successful", function() {
         client.assert(response.status === 200, "Response status is not 200");
+        client.assert(authCookies.includes("access_token="), "Access token cookie is missing");
+        client.assert(authCookies.includes("refresh_token="), "Refresh token cookie is missing");
     });
+
+    client.global.set("authCookies", authCookies);
 %}
 
-### POST test refresh access
-POST {{ path }}/tokens/access
-Content-Type: application/json
+### POST test refresh tokens
+POST {{ path }}/tokens
+Cookie: {{ authCookies }}
 
 > {%
-    client.test("Refresh should be successful", function() {
+    const authCookies = response.headers.valuesOf("Set-Cookie")
+        .map(header => header.split(";")[0])
+        .join("; ");
+
+    client.test("Token refresh should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+        client.assert(authCookies.includes("access_token="), "Access token cookie is missing");
+        client.assert(authCookies.includes("refresh_token="), "Refresh token cookie is missing");
+    });
+
+    client.global.set("authCookies", authCookies);
+%}
+
+### GET test active sessions
+GET {{ path }}/sessions
+Cookie: {{ authCookies }}
+
+> {%
+    client.test("Active sessions should be returned", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(Array.isArray(response.body.sessions), "Sessions are missing");
+        client.assert(response.body.sessions.length > 0, "No active sessions were returned");
+        client.assert(response.body.sessions[0].id !== undefined, "Session id is missing");
+        client.assert(response.body.sessions[0].lastRefreshedAt !== undefined, "Last refresh time is missing");
+        client.assert(response.body.sessions[0].expiresAt !== undefined, "Expiration time is missing");
+    });
+
+    client.global.set("sessionId", response.body.sessions[0].id);
+%}
+
+### POST test login for another session
+POST {{ path }}
+Content-Type: application/json
+
+{
+  "email": "{{ email }}",
+  "password": "{{ password }}"
+}
+
+> {%
+    const authCookies = response.headers.valuesOf("Set-Cookie")
+        .map(header => header.split(";")[0])
+        .join("; ");
+
+    client.test("Another session should be created", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(authCookies.includes("access_token="), "Access token cookie is missing");
+        client.assert(authCookies.includes("refresh_token="), "Refresh token cookie is missing");
+    });
+
+    client.global.set("authCookies", authCookies);
+%}
+
+### DELETE test selected session
+DELETE {{ path }}/sessions/{{ sessionId }}
+Cookie: {{ authCookies }}
+
+> {%
+    client.test("Selected session revocation should be successful", function() {
         client.assert(response.status === 204, "Response status is not 204");
     });
 %}
 
-### POST test refresh both
-POST {{ path }}/tokens/both
-Content-Type: application/json
+### POST test logout
+POST {{ path }}/logout
+Cookie: {{ authCookies }}
 
 > {%
-    client.test("Refresh should be successful", function() {
+    client.test("Logout should be successful", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+### POST test login before revoking all sessions
+POST {{ path }}
+Content-Type: application/json
+
+{
+  "email": "{{ email }}",
+  "password": "{{ password }}"
+}
+
+> {%
+    const authCookies = response.headers.valuesOf("Set-Cookie")
+        .map(header => header.split(";")[0])
+        .join("; ");
+
+    client.test("Login before revoking all sessions should be successful", function() {
+        client.assert(response.status === 200, "Response status is not 200");
+        client.assert(authCookies.includes("access_token="), "Access token cookie is missing");
+        client.assert(authCookies.includes("refresh_token="), "Refresh token cookie is missing");
+    });
+
+    client.global.set("authCookies", authCookies);
+%}
+
+### DELETE test all sessions
+DELETE {{ path }}/sessions
+Cookie: {{ authCookies }}
+
+> {%
+    client.test("All sessions revocation should be successful", function() {
         client.assert(response.status === 204, "Response status is not 204");
     });
 %}

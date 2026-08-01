@@ -18,7 +18,6 @@ class JwtTokenFilter(
 
     companion object {
         private val log = KotlinLogging.logger {}
-        private const val BEARER_PREFIX = "Bearer "
     }
 
     override fun doFilterInternal(
@@ -28,7 +27,6 @@ class JwtTokenFilter(
     ) {
         val token = cookieManager
             .getAccessTokenFromRequest(request)
-            ?.removePrefix(BEARER_PREFIX)
             ?.takeIf { it.isNotBlank() }
 
         if (token == null) {
@@ -37,7 +35,7 @@ class JwtTokenFilter(
         }
 
         try {
-            if (jwtTokenProvider.isValid(token)) {
+            if (jwtTokenProvider.isValidAccessToken(token)) {
                 SecurityContextHolder.getContext().authentication = jwtTokenProvider.getAuthentication(token)
             }
         } catch (exception: ExpiredJwtException) {

@@ -16,7 +16,11 @@ object ErrorMessages {
     const val FILE_EXTENSION_CONTENT_TYPE_MISMATCH = "File extension does not match its content type"
     const val INVALID_IMAGE_DIMENSIONS = "Failed to read image dimensions"
 
-    const val TOKEN_EXPIRED = "Token is expired"
+    const val INVALID_TOKEN = "Invalid or expired token"
+    const val INVALID_CREDENTIALS = "Invalid email or password"
+    const val AUTHENTICATION_REQUIRED = "Authentication is required"
+    const val ACCESS_DENIED = "Access denied"
+    const val TOO_MANY_REQUESTS = "Too many requests"
     const val PASSWORDS_MISMATCH = "Passwords don't match"
 
     const val ERROR_MESSAGES_SEPARATOR = "; "
