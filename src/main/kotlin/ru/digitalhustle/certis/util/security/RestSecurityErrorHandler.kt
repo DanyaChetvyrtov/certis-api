@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.security
+package ru.digitalhustle.certis.util.security
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest
@@ -11,12 +11,12 @@ import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.access.AccessDeniedHandler
 import org.springframework.stereotype.Component
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 
 @Component
 class RestSecurityErrorHandler(
     private val objectMapper: ObjectMapper,
-    private val exceptionResponseProducer: ExceptionResponseProducer,
+    private val exceptionResponseProvider: ExceptionResponseProvider,
 ) : AuthenticationEntryPoint,
     AccessDeniedHandler {
 
@@ -42,7 +42,7 @@ class RestSecurityErrorHandler(
         response.characterEncoding = Charsets.UTF_8.name()
         objectMapper.writeValue(
             response.writer,
-            exceptionResponseProducer.createResponse(status, message),
+            exceptionResponseProvider.createResponse(status, message),
         )
     }
 }

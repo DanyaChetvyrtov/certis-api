@@ -8,7 +8,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.SecurityConstants
 
-class SecurityEndpointsIT : AbstractIntegrationTest() {
+class SecurityEndpointsTest : AbstractIntegrationTest() {
 
     @Test
     fun `should expose health without details`() {
@@ -39,7 +39,7 @@ class SecurityEndpointsIT : AbstractIntegrationTest() {
     }
 
     private fun accessCookie(): Cookie {
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         val token = jwtTokenProvider.createAccessToken(user.id, user.email)
 
         return Cookie(SecurityConstants.ACCESS_TOKEN_COOKIE, token)

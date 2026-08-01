@@ -21,22 +21,14 @@ import ru.digitalhustle.certis.dto.ProfileDto
 import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.security.OwnProfileOnly
+import ru.digitalhustle.certis.util.security.OwnProfileOnly
 import java.util.UUID
 
 @RequestMapping(PathConstants.PROFILES)
 interface ProfileController {
 
-    @OwnProfileOnly
-    @GetMapping(PathConstants.PROFILE_ID)
-    fun getProfileById(
-        @PathVariable profileId: UUID,
-    ): ProfileDto
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    fun createProfile(
-        @RequestBody @Valid createProfileRq: CreateProfileRq,
+    @GetMapping(PathConstants.MY_PROFILE)
+    fun getUserProfile(
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): ProfileDto
 
@@ -45,6 +37,13 @@ interface ProfileController {
     fun getPhoto(
         @PathVariable profileId: UUID,
     ): ResponseEntity<ByteArray>
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createProfile(
+        @RequestBody @Valid createProfileRq: CreateProfileRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): ProfileDto
 
     @OwnProfileOnly
     @PostMapping(PathConstants.PROFILE_PHOTO, consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])

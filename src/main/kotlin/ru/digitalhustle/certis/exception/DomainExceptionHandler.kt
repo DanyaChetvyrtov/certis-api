@@ -17,12 +17,12 @@ import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
 import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
 class DomainExceptionHandler(
-    private val exceptionResponseProducer: ExceptionResponseProducer,
+    private val exceptionResponseProvider: ExceptionResponseProvider,
 ) {
 
     companion object {
@@ -34,7 +34,7 @@ class DomainExceptionHandler(
     fun handlePasswordsDoNotMatchException(exception: PasswordsDoNotMatchException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createBadRequest(
+        return exceptionResponseProvider.createBadRequest(
             message = exception.message ?: ErrorMessages.PASSWORDS_MISMATCH,
         )
     }
@@ -44,7 +44,7 @@ class DomainExceptionHandler(
     fun handleInvalidPhotoException(exception: InvalidPhotoException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createBadRequest(
+        return exceptionResponseProvider.createBadRequest(
             message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
         )
     }
@@ -54,7 +54,7 @@ class DomainExceptionHandler(
     fun handleUnsupportedPhotoMediaTypeException(exception: UnsupportedPhotoMediaTypeException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.UNSUPPORTED_MEDIA_TYPE,
             message = exception.message ?: HttpStatus.UNSUPPORTED_MEDIA_TYPE.reasonPhrase,
         )
@@ -65,7 +65,7 @@ class DomainExceptionHandler(
     fun handleTokenException(exception: RuntimeException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createUnauthorized(
+        return exceptionResponseProvider.createUnauthorized(
             message = exception.message ?: HttpStatus.UNAUTHORIZED.reasonPhrase,
         )
     }
@@ -75,7 +75,7 @@ class DomainExceptionHandler(
     fun handleAuthenticationException(exception: AuthenticationException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createUnauthorized(
+        return exceptionResponseProvider.createUnauthorized(
             message = ErrorMessages.INVALID_CREDENTIALS,
         )
     }
@@ -85,7 +85,7 @@ class DomainExceptionHandler(
     fun handleNotFoundException(exception: NotFoundException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createNotFound(
+        return exceptionResponseProvider.createNotFound(
             message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
         )
     }
@@ -95,7 +95,7 @@ class DomainExceptionHandler(
     fun handleEntityAlreadyExistsException(exception: EntityAlreadyExistsException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createConflict(
+        return exceptionResponseProvider.createConflict(
             message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
         )
     }

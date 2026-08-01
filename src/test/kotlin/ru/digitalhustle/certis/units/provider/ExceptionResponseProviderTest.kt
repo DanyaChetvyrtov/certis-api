@@ -1,18 +1,18 @@
-package ru.digitalhustle.certis.units.producer
+package ru.digitalhustle.certis.units.provider
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 import org.springframework.http.HttpStatus
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-class ExceptionResponseProducerTest {
+class ExceptionResponseProviderTest {
 
-    private val exceptionResponseProducer = ExceptionResponseProducer(
+    private val exceptionResponseProvider = ExceptionResponseProvider(
         Clock.fixed(NOW, ZoneOffset.UTC),
     )
 
@@ -28,7 +28,7 @@ class ExceptionResponseProducerTest {
         val errors = mapOf("email" to "must be a well-formed email address")
 
         // when
-        val response = exceptionResponseProducer.createResponse(
+        val response = exceptionResponseProvider.createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = MESSAGE,
             errors = errors,
@@ -47,7 +47,7 @@ class ExceptionResponseProducerTest {
     @Test
     fun `should create bad request response`() {
         // when
-        val response = exceptionResponseProducer.createBadRequest(MESSAGE)
+        val response = exceptionResponseProvider.createBadRequest(MESSAGE)
 
         // then
         assertAll(
@@ -60,7 +60,7 @@ class ExceptionResponseProducerTest {
     @Test
     fun `should create unauthorized response`() {
         // when
-        val response = exceptionResponseProducer.createUnauthorized(MESSAGE)
+        val response = exceptionResponseProvider.createUnauthorized(MESSAGE)
 
         // then
         assertAll(
@@ -73,7 +73,7 @@ class ExceptionResponseProducerTest {
     @Test
     fun `should create not found response`() {
         // when
-        val response = exceptionResponseProducer.createNotFound(MESSAGE)
+        val response = exceptionResponseProvider.createNotFound(MESSAGE)
 
         // then
         assertAll(
@@ -86,7 +86,7 @@ class ExceptionResponseProducerTest {
     @Test
     fun `should create conflict response`() {
         // when
-        val response = exceptionResponseProducer.createConflict(MESSAGE)
+        val response = exceptionResponseProvider.createConflict(MESSAGE)
 
         // then
         assertAll(
@@ -99,7 +99,7 @@ class ExceptionResponseProducerTest {
     @Test
     fun `should create internal server error response without leaking exception message`() {
         // when
-        val response = exceptionResponseProducer.createInternalServerError()
+        val response = exceptionResponseProvider.createInternalServerError()
 
         // then
         assertAll(

@@ -1,3 +1,4 @@
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
 import org.jooq.meta.jaxb.Logging
@@ -102,6 +103,7 @@ dependencies {
     // JWT
     implementation(libs.bundles.jwt)
 
+    // tests
     testImplementation(libs.spring.boot.starter.test)
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation(libs.kotlin.test.junit5)
@@ -117,6 +119,13 @@ configurations.configureEach {
         if (requested.group == "org.jooq") {
             useVersion(jooqVersion)
         }
+    }
+
+    if (name.startsWith("ktlint")) {
+        resolutionStrategy.force(
+            "io.github.detekt.sarif4k:sarif4k:0.6.0",
+            "io.github.detekt.sarif4k:sarif4k-jvm:0.6.0",
+        )
     }
 }
 
@@ -178,6 +187,15 @@ jooq {
                 }
             }
         }
+    }
+}
+
+ktlint {
+    relative.set(true)
+
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.SARIF)
     }
 }
 

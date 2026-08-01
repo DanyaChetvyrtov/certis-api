@@ -1,25 +1,32 @@
 package ru.digitalhustle.certis.config
 
-import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.web.servlet.ResultActions
-import java.nio.charset.StandardCharsets
 
-inline fun <reified T> ResultActions.body(
-    objectMapper: ObjectMapper,
-): T =
-    objectMapper.readValue(
-        andReturn().response.contentAsByteArray,
-        object : TypeReference<T>() {},
-    )
+abstract class AbstractResultActionsHelper {
 
-fun ResultActions.bodyAsString(): String =
-    andReturn().response.getContentAsString(StandardCharsets.UTF_8)
+    @Autowired
+    protected lateinit var objectMapper: ObjectMapper
 
-inline fun <reified T> ResultActions.bodyList(
-    objectMapper: ObjectMapper,
-): List<T> =
-    objectMapper.readValue(
-        andReturn().response.contentAsByteArray,
-        object : TypeReference<List<T>>() {},
-    )
+    protected fun <T> getBody(resultActions: ResultActions, clazz: Class<T>): T =
+        objectMapper.readValue(
+            resultActions.andReturn().response.contentAsByteArray,
+            clazz,
+        )
+
+    protected fun getBody(resultActions: ResultActions): String =
+        resultActions
+            .andReturn().response
+            .getContentAsString(Charsets.UTF_8)
+
+    protected fun <T> getListBody(resultActions: ResultActions, clazz: Class<T>): List<T> =
+        objectMapper.readValue(
+            resultActions.andReturn().response.contentAsByteArray,
+            objectMapper.typeFactory
+                .constructParametricType(List::class.java, clazz),
+        )
+
+    protected fun getHeaders(resultActions: ResultActions, headersName: String): List<String> =
+        resultActions.andReturn().response.getHeaders(headersName)
+}

@@ -15,11 +15,11 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 
 @RestControllerAdvice
 class BaseExceptionHandler(
-    private val exceptionResponseProducer: ExceptionResponseProducer,
+    private val exceptionResponseProvider: ExceptionResponseProvider,
 ) {
 
     companion object {
@@ -31,7 +31,7 @@ class BaseExceptionHandler(
     fun handleMethodArgumentNotValidException(exception: MethodArgumentNotValidException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createBadRequest(
+        return exceptionResponseProvider.createBadRequest(
             message = ErrorMessages.VALIDATION_FAILED,
             errors = exception.extractFieldErrors(),
         )
@@ -42,7 +42,7 @@ class BaseExceptionHandler(
     fun handleHandlerMethodValidationException(exception: HandlerMethodValidationException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createBadRequest(
+        return exceptionResponseProvider.createBadRequest(
             message = ErrorMessages.VALIDATION_FAILED,
             errors = exception.extractFieldErrors(),
         )
@@ -53,7 +53,7 @@ class BaseExceptionHandler(
     fun handleHttpMessageNotReadableException(exception: HttpMessageNotReadableException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = "${ErrorMessages.VALIDATION_FAILED}. Invalid value.",
         )
@@ -64,7 +64,7 @@ class BaseExceptionHandler(
     fun handleMethodArgumentTypeMismatchException(exception: MethodArgumentTypeMismatchException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.BAD_REQUEST,
             message = ErrorMessages.VALIDATION_FAILED,
         )
@@ -75,7 +75,7 @@ class BaseExceptionHandler(
     fun handleMaxUploadSizeExceededException(exception: MaxUploadSizeExceededException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.PAYLOAD_TOO_LARGE,
             message = ErrorMessages.PHOTO_TOO_LARGE,
         )
@@ -86,7 +86,7 @@ class BaseExceptionHandler(
     fun handleAuthorizationDeniedException(exception: AuthorizationDeniedException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.FORBIDDEN,
             message = ErrorMessages.ACCESS_DENIED,
         )
@@ -97,7 +97,7 @@ class BaseExceptionHandler(
     fun handlePhotoProcessingException(exception: PhotoProcessingException): ExceptionRs {
         log.error(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createResponse(
+        return exceptionResponseProvider.createResponse(
             status = HttpStatus.SERVICE_UNAVAILABLE,
             message = ErrorMessages.PHOTO_STORAGE_UNAVAILABLE,
         )
@@ -108,7 +108,7 @@ class BaseExceptionHandler(
     fun handleNoResourceFoundException(exception: NoResourceFoundException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createNotFound(
+        return exceptionResponseProvider.createNotFound(
             message = HttpStatus.NOT_FOUND.reasonPhrase,
         )
     }
@@ -118,6 +118,6 @@ class BaseExceptionHandler(
     fun handleException(exception: Exception): ExceptionRs {
         log.error(exception) { exception.message.orEmpty() }
 
-        return exceptionResponseProducer.createInternalServerError()
+        return exceptionResponseProvider.createInternalServerError()
     }
 }

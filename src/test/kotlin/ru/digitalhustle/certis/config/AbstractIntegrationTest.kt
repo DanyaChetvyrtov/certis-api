@@ -1,6 +1,5 @@
 package ru.digitalhustle.certis.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY
 import org.springframework.beans.factory.annotation.Autowired
@@ -12,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import ru.digitalhustle.certis.fixture.UserFixture
 import ru.digitalhustle.certis.gateway.MinioGateway
+import ru.digitalhustle.certis.provider.SecurityRequestProvider
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.repository.RefreshSessionRepository
@@ -26,7 +26,7 @@ import ru.digitalhustle.certis.service.security.JwtTokenProvider
 )
 @ActiveProfiles("test")
 @SpringBootTest
-abstract class AbstractIntegrationTest {
+abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
 
     @Autowired
     protected lateinit var userRepository: UserRepository
@@ -50,10 +50,10 @@ abstract class AbstractIntegrationTest {
     protected lateinit var userFixture: UserFixture
 
     @Autowired
-    protected lateinit var mvc: MockMvc
+    protected lateinit var securityRequestProvider: SecurityRequestProvider
 
     @Autowired
-    protected lateinit var objectMapper: ObjectMapper
+    protected lateinit var mvc: MockMvc
 
     @MockitoBean
     protected lateinit var minioGateway: MinioGateway

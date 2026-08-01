@@ -17,9 +17,9 @@ import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.filter.JwtTokenFilter
-import ru.digitalhustle.certis.security.RestSecurityErrorHandler
 import ru.digitalhustle.certis.service.security.JwtCookieManager
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
+import ru.digitalhustle.certis.util.security.RestSecurityErrorHandler
 
 @Configuration
 @EnableMethodSecurity

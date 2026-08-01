@@ -22,6 +22,7 @@ object PathConstants {
 
     const val PROFILES = "$API_V1/profiles"
     const val PROFILE_ID = "/{profileId}"
+    const val MY_PROFILE = "/me"
     const val PROFILE_PHOTO = "$PROFILE_ID/photo"
 
     fun profilePhoto(profileId: UUID): String = "$PROFILES/$profileId/photo"

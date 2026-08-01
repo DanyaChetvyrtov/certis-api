@@ -20,14 +20,14 @@ import ru.digitalhustle.certis.config.properties.AuthRateLimitProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 import kotlin.math.ceil
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class AuthRateLimitFilter(
     private val properties: AuthRateLimitProperties,
-    private val exceptionResponseProducer: ExceptionResponseProducer,
+    private val exceptionResponseProvider: ExceptionResponseProvider,
     private val objectMapper: ObjectMapper,
 ) : OncePerRequestFilter() {
 
@@ -78,7 +78,7 @@ class AuthRateLimitFilter(
 
             objectMapper.writeValue(
                 response.writer,
-                exceptionResponseProducer.createResponse(
+                exceptionResponseProvider.createResponse(
                     status = HttpStatus.TOO_MANY_REQUESTS,
                     message = ErrorMessages.TOO_MANY_REQUESTS,
                 ),
