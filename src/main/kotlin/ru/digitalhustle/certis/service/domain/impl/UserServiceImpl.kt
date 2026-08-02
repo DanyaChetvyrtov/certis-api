@@ -6,6 +6,7 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.UserService
+import ru.digitalhustle.certis.util.EmailNormalizer
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -15,23 +16,22 @@ class UserServiceImpl(
 ) : UserService {
 
     override fun getUserByEmail(email: String): User =
-        userRepository.findByEmail(email)
+        userRepository.findByEmail(EmailNormalizer.normalize(email))
             ?: throw NotFoundException.entity("User")
 
     override fun save(email: String, password: String): User {
-        userRepository.findByEmail(email)?.let {
-            throw EntityAlreadyExistsException.entity("User", "email")
-        }
+        val now = OffsetDateTime.now()
+        val normalizedEmail = EmailNormalizer.normalize(email)
 
-        return userRepository.save(
+        return userRepository.create(
             User(
                 id = UUID.randomUUID(),
-                email = email,
+                email = normalizedEmail,
                 passwordHash = password,
-                lastLogin = OffsetDateTime.now(),
-                createdAt = OffsetDateTime.now(),
+                lastLogin = now,
+                createdAt = now,
             ),
-        )
+        ) ?: throw EntityAlreadyExistsException.entity("User", "email")
     }
 
     override fun updateLastLogin(id: UUID) {

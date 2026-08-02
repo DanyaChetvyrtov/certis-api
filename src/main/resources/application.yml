@@ -19,6 +19,23 @@ spring:
 server:
   port: 8080
 
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+
 digital-hustle:
   certis:
     api:
@@ -26,9 +43,22 @@ digital-hustle:
 
     security:
       jwt:
-        secret: ${JWT_SECRET:local-development-jwt-secret-with-at-least-32-bytes}
-        access-duration: ${ACCESS_TOKEN_DURATION_HOURS:24}
-        refresh-duration: ${REFRESH_TOKEN_DURATION_DAYS:7}
+        secret: ${JWT_SECRET}
+        access-duration: ${ACCESS_TOKEN_DURATION:30m}
+        refresh-duration: ${REFRESH_TOKEN_DURATION:7d}
+
+      rate-limit:
+        cache-maximum-size: ${AUTH_RATE_LIMIT_CACHE_MAXIMUM_SIZE:10000}
+        cache-expire-after: ${AUTH_RATE_LIMIT_CACHE_EXPIRE_MINUTES:10}m
+        login:
+          capacity: ${LOGIN_RATE_LIMIT_CAPACITY:10}
+          refill-period: ${LOGIN_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
+        registration:
+          capacity: ${REGISTRATION_RATE_LIMIT_CAPACITY:5}
+          refill-period: ${REGISTRATION_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
+        refresh:
+          capacity: ${REFRESH_RATE_LIMIT_CAPACITY:30}
+          refill-period: ${REFRESH_RATE_LIMIT_REFILL_PERIOD_SECONDS:60}s
 
     minio:
       endpoint: http://${MINIO_HOST}:${MINIO_PORT}

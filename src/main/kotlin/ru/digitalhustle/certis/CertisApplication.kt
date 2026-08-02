@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import ru.digitalhustle.certis.config.properties.AppApiProperties
 import ru.digitalhustle.certis.config.properties.AppMinioProperties
+import ru.digitalhustle.certis.config.properties.AuthRateLimitProperties
 import ru.digitalhustle.certis.config.properties.JwtProperties
 
 @EnableWebSecurity
@@ -15,6 +16,7 @@ import ru.digitalhustle.certis.config.properties.JwtProperties
     JwtProperties::class,
     AppApiProperties::class,
     AppMinioProperties::class,
+    AuthRateLimitProperties::class,
 )
 @SpringBootApplication
 class CertisApplication

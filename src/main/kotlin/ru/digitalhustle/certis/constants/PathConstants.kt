@@ -9,12 +9,16 @@ object PathConstants {
 
     const val AUTH = "$API_V1/auth"
     const val REGISTRATION = "/registration"
-
     const val TOKENS = "/tokens"
-    const val TOKENS_ACCESS = "$TOKENS/access"
-    const val TOKENS_BOTH = "$TOKENS/both"
+    const val LOGOUT = "/logout"
+    const val SESSIONS = "/sessions"
+    const val SESSION_ID = "/{sessionId}"
 
+    const val AUTH_REGISTRATION = "$AUTH$REGISTRATION"
     const val AUTH_TOKEN = "$AUTH$TOKENS"
+    const val AUTH_LOGOUT = "$AUTH$LOGOUT"
+    const val AUTH_SESSIONS = "$AUTH$SESSIONS"
+    const val SESSIONS_WITH_ID = "${SESSIONS}${SESSION_ID}"
 
     const val PROFILES = "$API_V1/profiles"
     const val PROFILE_ID = "/{profileId}"

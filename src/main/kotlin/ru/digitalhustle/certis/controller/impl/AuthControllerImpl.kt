@@ -6,17 +6,28 @@ import org.springframework.web.bind.annotation.RestController
 import ru.digitalhustle.certis.controller.AuthController
 import ru.digitalhustle.certis.dto.request.LoginRq
 import ru.digitalhustle.certis.dto.request.RegisterRq
+import ru.digitalhustle.certis.dto.response.SessionsRs
+import ru.digitalhustle.certis.mapper.AuthSessionMapper
 import ru.digitalhustle.certis.mapper.UserMapper
 import ru.digitalhustle.certis.model.security.JwtData
+import ru.digitalhustle.certis.model.security.JwtDetails
 import ru.digitalhustle.certis.service.security.AuthService
 import ru.digitalhustle.certis.service.security.JwtCookieManager
+import java.util.UUID
 
 @RestController
 class AuthControllerImpl(
     private val userMapper: UserMapper,
+    private val authSessionMapper: AuthSessionMapper,
     private val cookieManager: JwtCookieManager,
     private val authService: AuthService,
 ) : AuthController {
+
+    override fun getSessions(jwtDetails: JwtDetails): SessionsRs {
+        val sessions = authService.getSessions(jwtDetails.id).map(authSessionMapper::convert)
+
+        return SessionsRs(sessions)
+    }
 
     override fun login(loginRequest: LoginRq, response: HttpServletResponse) {
         val user = userMapper.convert(loginRequest)
@@ -31,16 +42,24 @@ class AuthControllerImpl(
         authService.register(user)
     }
 
-    override fun refreshAccess(refreshToken: String, response: HttpServletResponse) {
-        val jwtData = authService.refreshAccess(refreshToken)
-
-        addAccessCookieToResponse(jwtData, response)
-    }
-
-    override fun refreshBothTokens(refreshToken: String, response: HttpServletResponse) {
+    override fun refreshTokens(refreshToken: String?, response: HttpServletResponse) {
         val jwtData = authService.refreshTokens(refreshToken)
 
         addCookieToResponse(jwtData, response)
+    }
+
+    override fun logout(refreshToken: String?, response: HttpServletResponse) {
+        authService.logout(refreshToken)
+        addRemovalCookiesToResponse(response)
+    }
+
+    override fun revokeSession(sessionId: UUID, jwtDetails: JwtDetails) {
+        authService.revokeSession(jwtDetails.id, sessionId)
+    }
+
+    override fun revokeAllSessions(jwtDetails: JwtDetails, response: HttpServletResponse) {
+        authService.revokeAllSessions(jwtDetails.id)
+        addRemovalCookiesToResponse(response)
     }
 
     private fun addCookieToResponse(jwtData: JwtData, response: HttpServletResponse) {
@@ -54,5 +73,10 @@ class AuthControllerImpl(
         val accessCookie = cookieManager.createAccessTokenCookie(jwtData.accessToken)
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString())
+    }
+
+    private fun addRemovalCookiesToResponse(response: HttpServletResponse) {
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieManager.createAccessTokenRemovalCookie().toString())
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieManager.createRefreshTokenRemovalCookie().toString())
     }
 }

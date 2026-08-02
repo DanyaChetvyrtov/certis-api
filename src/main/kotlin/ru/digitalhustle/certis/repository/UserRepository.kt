@@ -21,6 +21,14 @@ class UserRepository(
             .where(Tables.USERS.ID.eq(id))
             .fetchOneInto(User::class.java)
 
+    fun create(user: User): User? =
+        dsl.insertInto(Tables.USERS)
+            .set(dsl.newRecord(Tables.USERS, user))
+            .onConflict(Tables.USERS.EMAIL)
+            .doNothing()
+            .returning()
+            .fetchOneInto(User::class.java)
+
     fun save(user: User): User =
         dsl.insertInto(Tables.USERS)
             .set(dsl.newRecord(Tables.USERS, user))
