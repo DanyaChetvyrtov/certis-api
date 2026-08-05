@@ -13,7 +13,7 @@ class UserFixture(
     private val passwordEncoder: PasswordEncoder,
 ) {
 
-    fun create(
+    fun createInDb(
         block: User.() -> User = { this },
     ): User {
         val user = User(

@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
+import ru.digitalhustle.certis.constants.SecurityConstants
 import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
@@ -37,10 +38,9 @@ import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import javax.imageio.ImageIO
 
-class ProfileControllerIT : AbstractIntegrationTest() {
+class ProfileControllerTest : AbstractIntegrationTest() {
 
     private companion object {
-        private const val ACCESS_TOKEN_COOKIE = "access_token"
         private const val NAME = "John"
         private const val SURNAME = "Doe"
         private const val UPDATED_NAME = "Jane"
@@ -58,7 +58,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should create profile`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         val request = createProfileRequest()
 
         // when
@@ -86,7 +86,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should return 409 when profile already exists`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
 
         // when
@@ -105,13 +105,13 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should get profile`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         uploadPhoto(user)
 
         // when
         mvc.perform(
-            get("${PathConstants.PROFILES}/${user.id}")
+            get("${PathConstants.PROFILES}/${PathConstants.MY_PROFILE}")
                 .cookie(accessTokenCookie(user)),
         )
             // then
@@ -127,30 +127,9 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `should return 403 when accessing another user's profile`() {
-        // given
-        val owner = userFixture.create()
-        val anotherUser = userFixture.create {
-            copy(email = "another-user@test.com")
-        }
-        createProfile(owner)
-
-        // when
-        mvc.perform(
-            get("${PathConstants.PROFILES}/${owner.id}")
-                .cookie(accessTokenCookie(anotherUser)),
-        )
-            // then
-            .andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.status").value(HttpStatus.FORBIDDEN.value()))
-            .andExpect(jsonPath("$.error").value(HttpStatus.FORBIDDEN.reasonPhrase))
-            .andExpect(jsonPath("$.message").value(ErrorMessages.ACCESS_DENIED))
-    }
-
-    @Test
     fun `should update profile`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
 
         val request = UpdateProfileRq(
@@ -183,7 +162,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should return 400 when updating profile with invalid data`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
 
         val request = UpdateProfileRq(
@@ -210,7 +189,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should upload profile photo`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         val photoBytes = createPngBytes()
 
@@ -249,7 +228,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should return 409 when profile photo already exists`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         uploadPhoto(user)
 
@@ -271,7 +250,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should get profile photo`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         val photoBytes = createPngBytes()
         uploadPhoto(user, photoBytes)
@@ -300,7 +279,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should return 415 when photo extension is unsupported`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         val photo = createPhoto(fileName = "profile-photo.gif")
 
@@ -325,7 +304,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should update profile photo`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         uploadPhoto(user)
 
@@ -366,7 +345,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should delete profile photo`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         uploadPhoto(user)
 
@@ -393,7 +372,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should rollback photo metadata when storage is unavailable`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
 
         doThrow(PhotoProcessingException(ErrorMessages.PHOTO_UPLOAD_FAILED))
@@ -434,7 +413,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
     @Test
     fun `should delete profile but keep user`() {
         // given
-        val user = userFixture.create()
+        val user = userFixture.createInDb()
         createProfile(user)
         uploadPhoto(user)
 
@@ -490,7 +469,7 @@ class ProfileControllerIT : AbstractIntegrationTest() {
 
     private fun accessTokenCookie(user: User): Cookie =
         Cookie(
-            ACCESS_TOKEN_COOKIE,
+            SecurityConstants.ACCESS_TOKEN_COOKIE,
             jwtTokenProvider.createAccessToken(user.id, user.email),
         )
 

@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.security
+package ru.digitalhustle.certis.util.security
 
 import org.springframework.security.access.prepost.PreAuthorize
 

@@ -12,7 +12,7 @@ import ru.digitalhustle.certis.config.properties.AuthRateLimitProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.filter.AuthRateLimitFilter
-import ru.digitalhustle.certis.producer.ExceptionResponseProducer
+import ru.digitalhustle.certis.provider.ExceptionResponseProvider
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -29,7 +29,7 @@ class AuthRateLimitFilterTest {
             registration = rule(capacity = 1),
             refresh = rule(capacity = 1),
         ),
-        exceptionResponseProducer = ExceptionResponseProducer(
+        exceptionResponseProvider = ExceptionResponseProvider(
             Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC),
         ),
         objectMapper = objectMapper,

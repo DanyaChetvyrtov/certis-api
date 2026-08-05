@@ -1,4 +1,4 @@
-package ru.digitalhustle.certis.producer
+package ru.digitalhustle.certis.provider
 
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
@@ -7,9 +7,10 @@ import java.time.Clock
 import java.time.OffsetDateTime
 
 @Component
-class ExceptionResponseProducer(
+class ExceptionResponseProvider(
     private val clock: Clock,
 ) {
+
     fun createResponse(
         status: HttpStatus,
         message: String,
