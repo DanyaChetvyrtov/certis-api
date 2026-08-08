@@ -33,4 +33,7 @@ object PathConstants {
     const val CATEGORIES = "$API_V1/categories"
     const val CATEGORY_ID = "/{categoryId}"
     const val CATEGORY_RESTORE = "$CATEGORY_ID/restore"
+
+    const val TRANSACTIONS = "$API_V1/transactions"
+    const val TRANSACTION_ID = "/{transactionId}"
 }

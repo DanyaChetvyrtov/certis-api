@@ -16,6 +16,7 @@ CREATE TABLE keeper.transactions
 
     date        TIMESTAMPTZ    NOT NULL,
     created_at  TIMESTAMPTZ    NOT NULL,
+    deleted_at  TIMESTAMPTZ,
 
     CONSTRAINT uq_transactions_id_user
         UNIQUE (id, user_id),
@@ -30,7 +31,18 @@ CREATE TABLE keeper.transactions
     CONSTRAINT chk_transactions_amount_positive
         CHECK (amount > 0),
     CONSTRAINT chk_transactions_merchant_not_blank
-        CHECK (merchant IS NULL OR btrim(merchant) <> '')
+        CHECK (merchant IS NULL OR btrim(merchant) <> ''),
+    CONSTRAINT chk_transactions_deleted_at
+        CHECK (deleted_at IS NULL OR deleted_at >= created_at)
+
 );
+
+CREATE INDEX idx_transactions_user_date_active
+    ON keeper.transactions (user_id, date DESC)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_transactions_user_account_type_active
+    ON keeper.transactions (user_id, account_id, type)
+    WHERE deleted_at IS NULL;
 
 --rollback DROP TABLE keeper.transactions;

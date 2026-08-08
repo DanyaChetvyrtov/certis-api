@@ -3,10 +3,8 @@ package ru.digitalhustle.certis.integrations
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
-import org.jooq.DSLContext
 import org.jooq.generated.Tables
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
@@ -30,18 +28,11 @@ import ru.digitalhustle.certis.model.entity.Goal
 import ru.digitalhustle.certis.model.entity.GoalTransaction
 import ru.digitalhustle.certis.model.entity.Transaction
 import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.repository.AccountRepository
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
 class AccountControllerIT : AbstractIntegrationTest() {
-
-    @Autowired
-    private lateinit var accountRepository: AccountRepository
-
-    @Autowired
-    private lateinit var dsl: DSLContext
 
     private companion object {
         private const val ACCESS_TOKEN_COOKIE = "access_token"
@@ -339,6 +330,7 @@ class AccountControllerIT : AbstractIntegrationTest() {
             date = now,
             createdAt = now,
             recurringTransactionId = null,
+            deletedAt = null,
         )
 
         dsl.insertInto(Tables.TRANSACTIONS)

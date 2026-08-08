@@ -1,11 +1,11 @@
-package ru.digitalhustle.certis.model.entity
+package ru.digitalhustle.certis.model
 
 import ru.digitalhustle.certis.enums.TransactionType
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
-data class Transaction(
+data class UpdateTransactionData(
 
     val id: UUID,
 
@@ -24,10 +24,4 @@ data class Transaction(
     val note: String?,
 
     val date: OffsetDateTime,
-
-    val createdAt: OffsetDateTime,
-
-    val recurringTransactionId: UUID?,
-
-    val deletedAt: OffsetDateTime?,
 )
