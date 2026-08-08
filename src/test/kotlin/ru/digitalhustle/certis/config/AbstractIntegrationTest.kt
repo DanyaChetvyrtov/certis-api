@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc
 import ru.digitalhustle.certis.fixture.UserFixture
 import ru.digitalhustle.certis.gateway.MinioGateway
 import ru.digitalhustle.certis.provider.SecurityRequestProvider
+import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.repository.RefreshSessionRepository
@@ -33,6 +34,9 @@ abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
 
     @Autowired
     protected lateinit var refreshSessionRepository: RefreshSessionRepository
+
+    @Autowired
+    protected lateinit var categoryRepository: CategoryRepository
 
     @Autowired
     protected lateinit var profileRepository: ProfileRepository

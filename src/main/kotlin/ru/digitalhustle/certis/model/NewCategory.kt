@@ -1,12 +1,9 @@
-package ru.digitalhustle.certis.model.entity
+package ru.digitalhustle.certis.model
 
 import ru.digitalhustle.certis.enums.CategoryType
-import java.time.OffsetDateTime
 import java.util.UUID
 
-data class Category(
-
-    val id: UUID,
+data class NewCategory(
 
     val userId: UUID,
 
@@ -17,6 +14,4 @@ data class Category(
     val icon: String,
 
     val color: String,
-
-    val archivedAt: OffsetDateTime?,
 )
