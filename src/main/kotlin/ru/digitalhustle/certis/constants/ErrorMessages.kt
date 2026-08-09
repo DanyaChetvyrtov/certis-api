@@ -24,6 +24,7 @@ object ErrorMessages {
     const val PASSWORDS_MISMATCH = "Passwords don't match"
 
     const val ACCOUNT_CLOSED = "Closed account cannot be updated"
+    const val CATEGORY_ARCHIVED = "Archived category cannot be updated"
 
     const val ERROR_MESSAGES_SEPARATOR = "; "
     const val VALIDATION_FAILED = "Validation failed"

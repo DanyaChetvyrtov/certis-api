@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
+import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
@@ -93,7 +94,11 @@ class DomainExceptionHandler(
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(EntityAlreadyExistsException::class, AccountClosedException::class)
+    @ExceptionHandler(
+        EntityAlreadyExistsException::class,
+        AccountClosedException::class,
+        CategoryArchivedException::class,
+    )
     fun handleConflictException(exception: DomainException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 

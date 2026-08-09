@@ -1,14 +1,12 @@
-package ru.digitalhustle.certis.model.entity
+package ru.digitalhustle.certis.model
 
 import ru.digitalhustle.certis.enums.CategoryType
 import java.time.OffsetDateTime
 import java.util.UUID
 
-data class Category(
+data class CategoryPreview(
 
     val id: UUID,
-
-    val userId: UUID,
 
     val name: String,
 
