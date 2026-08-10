@@ -77,6 +77,21 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    fun `should get category with shared lock`() {
+        // given
+        val category = createCategory()
+
+        `when`(categoryRepository.findByIdAndUserIdForShare(category.id, category.userId))
+            .thenReturn(category)
+
+        // when
+        val result = categoryService.getByIdForShare(category.id, category.userId)
+
+        // then
+        assertThat(result).isEqualTo(category)
+    }
+
+    @Test
     fun `should get all user categories`() {
         // given
         val userId = UUID.randomUUID()

@@ -28,6 +28,18 @@ class AccountRepository(
             )
             .fetchOneInto(Account::class.java)
 
+    fun findByIdAndUserIdForShare(
+        id: UUID,
+        userId: UUID,
+    ): Account? =
+        dsl.selectFrom(Tables.ACCOUNTS)
+            .where(
+                Tables.ACCOUNTS.ID.eq(id)
+                    .and(Tables.ACCOUNTS.USER_ID.eq(userId)),
+            )
+            .forShare()
+            .fetchOneInto(Account::class.java)
+
     fun findAllByUserId(userId: UUID): List<Account> =
         dsl.selectFrom(Tables.ACCOUNTS)
             .where(Tables.ACCOUNTS.USER_ID.eq(userId))
@@ -70,7 +82,8 @@ class AccountRepository(
             .from(Tables.TRANSACTIONS)
             .where(
                 Tables.TRANSACTIONS.USER_ID.eq(userId)
-                    .and(Tables.TRANSACTIONS.ACCOUNT_ID.`in`(accountIds)),
+                    .and(Tables.TRANSACTIONS.ACCOUNT_ID.`in`(accountIds))
+                    .and(Tables.TRANSACTIONS.DELETED_AT.isNull()),
             )
             .groupBy(
                 Tables.TRANSACTIONS.ACCOUNT_ID,

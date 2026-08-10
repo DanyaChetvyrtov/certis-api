@@ -16,6 +16,7 @@ import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
+import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
 import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
@@ -45,6 +46,16 @@ class DomainExceptionHandler(
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(InvalidPhotoException::class)
     fun handleInvalidPhotoException(exception: InvalidPhotoException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createBadRequest(
+            message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InvalidTransactionException::class)
+    fun handleInvalidTransactionException(exception: InvalidTransactionException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(

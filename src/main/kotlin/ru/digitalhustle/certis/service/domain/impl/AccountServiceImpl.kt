@@ -31,6 +31,13 @@ class AccountServiceImpl(
         return addBalances(listOf(account), userId).single()
     }
 
+    override fun getByIdForShare(
+        id: UUID,
+        userId: UUID,
+    ): Account =
+        accountRepository.findByIdAndUserIdForShare(id, userId)
+            ?: throw NotFoundException.entity("Account")
+
     override fun getAllByUserId(userId: UUID): List<AccountPreview> =
         addBalances(accountRepository.findAllByUserId(userId), userId)
 

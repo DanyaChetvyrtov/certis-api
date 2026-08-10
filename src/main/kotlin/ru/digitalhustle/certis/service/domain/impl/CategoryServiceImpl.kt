@@ -28,6 +28,13 @@ class CategoryServiceImpl(
         userId: UUID,
     ): CategoryPreview = getCategory(id, userId).toPreview()
 
+    override fun getByIdForShare(
+        id: UUID,
+        userId: UUID,
+    ): Category =
+        categoryRepository.findByIdAndUserIdForShare(id, userId)
+            ?: throw NotFoundException.entity("Category")
+
     override fun getAllByUserId(userId: UUID): List<CategoryPreview> =
         categoryRepository.findAllByUserId(userId).map(Category::toPreview)
 

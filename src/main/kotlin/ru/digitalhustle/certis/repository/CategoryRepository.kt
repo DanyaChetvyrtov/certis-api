@@ -24,6 +24,18 @@ class CategoryRepository(
             )
             .fetchOneInto(Category::class.java)
 
+    fun findByIdAndUserIdForShare(
+        id: UUID,
+        userId: UUID,
+    ): Category? =
+        dsl.selectFrom(Tables.CATEGORIES)
+            .where(
+                Tables.CATEGORIES.ID.eq(id)
+                    .and(Tables.CATEGORIES.USER_ID.eq(userId)),
+            )
+            .forShare()
+            .fetchOneInto(Category::class.java)
+
     fun findAllByUserId(userId: UUID): List<Category> =
         dsl.selectFrom(Tables.CATEGORIES)
             .where(Tables.CATEGORIES.USER_ID.eq(userId))

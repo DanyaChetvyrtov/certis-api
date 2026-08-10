@@ -74,6 +74,21 @@ class AccountServiceImplTest {
     }
 
     @Test
+    fun `should get account with shared lock`() {
+        // given
+        val account = createAccount()
+
+        `when`(accountRepository.findByIdAndUserIdForShare(account.id, account.userId))
+            .thenReturn(account)
+
+        // when
+        val result = accountService.getByIdForShare(account.id, account.userId)
+
+        // then
+        assertThat(result).isEqualTo(account)
+    }
+
+    @Test
     fun `should return empty account list`() {
         // given
         val userId = UUID.randomUUID()
