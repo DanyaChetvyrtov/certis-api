@@ -7,17 +7,17 @@ import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.mapper.CategoryMapper
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.domain.CategoryService
+import ru.digitalhustle.certis.service.aggregation.CategoryAggregator
 import java.util.UUID
 
 @RestController
 class CategoryControllerImpl(
-    private val categoryService: CategoryService,
+    private val categoryAggregator: CategoryAggregator,
     private val categoryMapper: CategoryMapper,
 ) : CategoryController {
 
     override fun getCategories(jwtDetails: JwtDetails): List<CategoryDto> =
-        categoryService.getAllByUserId(jwtDetails.id)
+        categoryAggregator.getAllByUserId(jwtDetails.id)
             .map(categoryMapper::convert)
 
     override fun getCategoryById(
@@ -25,7 +25,7 @@ class CategoryControllerImpl(
         jwtDetails: JwtDetails,
     ): CategoryDto =
         categoryMapper.convert(
-            categoryService.getById(categoryId, jwtDetails.id),
+            categoryAggregator.getById(categoryId, jwtDetails.id),
         )
 
     override fun createCategory(
@@ -33,7 +33,7 @@ class CategoryControllerImpl(
         jwtDetails: JwtDetails,
     ): CategoryDto =
         categoryMapper.convert(
-            categoryService.save(
+            categoryAggregator.save(
                 categoryMapper.convert(createCategoryRq, jwtDetails.id),
             ),
         )
@@ -44,7 +44,7 @@ class CategoryControllerImpl(
         jwtDetails: JwtDetails,
     ): CategoryDto =
         categoryMapper.convert(
-            categoryService.update(
+            categoryAggregator.update(
                 categoryMapper.convert(updateCategoryRq, categoryId, jwtDetails.id),
             ),
         )
@@ -52,10 +52,10 @@ class CategoryControllerImpl(
     override fun restoreCategory(
         categoryId: UUID,
         jwtDetails: JwtDetails,
-    ): Unit = categoryService.restore(categoryId, jwtDetails.id)
+    ): Unit = categoryAggregator.restore(categoryId, jwtDetails.id)
 
     override fun archiveCategory(
         categoryId: UUID,
         jwtDetails: JwtDetails,
-    ): Unit = categoryService.archive(categoryId, jwtDetails.id)
+    ): Unit = categoryAggregator.archive(categoryId, jwtDetails.id)
 }

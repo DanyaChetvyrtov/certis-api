@@ -5,6 +5,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 import org.mockito.ArgumentCaptor
+import org.mockito.ArgumentMatchers.anyCollection
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
@@ -16,6 +18,7 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.NewCategory
 import ru.digitalhustle.certis.model.UpdateCategoryData
 import ru.digitalhustle.certis.model.entity.Category
+import ru.digitalhustle.certis.provider.DefaultCategoryProvider
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.service.domain.impl.CategoryServiceImpl
 import java.time.Clock
@@ -27,10 +30,12 @@ import java.util.UUID
 class CategoryServiceImplTest {
 
     private val categoryRepository = mock(CategoryRepository::class.java)
+    private val defaultCategoryProvider = DefaultCategoryProvider()
     private val clock = Clock.fixed(Instant.parse("2026-08-08T20:00:00Z"), ZoneOffset.UTC)
-    private val categoryService = CategoryServiceImpl(categoryRepository, clock)
+    private val categoryService = CategoryServiceImpl(categoryRepository, defaultCategoryProvider, clock)
 
     private companion object {
+        private const val DEFAULT_CATEGORY_COUNT = 11
         private const val NAME = "Groceries"
         private const val UPDATED_NAME = "Food"
         private const val ICON = "shopping-cart"
@@ -92,6 +97,21 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    fun `should get category with exclusive lock`() {
+        // given
+        val category = createCategory()
+
+        `when`(categoryRepository.findByIdAndUserIdForUpdate(category.id, category.userId))
+            .thenReturn(category)
+
+        // when
+        val result = categoryService.getByIdForUpdate(category.id, category.userId)
+
+        // then
+        assertThat(result).isEqualTo(category)
+    }
+
+    @Test
     fun `should get all user categories`() {
         // given
         val userId = UUID.randomUUID()
@@ -113,7 +133,10 @@ class CategoryServiceImplTest {
     @Test
     fun `should save category`() {
         // given
-        val newCategory = createNewCategory()
+        val newCategory = createNewCategory().copy(
+            name = "  $NAME  ",
+            icon = "  $ICON  ",
+        )
         val categoryCaptor = ArgumentCaptor.forClass(Category::class.java)
 
         `when`(categoryRepository.insert(captureCategory(categoryCaptor)))
@@ -124,9 +147,9 @@ class CategoryServiceImplTest {
 
         // then
         assertAll(
-            { assertThat(result.name).isEqualTo(newCategory.name) },
+            { assertThat(result.name).isEqualTo(NAME) },
             { assertThat(result.type).isEqualTo(newCategory.type) },
-            { assertThat(result.icon).isEqualTo(newCategory.icon) },
+            { assertThat(result.icon).isEqualTo(ICON) },
             { assertThat(result.color).isEqualTo(newCategory.color) },
             { assertThat(result.archivedAt).isNull() },
             { assertThat(categoryCaptor.value.userId).isEqualTo(newCategory.userId) },
@@ -134,17 +157,58 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    fun `should create default categories for user`() {
+        // given
+        val userId = UUID.randomUUID()
+        var capturedCategories = emptyList<Category>()
+
+        doAnswer { invocation ->
+            capturedCategories = invocation.getArgument<Collection<Category>>(0).toList()
+            null
+        }.`when`(categoryRepository).insertAll(anyCollection<Category>())
+
+        // when
+        categoryService.createDefaults(userId)
+
+        // then
+        assertAll(
+            { assertThat(capturedCategories).hasSize(DEFAULT_CATEGORY_COUNT) },
+            { assertThat(capturedCategories).allMatch { category -> category.userId == userId } },
+            { assertThat(capturedCategories).allMatch { category -> category.archivedAt == null } },
+            {
+                assertThat(
+                    capturedCategories.filter { category -> category.type == CategoryType.EXPENSE }.map(Category::name),
+                )
+                    .containsExactly("Food", "Transport", "Housing", "Utilities", "Health", "Entertainment", "Other")
+            },
+            {
+                assertThat(
+                    capturedCategories.filter { category -> category.type == CategoryType.INCOME }.map(Category::name),
+                )
+                    .containsExactly("Salary", "Bonus", "Investment", "Other")
+            },
+        )
+    }
+
+    @Test
     fun `should update active category without changing type`() {
         // given
         val category = createCategory()
-        val updateData = createUpdateCategoryData(category.id, category.userId)
+        val updateData = createUpdateCategoryData(category.id, category.userId).copy(
+            name = "  $UPDATED_NAME  ",
+            icon = "  $UPDATED_ICON  ",
+        )
+        val normalizedUpdateData = updateData.copy(
+            name = UPDATED_NAME,
+            icon = UPDATED_ICON,
+        )
         val updatedCategory = category.copy(
-            name = updateData.name,
-            icon = updateData.icon,
+            name = normalizedUpdateData.name,
+            icon = normalizedUpdateData.icon,
             color = updateData.color,
         )
 
-        `when`(categoryRepository.updateActive(updateData))
+        `when`(categoryRepository.updateActive(normalizedUpdateData))
             .thenReturn(updatedCategory)
 
         // when

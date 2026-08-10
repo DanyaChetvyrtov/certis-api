@@ -32,7 +32,7 @@ import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class AccountControllerIT : AbstractIntegrationTest() {
+class AccountControllerTest : AbstractIntegrationTest() {
 
     private companion object {
         private const val ACCESS_TOKEN_COOKIE = "access_token"
@@ -322,14 +322,16 @@ class AccountControllerIT : AbstractIntegrationTest() {
             id = UUID.randomUUID(),
             userId = account.userId,
             accountId = account.id,
+            categoryId = null,
+            recurringTransactionTemplateId = null,
             type = type,
             amount = amount,
-            categoryId = null,
             merchant = null,
             note = null,
-            date = now,
+            scheduledFor = null,
+            occurredAt = now,
             createdAt = now,
-            recurringTransactionId = null,
+            updatedAt = now,
             deletedAt = null,
         )
 

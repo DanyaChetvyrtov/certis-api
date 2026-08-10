@@ -3,6 +3,7 @@ package ru.digitalhustle.certis.integrations
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
+import org.jooq.generated.Tables
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -17,16 +18,29 @@ import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
+import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.CategoryType
+import ru.digitalhustle.certis.enums.Currency
+import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.enums.TransactionType
+import ru.digitalhustle.certis.model.entity.Account
+import ru.digitalhustle.certis.model.entity.Budget
+import ru.digitalhustle.certis.model.entity.BudgetCategory
 import ru.digitalhustle.certis.model.entity.Category
+import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.entity.User
+import java.math.BigDecimal
+import java.time.Clock
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class CategoryControllerIT : AbstractIntegrationTest() {
+class CategoryControllerTest : AbstractIntegrationTest() {
 
     private companion object {
         private const val ACCESS_TOKEN_COOKIE = "access_token"
+        private const val MAX_ICON_LENGTH = 50
         private const val NAME = "Groceries"
         private const val UPDATED_NAME = "Food"
         private const val ICON = "shopping-cart"
@@ -48,13 +62,17 @@ class CategoryControllerIT : AbstractIntegrationTest() {
     fun `should create category for authenticated user`() {
         // given
         val user = userFixture.createInDb()
+        val request = createCategoryRequest().copy(
+            name = "  $NAME  ",
+            icon = "  $ICON  ",
+        )
 
         // when
         val result = mvc.perform(
             post(PathConstants.CATEGORIES)
                 .cookie(accessTokenCookie(user))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsBytes(createCategoryRequest())),
+                .content(objectMapper.writeValueAsBytes(request)),
         )
             // then
             .andExpect(status().isCreated)
@@ -162,7 +180,7 @@ class CategoryControllerIT : AbstractIntegrationTest() {
         val request = CreateCategoryRq(
             name = " ",
             type = CategoryType.EXPENSE,
-            icon = " ",
+            icon = "x".repeat(MAX_ICON_LENGTH + 1),
             color = "green",
         )
 
@@ -292,7 +310,10 @@ class CategoryControllerIT : AbstractIntegrationTest() {
         // given
         val user = userFixture.createInDb()
         val category = createCategory(user.id)
-        val request = updateCategoryRequest()
+        val request = updateCategoryRequest().copy(
+            name = "  $UPDATED_NAME  ",
+            icon = "  $UPDATED_ICON  ",
+        )
 
         // when
         mvc.perform(
@@ -435,6 +456,68 @@ class CategoryControllerIT : AbstractIntegrationTest() {
     }
 
     @Test
+    fun `should reject archive for category used by active recurring template`() {
+        // given
+        val user = userFixture.createInDb()
+        val category = createCategory(user.id)
+        val account = createAccount(user.id)
+        createRecurringTemplate(account, category, RecurringTransactionTemplateStatus.ACTIVE)
+
+        // when
+        mvc.perform(
+            delete("${PathConstants.CATEGORIES}/${category.id}")
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value(ErrorMessages.CATEGORY_IN_USE))
+
+        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+            .isNull()
+    }
+
+    @Test
+    fun `should reject archive for category used by non-ended budget`() {
+        // given
+        val user = userFixture.createInDb()
+        val category = createCategory(user.id)
+        createBudgetCategory(category, LocalDate.now(Clock.systemUTC()).plusDays(1))
+
+        // when
+        mvc.perform(
+            delete("${PathConstants.CATEGORIES}/${category.id}")
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value(ErrorMessages.CATEGORY_IN_USE))
+
+        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+            .isNull()
+    }
+
+    @Test
+    fun `should archive category with only terminal and historical dependencies`() {
+        // given
+        val user = userFixture.createInDb()
+        val category = createCategory(user.id)
+        val account = createAccount(user.id)
+        createRecurringTemplate(account, category, RecurringTransactionTemplateStatus.COMPLETED)
+        createBudgetCategory(category, LocalDate.now(Clock.systemUTC()).minusDays(1))
+
+        // when
+        mvc.perform(
+            delete("${PathConstants.CATEGORIES}/${category.id}")
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isNoContent)
+
+        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+            .isNotNull()
+    }
+
+    @Test
     fun `should archive category idempotently`() {
         // given
         val user = userFixture.createInDb()
@@ -491,6 +574,82 @@ class CategoryControllerIT : AbstractIntegrationTest() {
                 archivedAt = archivedAt,
             ),
         )
+
+    private fun createAccount(userId: UUID): Account =
+        accountRepository.insert(
+            Account(
+                id = UUID.randomUUID(),
+                userId = userId,
+                name = "Main card",
+                type = AccountType.CARD,
+                openingBalance = BigDecimal("1000.00"),
+                currency = Currency.EUR,
+                createdAt = OffsetDateTime.now(),
+                closedAt = null,
+            ),
+        )
+
+    private fun createRecurringTemplate(
+        account: Account,
+        category: Category,
+        status: RecurringTransactionTemplateStatus,
+    ) {
+        val today = LocalDate.now(Clock.systemUTC())
+        val now = OffsetDateTime.now()
+        val template = RecurringTransactionTemplate(
+            id = UUID.randomUUID(),
+            userId = account.userId,
+            accountId = account.id,
+            categoryId = category.id,
+            name = "Monthly payment",
+            type = TransactionType.EXPENSE,
+            amount = BigDecimal("50.00"),
+            merchant = null,
+            note = null,
+            status = status,
+            frequency = RecurringTransactionFrequency.MONTHLY,
+            intervalCount = 1.toShort(),
+            startDate = today,
+            endDate = null,
+            lastRunDate = null,
+            nextRunDate = if (status == RecurringTransactionTemplateStatus.COMPLETED) null else today,
+            createdAt = now,
+            updatedAt = now,
+        )
+
+        dsl.insertInto(Tables.RECURRING_TRANSACTION_TEMPLATES)
+            .set(dsl.newRecord(Tables.RECURRING_TRANSACTION_TEMPLATES, template))
+            .execute()
+    }
+
+    private fun createBudgetCategory(
+        category: Category,
+        periodEnd: LocalDate,
+    ) {
+        val budget = Budget(
+            id = UUID.randomUUID(),
+            userId = category.userId,
+            periodStart = periodEnd.minusMonths(1),
+            periodEnd = periodEnd,
+            totalBudget = BigDecimal("500.00"),
+            currency = Currency.EUR,
+            createdAt = OffsetDateTime.now(),
+        )
+        val budgetCategory = BudgetCategory(
+            id = UUID.randomUUID(),
+            userId = category.userId,
+            budgetId = budget.id,
+            categoryId = category.id,
+            limitAmount = BigDecimal("200.00"),
+        )
+
+        dsl.insertInto(Tables.BUDGETS)
+            .set(dsl.newRecord(Tables.BUDGETS, budget))
+            .execute()
+        dsl.insertInto(Tables.BUDGET_CATEGORIES)
+            .set(dsl.newRecord(Tables.BUDGET_CATEGORIES, budgetCategory))
+            .execute()
+    }
 
     private fun accessTokenCookie(user: User): Cookie =
         Cookie(

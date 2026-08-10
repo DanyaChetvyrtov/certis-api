@@ -36,6 +36,18 @@ class CategoryRepository(
             .forShare()
             .fetchOneInto(Category::class.java)
 
+    fun findByIdAndUserIdForUpdate(
+        id: UUID,
+        userId: UUID,
+    ): Category? =
+        dsl.selectFrom(Tables.CATEGORIES)
+            .where(
+                Tables.CATEGORIES.ID.eq(id)
+                    .and(Tables.CATEGORIES.USER_ID.eq(userId)),
+            )
+            .forUpdate()
+            .fetchOneInto(Category::class.java)
+
     fun findAllByUserId(userId: UUID): List<Category> =
         dsl.selectFrom(Tables.CATEGORIES)
             .where(Tables.CATEGORIES.USER_ID.eq(userId))
@@ -51,6 +63,18 @@ class CategoryRepository(
             .set(dsl.newRecord(Tables.CATEGORIES, category))
             .returning()
             .fetchSingleInto(Category::class.java)
+
+    fun insertAll(categories: Collection<Category>) {
+        if (categories.isEmpty()) {
+            return
+        }
+
+        dsl.batchInsert(
+            categories.map { category ->
+                dsl.newRecord(Tables.CATEGORIES, category)
+            },
+        ).execute()
+    }
 
     fun updateActive(category: UpdateCategoryData): Category? =
         dsl.update(Tables.CATEGORIES)

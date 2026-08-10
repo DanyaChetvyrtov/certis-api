@@ -22,4 +22,7 @@ CREATE TABLE keeper.budget_categories
         CHECK (limit_amount >= 0)
 );
 
+CREATE INDEX ix_budget_categories_user_category
+    ON keeper.budget_categories (user_id, category_id);
+
 --rollback DROP TABLE keeper.budget_categories;

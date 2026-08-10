@@ -32,7 +32,7 @@ import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class TransactionControllerIT : AbstractIntegrationTest() {
+class TransactionControllerTest : AbstractIntegrationTest() {
 
     private companion object {
         private val OPENING_BALANCE = BigDecimal("100.00")
@@ -64,9 +64,11 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.categoryId").value(category.id.toString()))
             .andExpect(jsonPath("$.merchant").value("Coffee shop"))
             .andExpect(jsonPath("$.note").value("Lunch"))
-            .andExpect(jsonPath("$.date").value(TRANSACTION_DATE.toInstant().toString()))
+            .andExpect(jsonPath("$.occurredAt").value(TRANSACTION_DATE.toInstant().toString()))
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
-            .andExpect(jsonPath("$.recurringTransactionId").doesNotExist())
+            .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+            .andExpect(jsonPath("$.recurringTransactionTemplateId").doesNotExist())
+            .andExpect(jsonPath("$.scheduledFor").doesNotExist())
             .andReturn()
 
         val transactionId = UUID.fromString(
@@ -253,7 +255,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = null,
             merchant = "Employer",
             note = "Bonus",
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
 
         // when
@@ -270,9 +272,15 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.amount").value(request.amount.toDouble()))
             .andExpect(jsonPath("$.merchant").value("Employer"))
             .andExpect(jsonPath("$.note").value("Bonus"))
+            .andExpect(jsonPath("$.occurredAt").value(request.occurredAt.toInstant().toString()))
+            .andExpect(jsonPath("$.updatedAt").isNotEmpty())
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.createdAt)
-            .isEqualTo(createdAt)
+        val updatedTransaction = checkNotNull(
+            transactionRepository.findByIdAndUserId(transaction.id, user.id),
+        )
+
+        assertThat(updatedTransaction.createdAt).isEqualTo(createdAt)
+        assertThat(updatedTransaction.updatedAt).isAfterOrEqualTo(createdAt)
     }
 
     @Test
@@ -289,7 +297,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = null,
             merchant = "Corrected merchant",
             note = null,
-            date = TRANSACTION_DATE,
+            occurredAt = TRANSACTION_DATE,
         )
 
         // when
@@ -323,7 +331,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = null,
             merchant = "Employer",
             note = "Bonus",
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
 
         // when
@@ -356,7 +364,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = null,
             merchant = null,
             note = null,
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
 
         // when
@@ -388,7 +396,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = category.id,
             merchant = "Updated merchant",
             note = "Updated note",
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
         categoryRepository.archive(category.id, user.id, OffsetDateTime.now())
 
@@ -423,7 +431,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = category.id,
             merchant = null,
             note = null,
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
 
         // when
@@ -521,7 +529,7 @@ class TransactionControllerIT : AbstractIntegrationTest() {
             categoryId = categoryId,
             merchant = "Coffee shop",
             note = "Lunch",
-            date = TRANSACTION_DATE,
+            occurredAt = TRANSACTION_DATE,
         )
 
     private fun createAccount(
@@ -573,14 +581,16 @@ class TransactionControllerIT : AbstractIntegrationTest() {
                 id = UUID.randomUUID(),
                 userId = account.userId,
                 accountId = account.id,
+                categoryId = categoryId,
+                recurringTransactionTemplateId = null,
                 type = TransactionType.EXPENSE,
                 amount = amount,
-                categoryId = categoryId,
                 merchant = null,
                 note = null,
-                date = TRANSACTION_DATE,
+                scheduledFor = null,
+                occurredAt = TRANSACTION_DATE,
                 createdAt = OffsetDateTime.now(),
-                recurringTransactionId = null,
+                updatedAt = OffsetDateTime.now(),
                 deletedAt = null,
             ),
         )

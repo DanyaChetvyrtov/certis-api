@@ -46,21 +46,26 @@ class TransactionServiceImpl(
                 id = UUID.randomUUID(),
                 userId = newTransaction.userId,
                 accountId = newTransaction.accountId,
+                categoryId = newTransaction.categoryId,
+                recurringTransactionTemplateId = null,
                 type = newTransaction.type,
                 amount = newTransaction.amount,
-                categoryId = newTransaction.categoryId,
                 merchant = newTransaction.merchant,
                 note = newTransaction.note,
-                date = newTransaction.date,
+                scheduledFor = null,
+                occurredAt = newTransaction.occurredAt,
                 createdAt = now,
-                recurringTransactionId = null,
+                updatedAt = now,
                 deletedAt = null,
             ),
         )
     }
 
     override fun update(transaction: UpdateTransactionData): Transaction =
-        transactionRepository.updateActive(transaction)
+        transactionRepository.updateActive(
+            transaction = transaction,
+            updatedAt = OffsetDateTime.now(clock),
+        )
             ?: throw NotFoundException.entity("Transaction")
 
     override fun delete(

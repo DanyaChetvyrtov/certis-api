@@ -27,5 +27,5 @@ data class CreateTransactionRq(
 
     val note: String?,
 
-    val date: OffsetDateTime,
+    val occurredAt: OffsetDateTime,
 )

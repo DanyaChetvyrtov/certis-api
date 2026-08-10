@@ -11,6 +11,7 @@ import ru.digitalhustle.certis.model.CategoryPreview
 import ru.digitalhustle.certis.model.NewCategory
 import ru.digitalhustle.certis.model.UpdateCategoryData
 import ru.digitalhustle.certis.model.entity.Category
+import ru.digitalhustle.certis.provider.DefaultCategoryProvider
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.service.domain.CategoryService
 import java.time.Clock
@@ -20,6 +21,7 @@ import java.util.UUID
 @Service
 class CategoryServiceImpl(
     private val categoryRepository: CategoryRepository,
+    private val defaultCategoryProvider: DefaultCategoryProvider,
     private val clock: Clock,
 ) : CategoryService {
 
@@ -35,25 +37,29 @@ class CategoryServiceImpl(
         categoryRepository.findByIdAndUserIdForShare(id, userId)
             ?: throw NotFoundException.entity("Category")
 
+    override fun getByIdForUpdate(
+        id: UUID,
+        userId: UUID,
+    ): Category =
+        categoryRepository.findByIdAndUserIdForUpdate(id, userId)
+            ?: throw NotFoundException.entity("Category")
+
     override fun getAllByUserId(userId: UUID): List<CategoryPreview> =
         categoryRepository.findAllByUserId(userId).map(Category::toPreview)
 
     override fun save(category: NewCategory): CategoryPreview = translateNameConflict {
-        categoryRepository.insert(
-            Category(
-                id = UUID.randomUUID(),
-                userId = category.userId,
-                name = category.name,
-                type = category.type,
-                icon = category.icon,
-                color = category.color,
-                archivedAt = null,
-            ),
-        ).toPreview()
+        categoryRepository.insert(normalize(category).toEntity()).toPreview()
+    }
+
+    override fun createDefaults(userId: UUID): Unit = translateNameConflict {
+        categoryRepository.insertAll(
+            defaultCategoryProvider.getByUserId(userId)
+                .map { category -> category.toEntity() },
+        )
     }
 
     override fun update(category: UpdateCategoryData): CategoryPreview = translateNameConflict {
-        val updatedCategory = categoryRepository.updateActive(category)
+        val updatedCategory = categoryRepository.updateActive(normalize(category))
             ?: throwUpdateFailure(category.id, category.userId)
 
         updatedCategory.toPreview()
@@ -101,6 +107,29 @@ class CategoryServiceImpl(
     private fun getCategory(id: UUID, userId: UUID): Category =
         categoryRepository.findByIdAndUserId(id, userId)
             ?: throw NotFoundException.entity("Category")
+
+    private fun normalize(category: NewCategory): NewCategory =
+        category.copy(
+            name = category.name.trim(),
+            icon = category.icon.trim(),
+        )
+
+    private fun normalize(category: UpdateCategoryData): UpdateCategoryData =
+        category.copy(
+            name = category.name.trim(),
+            icon = category.icon.trim(),
+        )
+
+    private fun NewCategory.toEntity(): Category =
+        Category(
+            id = UUID.randomUUID(),
+            userId = userId,
+            name = name,
+            type = type,
+            icon = icon,
+            color = color,
+            archivedAt = null,
+        )
 
     private fun <T> translateNameConflict(action: () -> T): T =
         try {
