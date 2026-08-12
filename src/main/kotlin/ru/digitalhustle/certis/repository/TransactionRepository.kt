@@ -57,16 +57,16 @@ class TransactionRepository(
             condition = condition.and(Tables.TRANSACTIONS.TYPE.eq(it.name))
         }
         filter.from?.let {
-            condition = condition.and(Tables.TRANSACTIONS.DATE.ge(it))
+            condition = condition.and(Tables.TRANSACTIONS.OCCURRED_AT.ge(it))
         }
         filter.to?.let {
-            condition = condition.and(Tables.TRANSACTIONS.DATE.le(it))
+            condition = condition.and(Tables.TRANSACTIONS.OCCURRED_AT.le(it))
         }
 
         val items = dsl.selectFrom(Tables.TRANSACTIONS)
             .where(condition)
             .orderBy(
-                Tables.TRANSACTIONS.DATE.desc(),
+                Tables.TRANSACTIONS.OCCURRED_AT.desc(),
                 Tables.TRANSACTIONS.CREATED_AT.desc(),
                 Tables.TRANSACTIONS.ID.desc(),
             )
@@ -103,7 +103,10 @@ class TransactionRepository(
             .returning()
             .fetchOneInto(Transaction::class.java)!!
 
-    fun updateActive(transaction: UpdateTransactionData): Transaction? =
+    fun updateActive(
+        transaction: UpdateTransactionData,
+        updatedAt: OffsetDateTime,
+    ): Transaction? =
         dsl.update(Tables.TRANSACTIONS)
             .set(Tables.TRANSACTIONS.ACCOUNT_ID, transaction.accountId)
             .set(Tables.TRANSACTIONS.TYPE, transaction.type.name)
@@ -111,7 +114,8 @@ class TransactionRepository(
             .set(Tables.TRANSACTIONS.CATEGORY_ID, transaction.categoryId)
             .set(Tables.TRANSACTIONS.MERCHANT, transaction.merchant)
             .set(Tables.TRANSACTIONS.NOTE, transaction.note)
-            .set(Tables.TRANSACTIONS.DATE, transaction.date)
+            .set(Tables.TRANSACTIONS.OCCURRED_AT, transaction.occurredAt)
+            .set(Tables.TRANSACTIONS.UPDATED_AT, updatedAt)
             .where(
                 Tables.TRANSACTIONS.ID.eq(transaction.id)
                     .and(Tables.TRANSACTIONS.USER_ID.eq(transaction.userId))

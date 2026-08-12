@@ -5,6 +5,7 @@ import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.exception.custom.MissedTokenException
@@ -14,6 +15,7 @@ import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.security.JwtData
 import ru.digitalhustle.certis.model.security.JwtDetails
 import ru.digitalhustle.certis.model.security.UserCredentials
+import ru.digitalhustle.certis.service.domain.CategoryService
 import ru.digitalhustle.certis.service.domain.RefreshSessionService
 import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.security.AuthService
@@ -24,6 +26,7 @@ import java.util.UUID
 @Service
 class AuthServiceImpl(
     private val userService: UserService,
+    private val categoryService: CategoryService,
     private val passwordEncoder: PasswordEncoder,
     private val jwtTokenProvider: JwtTokenProvider,
     private val refreshSessionService: RefreshSessionService,
@@ -37,13 +40,18 @@ class AuthServiceImpl(
     override fun getSessions(userId: UUID): List<RefreshSession> =
         refreshSessionService.getActiveByUserId(userId)
 
+    @Transactional
     override fun register(userCredentials: UserCredentials): User {
         if (userCredentials.password != userCredentials.passwordConfirmation) {
             throw PasswordsDoNotMatchException(ErrorMessages.PASSWORDS_MISMATCH)
         }
 
         val encodedPassword = passwordEncoder.encode(userCredentials.password)
-        return userService.save(EmailNormalizer.normalize(userCredentials.email), encodedPassword)
+        val user = userService.save(EmailNormalizer.normalize(userCredentials.email), encodedPassword)
+
+        categoryService.createDefaults(user.id)
+
+        return user
     }
 
     override fun login(userCredentials: UserCredentials): JwtData {

@@ -20,7 +20,7 @@ import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
-class TransactionQueryControllerIT : AbstractIntegrationTest() {
+class TransactionQueryControllerTest : AbstractIntegrationTest() {
 
     private companion object {
         private const val FILTERED_TRANSACTION_COUNT = 3
@@ -35,11 +35,11 @@ class TransactionQueryControllerIT : AbstractIntegrationTest() {
         val user = userFixture.createInDb()
         val account = createAccount(user.id)
         val anotherAccount = createAccount(user.id, name = "Cash")
-        val oldest = createTransaction(account, date = TRANSACTION_DATE.minusDays(2))
-        createTransaction(account, date = TRANSACTION_DATE.minusDays(1))
-        createTransaction(account, date = TRANSACTION_DATE)
-        createTransaction(account, type = TransactionType.INCOME, date = TRANSACTION_DATE.plusDays(1))
-        createTransaction(anotherAccount, date = TRANSACTION_DATE.plusDays(2))
+        val oldest = createTransaction(account, occurredAt = TRANSACTION_DATE.minusDays(2))
+        createTransaction(account, occurredAt = TRANSACTION_DATE.minusDays(1))
+        createTransaction(account, occurredAt = TRANSACTION_DATE)
+        createTransaction(account, type = TransactionType.INCOME, occurredAt = TRANSACTION_DATE.plusDays(1))
+        createTransaction(anotherAccount, occurredAt = TRANSACTION_DATE.plusDays(2))
 
         // when
         mvc.perform(
@@ -102,21 +102,23 @@ class TransactionQueryControllerIT : AbstractIntegrationTest() {
     private fun createTransaction(
         account: Account,
         type: TransactionType = TransactionType.EXPENSE,
-        date: OffsetDateTime,
+        occurredAt: OffsetDateTime,
     ): Transaction =
         transactionRepository.insert(
             Transaction(
                 id = UUID.randomUUID(),
                 userId = account.userId,
                 accountId = account.id,
+                categoryId = null,
+                recurringTransactionTemplateId = null,
                 type = type,
                 amount = AMOUNT,
-                categoryId = null,
                 merchant = null,
                 note = null,
-                date = date,
+                scheduledFor = null,
+                occurredAt = occurredAt,
                 createdAt = OffsetDateTime.now(),
-                recurringTransactionId = null,
+                updatedAt = OffsetDateTime.now(),
                 deletedAt = null,
             ),
         )

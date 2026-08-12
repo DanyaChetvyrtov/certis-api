@@ -25,6 +25,7 @@ import ru.digitalhustle.certis.dto.request.LoginRq
 import ru.digitalhustle.certis.dto.request.RegisterRq
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.dto.response.SessionsRs
+import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.provider.SecurityRequestProvider
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -34,6 +35,10 @@ import kotlin.test.assertEquals
 
 @Tag("integration")
 class AuthControllerTest : AbstractIntegrationTest() {
+
+    private companion object {
+        private const val DEFAULT_CATEGORY_COUNT = 11
+    }
 
     @Test
     fun `should normalize email and register user`() {
@@ -58,7 +63,21 @@ class AuthControllerTest : AbstractIntegrationTest() {
         response.andExpect(status().isCreated)
 
         val user = requireNotNull(userRepository.findByEmail(SecurityRequestProvider.NORMALIZED_EMAIL))
+        val categories = categoryRepository.findAllByUserId(user.id)
+
         assertThat(user.email).isEqualTo(SecurityRequestProvider.NORMALIZED_EMAIL)
+        assertAll(
+            { assertThat(categories).hasSize(DEFAULT_CATEGORY_COUNT) },
+            {
+                assertThat(categories.filter { category -> category.type == CategoryType.EXPENSE }.map { it.name })
+                    .containsExactly("Entertainment", "Food", "Health", "Housing", "Other", "Transport", "Utilities")
+            },
+            {
+                assertThat(categories.filter { category -> category.type == CategoryType.INCOME }.map { it.name })
+                    .containsExactly("Bonus", "Investment", "Other", "Salary")
+            },
+            { assertThat(categories).allMatch { category -> category.archivedAt == null } },
+        )
     }
 
     @Test

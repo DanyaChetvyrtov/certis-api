@@ -26,6 +26,7 @@ import ru.digitalhustle.certis.model.security.JwtData
 import ru.digitalhustle.certis.model.security.JwtDetails
 import ru.digitalhustle.certis.model.security.RefreshTokenPayload
 import ru.digitalhustle.certis.model.security.UserCredentials
+import ru.digitalhustle.certis.service.domain.CategoryService
 import ru.digitalhustle.certis.service.domain.RefreshSessionService
 import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
@@ -36,6 +37,7 @@ import java.util.UUID
 class AuthServiceImplTest {
 
     private val userService = mock(UserService::class.java)
+    private val categoryService = mock(CategoryService::class.java)
     private val passwordEncoder = mock(PasswordEncoder::class.java)
     private val jwtTokenProvider = mock(JwtTokenProvider::class.java)
     private val refreshSessionService = mock(RefreshSessionService::class.java)
@@ -43,6 +45,7 @@ class AuthServiceImplTest {
 
     private val authService = AuthServiceImpl(
         userService = userService,
+        categoryService = categoryService,
         passwordEncoder = passwordEncoder,
         jwtTokenProvider = jwtTokenProvider,
         refreshSessionService = refreshSessionService,
@@ -79,6 +82,7 @@ class AuthServiceImplTest {
         assertThat(registeredUser).isEqualTo(user)
         verify(passwordEncoder).encode(PASSWORD)
         verify(userService).save(EMAIL, ENCODED_PASSWORD)
+        verify(categoryService).createDefaults(user.id)
     }
 
     @Test
@@ -94,6 +98,7 @@ class AuthServiceImplTest {
 
         verifyNoInteractions(passwordEncoder)
         verifyNoInteractions(userService)
+        verifyNoInteractions(categoryService)
     }
 
     @Test

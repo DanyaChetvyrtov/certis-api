@@ -134,7 +134,9 @@ class TransactionServiceImplTest {
         assertAll(
             { assertThat(result.amount).isEqualByComparingTo(AMOUNT) },
             { assertThat(result.createdAt).isEqualTo(OffsetDateTime.now(clock)) },
-            { assertThat(result.recurringTransactionId).isNull() },
+            { assertThat(result.updatedAt).isEqualTo(OffsetDateTime.now(clock)) },
+            { assertThat(result.recurringTransactionTemplateId).isNull() },
+            { assertThat(result.scheduledFor).isNull() },
             { assertThat(result.deletedAt).isNull() },
         )
     }
@@ -149,7 +151,7 @@ class TransactionServiceImplTest {
             accountId = updateData.accountId,
         )
 
-        `when`(transactionRepository.updateActive(updateData))
+        `when`(transactionRepository.updateActive(updateData, OffsetDateTime.now(clock)))
             .thenReturn(updatedTransaction)
 
         // when
@@ -157,6 +159,7 @@ class TransactionServiceImplTest {
 
         // then
         assertThat(result).isEqualTo(updatedTransaction)
+        verify(transactionRepository).updateActive(updateData, OffsetDateTime.now(clock))
     }
 
     @Test
@@ -164,7 +167,7 @@ class TransactionServiceImplTest {
         // given
         val updateData = createUpdateTransactionData()
 
-        `when`(transactionRepository.updateActive(updateData))
+        `when`(transactionRepository.updateActive(updateData, OffsetDateTime.now(clock)))
             .thenReturn(null)
 
         // when, then
@@ -247,7 +250,7 @@ class TransactionServiceImplTest {
             categoryId = categoryId,
             merchant = "Coffee shop",
             note = "Lunch",
-            date = TRANSACTION_DATE,
+            occurredAt = TRANSACTION_DATE,
         )
 
     private fun createUpdateTransactionData(
@@ -264,7 +267,7 @@ class TransactionServiceImplTest {
             categoryId = null,
             merchant = "Updated merchant",
             note = "Updated note",
-            date = TRANSACTION_DATE.plusDays(1),
+            occurredAt = TRANSACTION_DATE.plusDays(1),
         )
 
     private fun createTransaction(
@@ -276,14 +279,16 @@ class TransactionServiceImplTest {
             id = id,
             userId = userId,
             accountId = accountId,
+            categoryId = null,
+            recurringTransactionTemplateId = null,
             type = TransactionType.EXPENSE,
             amount = AMOUNT,
-            categoryId = null,
             merchant = "Coffee shop",
             note = "Lunch",
-            date = TRANSACTION_DATE,
+            scheduledFor = null,
+            occurredAt = TRANSACTION_DATE,
             createdAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
-            recurringTransactionId = null,
+            updatedAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
             deletedAt = null,
         )
 

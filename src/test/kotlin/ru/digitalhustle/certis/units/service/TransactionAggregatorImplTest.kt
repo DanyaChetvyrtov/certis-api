@@ -235,7 +235,7 @@ class TransactionAggregatorImplTest {
             categoryId = categoryId,
             merchant = "Coffee shop",
             note = "Lunch",
-            date = OffsetDateTime.parse("2026-08-07T12:30:00Z"),
+            occurredAt = OffsetDateTime.parse("2026-08-07T12:30:00Z"),
         )
 
     private fun createUpdateTransactionData(
@@ -253,7 +253,7 @@ class TransactionAggregatorImplTest {
             categoryId = categoryId,
             merchant = "Updated merchant",
             note = "Updated note",
-            date = OffsetDateTime.parse("2026-08-08T12:30:00Z"),
+            occurredAt = OffsetDateTime.parse("2026-08-08T12:30:00Z"),
         )
 
     private fun createAccount(
@@ -298,14 +298,16 @@ class TransactionAggregatorImplTest {
             id = id,
             userId = userId,
             accountId = accountId,
+            categoryId = categoryId,
+            recurringTransactionTemplateId = null,
             type = TransactionType.EXPENSE,
             amount = BigDecimal("42.50"),
-            categoryId = categoryId,
             merchant = "Coffee shop",
             note = "Lunch",
-            date = OffsetDateTime.parse("2026-08-07T12:30:00Z"),
+            scheduledFor = null,
+            occurredAt = OffsetDateTime.parse("2026-08-07T12:30:00Z"),
             createdAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
-            recurringTransactionId = null,
+            updatedAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
             deletedAt = null,
         )
 }

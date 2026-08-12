@@ -25,6 +25,7 @@ object ErrorMessages {
 
     const val ACCOUNT_CLOSED = "Closed account cannot be updated"
     const val CATEGORY_ARCHIVED = "Archived category cannot be updated"
+    const val CATEGORY_IN_USE = "Category is used by an active budget or recurring transaction template"
     const val TRANSACTION_ACCOUNT_CLOSED = "Closed account cannot be used for a new transaction"
     const val TRANSACTION_CATEGORY_ARCHIVED = "Archived category cannot be assigned to a transaction"
     const val TRANSACTION_CATEGORY_TYPE_MISMATCH = "Transaction and category types must match"

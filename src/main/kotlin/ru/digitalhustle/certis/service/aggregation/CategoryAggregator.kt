@@ -1,24 +1,17 @@
-package ru.digitalhustle.certis.service.domain
+package ru.digitalhustle.certis.service.aggregation
 
 import ru.digitalhustle.certis.model.CategoryPreview
 import ru.digitalhustle.certis.model.NewCategory
 import ru.digitalhustle.certis.model.UpdateCategoryData
-import ru.digitalhustle.certis.model.entity.Category
 import java.util.UUID
 
-interface CategoryService {
+interface CategoryAggregator {
 
     fun getById(id: UUID, userId: UUID): CategoryPreview
-
-    fun getByIdForShare(id: UUID, userId: UUID): Category
-
-    fun getByIdForUpdate(id: UUID, userId: UUID): Category
 
     fun getAllByUserId(userId: UUID): List<CategoryPreview>
 
     fun save(category: NewCategory): CategoryPreview
-
-    fun createDefaults(userId: UUID)
 
     fun update(category: UpdateCategoryData): CategoryPreview
 

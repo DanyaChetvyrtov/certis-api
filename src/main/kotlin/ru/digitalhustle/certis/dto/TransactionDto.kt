@@ -3,6 +3,7 @@ package ru.digitalhustle.certis.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import ru.digitalhustle.certis.enums.TransactionType
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -23,9 +24,13 @@ data class TransactionDto(
 
     val note: String?,
 
-    val date: OffsetDateTime,
+    val recurringTransactionTemplateId: UUID?,
+
+    val scheduledFor: LocalDate?,
+
+    val occurredAt: OffsetDateTime,
 
     val createdAt: OffsetDateTime,
 
-    val recurringTransactionId: UUID?,
+    val updatedAt: OffsetDateTime,
 )

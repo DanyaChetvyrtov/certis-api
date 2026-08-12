@@ -21,5 +21,5 @@ data class NewTransaction(
 
     val note: String?,
 
-    val date: OffsetDateTime,
+    val occurredAt: OffsetDateTime,
 )

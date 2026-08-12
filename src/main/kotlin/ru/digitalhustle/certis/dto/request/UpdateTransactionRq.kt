@@ -27,5 +27,5 @@ data class UpdateTransactionRq(
 
     val note: String?,
 
-    val date: OffsetDateTime,
+    val occurredAt: OffsetDateTime,
 )

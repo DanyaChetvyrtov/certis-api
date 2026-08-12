@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-class TransactionLockingIT : AbstractIntegrationTest() {
+class TransactionLockingTest : AbstractIntegrationTest() {
 
     @Autowired
     private lateinit var transactionManager: PlatformTransactionManager
@@ -91,14 +91,16 @@ class TransactionLockingIT : AbstractIntegrationTest() {
                 id = UUID.randomUUID(),
                 userId = account.userId,
                 accountId = account.id,
+                categoryId = null,
+                recurringTransactionTemplateId = null,
                 type = TransactionType.EXPENSE,
                 amount = BigDecimal("25.50"),
-                categoryId = null,
                 merchant = null,
                 note = null,
-                date = OffsetDateTime.parse("2026-08-09T11:00:00Z"),
+                scheduledFor = null,
+                occurredAt = OffsetDateTime.parse("2026-08-09T11:00:00Z"),
                 createdAt = OffsetDateTime.parse("2026-08-09T12:00:00Z"),
-                recurringTransactionId = null,
+                updatedAt = OffsetDateTime.parse("2026-08-09T12:00:00Z"),
                 deletedAt = null,
             ),
         )

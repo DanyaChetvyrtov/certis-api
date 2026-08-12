@@ -1,12 +1,14 @@
 package ru.digitalhustle.certis.model.entity
 
+import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
 import ru.digitalhustle.certis.enums.TransactionType
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
-data class Transaction(
+data class RecurringTransactionTemplate(
 
     val id: UUID,
 
@@ -16,7 +18,7 @@ data class Transaction(
 
     val categoryId: UUID?,
 
-    val recurringTransactionTemplateId: UUID?,
+    val name: String,
 
     val type: TransactionType,
 
@@ -26,13 +28,21 @@ data class Transaction(
 
     val note: String?,
 
-    val scheduledFor: LocalDate?,
+    val status: RecurringTransactionTemplateStatus,
 
-    val occurredAt: OffsetDateTime,
+    val frequency: RecurringTransactionFrequency,
+
+    val intervalCount: Short,
+
+    val startDate: LocalDate,
+
+    val endDate: LocalDate?,
+
+    val lastRunDate: LocalDate?,
+
+    val nextRunDate: LocalDate?,
 
     val createdAt: OffsetDateTime,
 
     val updatedAt: OffsetDateTime,
-
-    val deletedAt: OffsetDateTime?,
 )

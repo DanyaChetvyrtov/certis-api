@@ -23,5 +23,5 @@ data class UpdateTransactionData(
 
     val note: String?,
 
-    val date: OffsetDateTime,
+    val occurredAt: OffsetDateTime,
 )

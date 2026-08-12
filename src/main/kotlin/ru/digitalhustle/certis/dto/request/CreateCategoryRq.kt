@@ -14,6 +14,7 @@ data class CreateCategoryRq(
     val type: CategoryType,
 
     @field:NotBlank
+    @field:Size(max = 50, message = "should be less than {max}")
     val icon: String,
 
     @field:Pattern(regexp = "^#[0-9A-Fa-f]{6}$")

@@ -7,12 +7,14 @@ CREATE TABLE keeper.categories
     user_id     UUID         NOT NULL REFERENCES keeper.users (id),
     name        VARCHAR(150) NOT NULL,
     type        VARCHAR(20)  NOT NULL,
-    icon        TEXT         NOT NULL,
+    icon        VARCHAR(50)  NOT NULL,
     color       VARCHAR(7)   NOT NULL,
     archived_at TIMESTAMPTZ,
 
     CONSTRAINT uq_categories_id_user
         UNIQUE (id, user_id),
+    CONSTRAINT uq_categories_id_user_type
+        UNIQUE (id, user_id, type),
     CONSTRAINT chk_categories_name_not_blank
         CHECK (btrim(name) <> ''),
     CONSTRAINT chk_categories_type
