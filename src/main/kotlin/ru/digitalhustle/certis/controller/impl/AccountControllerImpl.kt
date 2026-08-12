@@ -7,17 +7,17 @@ import ru.digitalhustle.certis.dto.request.CreateAccountRq
 import ru.digitalhustle.certis.dto.request.UpdateAccountRq
 import ru.digitalhustle.certis.mapper.AccountMapper
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.domain.AccountService
+import ru.digitalhustle.certis.service.account.AccountAggregator
 import java.util.UUID
 
 @RestController
 class AccountControllerImpl(
-    private val accountService: AccountService,
+    private val accountAggregator: AccountAggregator,
     private val accountMapper: AccountMapper,
 ) : AccountController {
 
     override fun getAccounts(jwtDetails: JwtDetails): List<AccountDto> =
-        accountService.getAllByUserId(jwtDetails.id)
+        accountAggregator.getAllByUserId(jwtDetails.id)
             .map(accountMapper::convert)
 
     override fun getAccountById(
@@ -25,7 +25,7 @@ class AccountControllerImpl(
         jwtDetails: JwtDetails,
     ): AccountDto =
         accountMapper.convert(
-            accountService.getById(accountId, jwtDetails.id),
+            accountAggregator.getById(accountId, jwtDetails.id),
         )
 
     override fun createAccount(
@@ -33,7 +33,7 @@ class AccountControllerImpl(
         jwtDetails: JwtDetails,
     ): AccountDto =
         accountMapper.convert(
-            accountService.save(
+            accountAggregator.save(
                 accountMapper.convert(createAccountRq, jwtDetails.id),
             ),
         )
@@ -44,7 +44,7 @@ class AccountControllerImpl(
         jwtDetails: JwtDetails,
     ): AccountDto =
         accountMapper.convert(
-            accountService.update(
+            accountAggregator.update(
                 accountMapper.convert(updateAccountRq, accountId, jwtDetails.id),
             ),
         )
@@ -52,5 +52,5 @@ class AccountControllerImpl(
     override fun closeAccount(
         accountId: UUID,
         jwtDetails: JwtDetails,
-    ): Unit = accountService.close(accountId, jwtDetails.id)
+    ): Unit = accountAggregator.close(accountId, jwtDetails.id)
 }

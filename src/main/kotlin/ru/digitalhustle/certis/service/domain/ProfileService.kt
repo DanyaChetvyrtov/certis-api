@@ -1,8 +1,8 @@
 package ru.digitalhustle.certis.service.domain
 
-import ru.digitalhustle.certis.model.NewProfile
-import ru.digitalhustle.certis.model.UpdateProfileData
 import ru.digitalhustle.certis.model.entity.Profile
+import ru.digitalhustle.certis.model.profile.NewProfile
+import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import java.util.UUID
 
 interface ProfileService {

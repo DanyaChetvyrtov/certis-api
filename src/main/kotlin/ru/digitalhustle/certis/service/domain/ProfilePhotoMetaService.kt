@@ -1,7 +1,7 @@
 package ru.digitalhustle.certis.service.domain
 
-import ru.digitalhustle.certis.model.NewProfilePhotoMeta
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
+import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import java.util.UUID
 
 interface ProfilePhotoMetaService {

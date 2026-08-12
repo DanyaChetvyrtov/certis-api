@@ -15,15 +15,15 @@ import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
 import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
-import ru.digitalhustle.certis.model.NewTransaction
-import ru.digitalhustle.certis.model.UpdateTransactionData
 import ru.digitalhustle.certis.model.entity.Account
 import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.service.aggregation.impl.TransactionAggregatorImpl
+import ru.digitalhustle.certis.model.transaction.NewTransaction
+import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
 import ru.digitalhustle.certis.service.domain.AccountService
 import ru.digitalhustle.certis.service.domain.CategoryService
 import ru.digitalhustle.certis.service.domain.TransactionService
+import ru.digitalhustle.certis.service.transaction.impl.TransactionAggregatorImpl
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -212,14 +212,55 @@ class TransactionAggregatorImplTest {
     @Test
     fun `should delegate delete`() {
         // given
-        val transactionId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
+        val transaction = createTransaction()
+        `when`(transactionService.findByIdForUpdate(transaction.id, transaction.userId))
+            .thenReturn(transaction)
 
         // when
-        transactionAggregator.delete(transactionId, userId)
+        transactionAggregator.delete(transaction.id, transaction.userId)
 
         // then
-        verify(transactionService).delete(transactionId, userId)
+        verify(transactionService).findByIdForUpdate(transaction.id, transaction.userId)
+        verify(transactionService).delete(transaction.id, transaction.userId)
+    }
+
+    @Test
+    fun `should reject independent transfer posting update`() {
+        // given
+        val transaction = createTransaction().copy(transferId = UUID.randomUUID())
+        val updateData = createUpdateTransactionData(
+            id = transaction.id,
+            userId = transaction.userId,
+            accountId = transaction.accountId,
+        )
+        `when`(transactionService.getByIdForUpdate(transaction.id, transaction.userId))
+            .thenReturn(transaction)
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.update(updateData)
+        }
+            .isInstanceOf(InvalidTransactionException::class.java)
+            .hasMessage(ErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE)
+
+        verify(transactionService, never()).update(updateData)
+    }
+
+    @Test
+    fun `should reject independent transfer posting deletion`() {
+        // given
+        val transaction = createTransaction().copy(transferId = UUID.randomUUID())
+        `when`(transactionService.findByIdForUpdate(transaction.id, transaction.userId))
+            .thenReturn(transaction)
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.delete(transaction.id, transaction.userId)
+        }
+            .isInstanceOf(InvalidTransactionException::class.java)
+            .hasMessage(ErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE)
+
+        verify(transactionService, never()).delete(transaction.id, transaction.userId)
     }
 
     private fun createNewTransaction(

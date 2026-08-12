@@ -5,10 +5,12 @@ import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.mapper.toPreview
-import ru.digitalhustle.certis.model.AccountPreview
-import ru.digitalhustle.certis.model.NewAccount
-import ru.digitalhustle.certis.model.UpdateAccountData
+import ru.digitalhustle.certis.model.account.AccountBalanceDelta
+import ru.digitalhustle.certis.model.account.AccountPreview
+import ru.digitalhustle.certis.model.account.NewAccount
+import ru.digitalhustle.certis.model.account.UpdateAccountData
 import ru.digitalhustle.certis.model.entity.Account
+import ru.digitalhustle.certis.repository.AccountBalanceRepository
 import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.service.domain.AccountService
 import java.math.BigDecimal
@@ -19,6 +21,7 @@ import java.util.UUID
 @Service
 class AccountServiceImpl(
     private val accountRepository: AccountRepository,
+    private val accountBalanceRepository: AccountBalanceRepository,
     private val clock: Clock,
 ) : AccountService {
 
@@ -37,6 +40,27 @@ class AccountServiceImpl(
     ): Account =
         accountRepository.findByIdAndUserIdForShare(id, userId)
             ?: throw NotFoundException.entity("Account")
+
+    override fun getByIdForUpdate(
+        id: UUID,
+        userId: UUID,
+    ): Account =
+        accountRepository.findByIdAndUserIdForUpdate(id, userId)
+            ?: throw NotFoundException.entity("Account")
+
+    override fun getAllByIdsForShare(
+        ids: Collection<UUID>,
+        userId: UUID,
+    ): List<Account> {
+        val requestedIds = ids.toSet()
+        val accounts = accountRepository.findAllByIdsAndUserIdForShare(requestedIds, userId)
+
+        if (accounts.size != requestedIds.size) {
+            throw NotFoundException.entity("Account")
+        }
+
+        return accounts
+    }
 
     override fun getAllByUserId(userId: UUID): List<AccountPreview> =
         addBalances(accountRepository.findAllByUserId(userId), userId)
@@ -105,14 +129,14 @@ class AccountServiceImpl(
             return emptyList()
         }
 
-        val balanceDeltas = accountRepository.findBalanceDeltas(
+        val balanceDeltas = accountBalanceRepository.findBalanceDeltas(
             userId = userId,
             accountIds = accounts.map(Account::id),
-        )
+        ).associateBy(AccountBalanceDelta::accountId)
 
         return accounts.map { account ->
             account.toPreview(
-                account.openingBalance + balanceDeltas.getOrDefault(account.id, BigDecimal.ZERO),
+                account.openingBalance + (balanceDeltas[account.id]?.delta ?: BigDecimal.ZERO),
             )
         }
     }

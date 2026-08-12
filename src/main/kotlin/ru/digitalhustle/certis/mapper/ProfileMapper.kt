@@ -7,11 +7,11 @@ import ru.digitalhustle.certis.dto.PhotoMetaInfoDto
 import ru.digitalhustle.certis.dto.ProfileDto
 import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
-import ru.digitalhustle.certis.model.NewProfile
-import ru.digitalhustle.certis.model.ProfilePreview
-import ru.digitalhustle.certis.model.UpdateProfileData
 import ru.digitalhustle.certis.model.entity.Profile
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
+import ru.digitalhustle.certis.model.profile.NewProfile
+import ru.digitalhustle.certis.model.profile.ProfilePreview
+import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import java.util.UUID
 
 @Mapper(config = BaseMapperConfig::class)

@@ -9,18 +9,22 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewProfilePhotoMeta
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
+import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.service.domain.impl.ProfilePhotoMetaServiceImpl
+import java.time.Clock
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 class ProfilePhotoMetaServiceImplTest {
 
     private val profilePhotoMetaRepository = mock(ProfilePhotoMetaRepository::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(profilePhotoMetaRepository)
+    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(profilePhotoMetaRepository, clock)
 
     private companion object {
         private const val ORIGINAL_FILE_NAME = "profile-photo"
@@ -115,7 +119,7 @@ class ProfilePhotoMetaServiceImplTest {
             { assertThat(photoMetaCaptor.value.height).isEqualTo(newPhotoMeta.height) },
             { assertThat(photoMetaCaptor.value.contentType).isEqualTo(newPhotoMeta.contentType) },
             { assertThat(photoMetaCaptor.value.url).isEqualTo(newPhotoMeta.url) },
-            { assertThat(photoMetaCaptor.value.uploadedAt).isNotNull() },
+            { assertThat(photoMetaCaptor.value.uploadedAt).isEqualTo(OffsetDateTime.now(clock)) },
         )
     }
 

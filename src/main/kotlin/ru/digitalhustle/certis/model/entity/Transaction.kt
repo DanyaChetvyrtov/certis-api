@@ -35,4 +35,6 @@ data class Transaction(
     val updatedAt: OffsetDateTime,
 
     val deletedAt: OffsetDateTime?,
+
+    val transferId: UUID? = null,
 )

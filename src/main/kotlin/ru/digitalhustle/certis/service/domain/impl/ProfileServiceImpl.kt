@@ -3,17 +3,19 @@ package ru.digitalhustle.certis.service.domain.impl
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewProfile
-import ru.digitalhustle.certis.model.UpdateProfileData
 import ru.digitalhustle.certis.model.entity.Profile
+import ru.digitalhustle.certis.model.profile.NewProfile
+import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.service.domain.ProfileService
+import java.time.Clock
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class ProfileServiceImpl(
     private val profileRepository: ProfileRepository,
+    private val clock: Clock,
 ) : ProfileService {
 
     override fun getById(id: UUID): Profile =
@@ -33,7 +35,7 @@ class ProfileServiceImpl(
                 name = profile.name,
                 surname = profile.surname,
                 dateOfBirth = profile.dateOfBirth,
-                updatedAt = OffsetDateTime.now(),
+                updatedAt = OffsetDateTime.now(clock),
             ),
         )
     }
@@ -49,7 +51,7 @@ class ProfileServiceImpl(
                 name = profile.name,
                 surname = profile.surname,
                 dateOfBirth = profile.dateOfBirth,
-                updatedAt = OffsetDateTime.now(),
+                updatedAt = OffsetDateTime.now(clock),
             ),
         )
     }

@@ -14,9 +14,11 @@ import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewAccount
-import ru.digitalhustle.certis.model.UpdateAccountData
+import ru.digitalhustle.certis.model.account.AccountBalanceDelta
+import ru.digitalhustle.certis.model.account.NewAccount
+import ru.digitalhustle.certis.model.account.UpdateAccountData
 import ru.digitalhustle.certis.model.entity.Account
+import ru.digitalhustle.certis.repository.AccountBalanceRepository
 import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.service.domain.impl.AccountServiceImpl
 import java.math.BigDecimal
@@ -29,8 +31,9 @@ import java.util.UUID
 class AccountServiceImplTest {
 
     private val accountRepository = mock(AccountRepository::class.java)
+    private val accountBalanceRepository = mock(AccountBalanceRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-07-31T10:15:30Z"), ZoneOffset.UTC)
-    private val accountService = AccountServiceImpl(accountRepository, clock)
+    private val accountService = AccountServiceImpl(accountRepository, accountBalanceRepository, clock)
 
     private companion object {
         private const val NAME = "Main card"
@@ -47,8 +50,8 @@ class AccountServiceImplTest {
 
         `when`(accountRepository.findByIdAndUserId(account.id, account.userId))
             .thenReturn(account)
-        `when`(accountRepository.findBalanceDeltas(account.userId, listOf(account.id)))
-            .thenReturn(mapOf(account.id to TRANSACTION_DELTA))
+        `when`(accountBalanceRepository.findBalanceDeltas(account.userId, listOf(account.id)))
+            .thenReturn(listOf(AccountBalanceDelta(account.id, TRANSACTION_DELTA)))
 
         // when
         val result = accountService.getById(account.id, account.userId)
@@ -101,7 +104,7 @@ class AccountServiceImplTest {
 
         // then
         assertThat(result).isEmpty()
-        verify(accountRepository, never())
+        verify(accountBalanceRepository, never())
             .findBalanceDeltas(userId, emptyList())
     }
 
@@ -143,8 +146,8 @@ class AccountServiceImplTest {
 
         `when`(accountRepository.updateActive(updateData))
             .thenReturn(updatedAccount)
-        `when`(accountRepository.findBalanceDeltas(savedAccount.userId, listOf(savedAccount.id)))
-            .thenReturn(emptyMap())
+        `when`(accountBalanceRepository.findBalanceDeltas(savedAccount.userId, listOf(savedAccount.id)))
+            .thenReturn(emptyList())
 
         // when
         val result = accountService.update(updateData)
@@ -182,7 +185,7 @@ class AccountServiceImplTest {
             .isInstanceOf(AccountClosedException::class.java)
             .hasMessage(ErrorMessages.ACCOUNT_CLOSED)
 
-        verify(accountRepository, never())
+        verify(accountBalanceRepository, never())
             .findBalanceDeltas(account.userId, listOf(account.id))
     }
 

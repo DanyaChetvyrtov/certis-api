@@ -26,6 +26,9 @@ CREATE TABLE keeper.recurring_transaction_templates
     created_at     TIMESTAMPTZ    NOT NULL,
     updated_at     TIMESTAMPTZ    NOT NULL,
 
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    retry_after TIMESTAMPTZ,
+
     CONSTRAINT fk_recurring_transaction_templates_account_user
         FOREIGN KEY (account_id, user_id)
             REFERENCES keeper.accounts (id, user_id),
@@ -81,7 +84,9 @@ CREATE TABLE keeper.recurring_transaction_templates
             (status IN ('COMPLETED', 'CANCELLED') AND next_run_date IS NULL)
         ),
     CONSTRAINT chk_recurring_transaction_templates_updated_at
-        CHECK (updated_at >= created_at)
+        CHECK (updated_at >= created_at),
+    CONSTRAINT chk_recurring_transaction_templates_consecutive_failures
+        CHECK (consecutive_failures >= 0)
 );
 
 CREATE INDEX ix_recurring_transaction_templates_due
@@ -92,5 +97,9 @@ CREATE INDEX ix_recurring_transaction_templates_user_category_schedulable
     ON keeper.recurring_transaction_templates (user_id, category_id)
     WHERE category_id IS NOT NULL
         AND status IN ('ACTIVE', 'PAUSED');
+
+CREATE INDEX ix_recurring_transaction_templates_user_account_schedulable
+    ON keeper.recurring_transaction_templates (user_id, account_id)
+    WHERE status IN ('ACTIVE', 'PAUSED');
 
 --rollback DROP TABLE keeper.recurring_transaction_templates;

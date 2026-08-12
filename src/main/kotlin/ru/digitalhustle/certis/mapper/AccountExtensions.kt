@@ -1,6 +1,6 @@
 package ru.digitalhustle.certis.mapper
 
-import ru.digitalhustle.certis.model.AccountPreview
+import ru.digitalhustle.certis.model.account.AccountPreview
 import ru.digitalhustle.certis.model.entity.Account
 import java.math.BigDecimal
 

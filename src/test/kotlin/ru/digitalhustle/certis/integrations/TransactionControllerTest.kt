@@ -7,6 +7,7 @@ import org.jooq.generated.Tables
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.MvcResult
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -64,12 +65,13 @@ class TransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.categoryId").value(category.id.toString()))
             .andExpect(jsonPath("$.merchant").value("Coffee shop"))
             .andExpect(jsonPath("$.note").value("Lunch"))
-            .andExpect(jsonPath("$.occurredAt").value(TRANSACTION_DATE.toInstant().toString()))
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
             .andExpect(jsonPath("$.updatedAt").isNotEmpty())
             .andExpect(jsonPath("$.recurringTransactionTemplateId").doesNotExist())
             .andExpect(jsonPath("$.scheduledFor").doesNotExist())
             .andReturn()
+
+        assertOccurredAt(result, TRANSACTION_DATE)
 
         val transactionId = UUID.fromString(
             objectMapper.readTree(result.response.contentAsByteArray)["id"].asText(),
@@ -259,7 +261,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
 
         // when
-        mvc.perform(
+        val result = mvc.perform(
             put("${PathConstants.TRANSACTIONS}/${transaction.id}")
                 .cookie(accessTokenCookie(user))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -272,8 +274,10 @@ class TransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.amount").value(request.amount.toDouble()))
             .andExpect(jsonPath("$.merchant").value("Employer"))
             .andExpect(jsonPath("$.note").value("Bonus"))
-            .andExpect(jsonPath("$.occurredAt").value(request.occurredAt.toInstant().toString()))
             .andExpect(jsonPath("$.updatedAt").isNotEmpty())
+            .andReturn()
+
+        assertOccurredAt(result, request.occurredAt)
 
         val updatedTransaction = checkNotNull(
             transactionRepository.findByIdAndUserId(transaction.id, user.id),
@@ -594,6 +598,17 @@ class TransactionControllerTest : AbstractIntegrationTest() {
                 deletedAt = null,
             ),
         )
+
+    private fun assertOccurredAt(
+        result: MvcResult,
+        expected: OffsetDateTime,
+    ) {
+        val actual = OffsetDateTime.parse(
+            objectMapper.readTree(result.response.contentAsByteArray)["occurredAt"].asText(),
+        )
+
+        assertThat(actual.toInstant()).isEqualTo(expected.toInstant())
+    }
 
     private fun accessTokenCookie(user: User): Cookie =
         Cookie(

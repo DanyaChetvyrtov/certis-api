@@ -2,16 +2,18 @@ package ru.digitalhustle.certis.service.domain.impl
 
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewProfilePhotoMeta
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
+import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.service.domain.ProfilePhotoMetaService
+import java.time.Clock
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class ProfilePhotoMetaServiceImpl(
     private val profilePhotoMetaRepository: ProfilePhotoMetaRepository,
+    private val clock: Clock,
 ) : ProfilePhotoMetaService {
 
     override fun getById(id: UUID): ProfilePhotoMeta =
@@ -33,7 +35,7 @@ class ProfilePhotoMetaServiceImpl(
                 height = profilePhotoMeta.height,
                 contentType = profilePhotoMeta.contentType,
                 url = profilePhotoMeta.url,
-                uploadedAt = OffsetDateTime.now(),
+                uploadedAt = OffsetDateTime.now(clock),
             ),
         )
 

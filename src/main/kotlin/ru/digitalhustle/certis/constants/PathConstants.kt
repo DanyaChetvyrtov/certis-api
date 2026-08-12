@@ -36,4 +36,11 @@ object PathConstants {
 
     const val TRANSACTIONS = "$API_V1/transactions"
     const val TRANSACTION_ID = "/{transactionId}"
+
+    const val TRANSFERS = "$API_V1/transfers"
+    const val TRANSFER_ID = "/{transferId}"
+    const val TRANSFER_REVERSAL = "$TRANSFER_ID/reversal"
+
+    const val RECURRING_TRANSACTIONS = "$API_V1/recurring-transactions"
+    const val RECURRING_TRANSACTION_ID = "/{recurringTransactionId}"
 }

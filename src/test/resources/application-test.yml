@@ -5,6 +5,10 @@ spring:
 
 digital-hustle:
   certis:
+    recurring-transactions:
+      scheduler:
+        enabled: false
+
     security:
       jwt:
         secret: "01234567890123456789012345678901"

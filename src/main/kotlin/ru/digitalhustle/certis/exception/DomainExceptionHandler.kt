@@ -11,13 +11,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
+import ru.digitalhustle.certis.exception.custom.AccountInUseException
 import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.CategoryInUseException
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
+import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
+import ru.digitalhustle.certis.exception.custom.InvalidTransferException
 import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
@@ -55,8 +58,12 @@ class DomainExceptionHandler(
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(InvalidTransactionException::class)
-    fun handleInvalidTransactionException(exception: InvalidTransactionException): ExceptionRs {
+    @ExceptionHandler(
+        InvalidTransactionException::class,
+        InvalidRecurringTransactionException::class,
+        InvalidTransferException::class,
+    )
+    fun handleInvalidFinancialOperationException(exception: DomainException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
@@ -109,6 +116,7 @@ class DomainExceptionHandler(
     @ExceptionHandler(
         EntityAlreadyExistsException::class,
         AccountClosedException::class,
+        AccountInUseException::class,
         CategoryArchivedException::class,
         CategoryInUseException::class,
     )
