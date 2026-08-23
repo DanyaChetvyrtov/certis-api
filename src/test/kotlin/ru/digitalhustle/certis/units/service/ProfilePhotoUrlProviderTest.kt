@@ -3,7 +3,7 @@ package ru.digitalhustle.certis.units.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import ru.digitalhustle.certis.config.properties.AppApiProperties
-import ru.digitalhustle.certis.service.photo.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
 import java.util.UUID
 
 class ProfilePhotoUrlProviderTest {

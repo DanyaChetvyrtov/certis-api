@@ -20,7 +20,7 @@ import ru.digitalhustle.certis.service.domain.RefreshSessionService
 import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.security.AuthService
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
-import ru.digitalhustle.certis.util.EmailNormalizer
+import ru.digitalhustle.certis.util.normalizer.EmailNormalizer
 import java.util.UUID
 
 @Service

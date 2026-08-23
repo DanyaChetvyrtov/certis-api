@@ -12,8 +12,8 @@ import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.exception.custom.CategoryInUseException
 import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.provider.CategoryUsageProvider
-import ru.digitalhustle.certis.service.aggregation.impl.CategoryAggregatorImpl
 import ru.digitalhustle.certis.service.domain.CategoryService
+import ru.digitalhustle.certis.service.transaction.impl.CategoryAggregatorImpl
 import java.time.OffsetDateTime
 import java.util.UUID
 

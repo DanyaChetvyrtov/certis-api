@@ -3,10 +3,11 @@ package ru.digitalhustle.certis.repository
 import org.jooq.DSLContext
 import org.jooq.generated.Tables
 import org.springframework.stereotype.Repository
-import ru.digitalhustle.certis.model.TransactionFilter
-import ru.digitalhustle.certis.model.TransactionPage
-import ru.digitalhustle.certis.model.UpdateTransactionData
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.TransactionFilter
+import ru.digitalhustle.certis.model.transaction.TransactionPage
+import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -97,16 +98,34 @@ class TransactionRepository(
                 ),
         )
 
+    fun findByRecurringTemplateIdAndScheduledFor(
+        recurringTransactionTemplateId: UUID,
+        scheduledFor: LocalDate,
+    ): Transaction? =
+        dsl.selectFrom(Tables.TRANSACTIONS)
+            .where(
+                Tables.TRANSACTIONS.RECURRING_TRANSACTION_TEMPLATE_ID.eq(recurringTransactionTemplateId)
+                    .and(Tables.TRANSACTIONS.SCHEDULED_FOR.eq(scheduledFor)),
+            )
+            .fetchOneInto(Transaction::class.java)
+
     fun insert(transaction: Transaction): Transaction =
         dsl.insertInto(Tables.TRANSACTIONS)
             .set(dsl.newRecord(Tables.TRANSACTIONS, transaction))
             .returning()
             .fetchOneInto(Transaction::class.java)!!
 
+    fun insertIgnoringConflict(transaction: Transaction): Transaction? =
+        dsl.insertInto(Tables.TRANSACTIONS)
+            .set(dsl.newRecord(Tables.TRANSACTIONS, transaction))
+            .onConflictDoNothing()
+            .returning()
+            .fetchOneInto(Transaction::class.java)
+
     fun updateActive(
         transaction: UpdateTransactionData,
         updatedAt: OffsetDateTime,
-    ): Transaction? =
+    ): Transaction =
         dsl.update(Tables.TRANSACTIONS)
             .set(Tables.TRANSACTIONS.ACCOUNT_ID, transaction.accountId)
             .set(Tables.TRANSACTIONS.TYPE, transaction.type.name)
@@ -122,7 +141,7 @@ class TransactionRepository(
                     .and(Tables.TRANSACTIONS.DELETED_AT.isNull()),
             )
             .returning()
-            .fetchOneInto(Transaction::class.java)
+            .fetchOneInto(Transaction::class.java)!!
 
     fun softDelete(
         id: UUID,

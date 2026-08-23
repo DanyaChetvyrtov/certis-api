@@ -11,13 +11,17 @@ import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.impl.UserServiceImpl
+import java.time.Clock
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 class UserServiceImplTest {
 
     private val repository = mock(UserRepository::class.java)
-    private val service = UserServiceImpl(repository)
+    private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
+    private val service = UserServiceImpl(repository, clock)
 
     @Test
     fun `should normalize email when reading user`() {
@@ -44,6 +48,8 @@ class UserServiceImplTest {
 
         // then
         assertThat(result.email).isEqualTo(EMAIL)
+        assertThat(result.lastLogin).isEqualTo(OffsetDateTime.now(clock))
+        assertThat(result.createdAt).isEqualTo(OffsetDateTime.now(clock))
         verify(repository).create(anyUser())
     }
 
@@ -57,6 +63,19 @@ class UserServiceImplTest {
             service.save(EMAIL, PASSWORD_HASH)
         }.isInstanceOf(EntityAlreadyExistsException::class.java)
             .hasMessage("User with such email already exists")
+    }
+
+    @Test
+    fun `should update last login with configured clock`() {
+        // given
+        val user = createUser()
+        `when`(repository.findById(user.id)).thenReturn(user)
+
+        // when
+        service.updateLastLogin(user.id)
+
+        // then
+        verify(repository).save(user.copy(lastLogin = OffsetDateTime.now(clock)))
     }
 
     private fun anyUser(): User {

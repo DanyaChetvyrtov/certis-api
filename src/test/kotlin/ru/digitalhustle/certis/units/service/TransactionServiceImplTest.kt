@@ -9,18 +9,22 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
 import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewTransaction
-import ru.digitalhustle.certis.model.TransactionFilter
-import ru.digitalhustle.certis.model.TransactionPage
-import ru.digitalhustle.certis.model.UpdateTransactionData
+import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.NewTransaction
+import ru.digitalhustle.certis.model.transaction.TransactionFilter
+import ru.digitalhustle.certis.model.transaction.TransactionPage
+import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
 import ru.digitalhustle.certis.repository.TransactionRepository
 import ru.digitalhustle.certis.service.domain.impl.TransactionServiceImpl
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -97,6 +101,21 @@ class TransactionServiceImplTest {
     }
 
     @Test
+    fun `should return null when optionally locking missing transaction for update`() {
+        // given
+        val transactionId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        `when`(transactionRepository.findByIdAndUserIdForUpdate(transactionId, userId))
+            .thenReturn(null)
+
+        // when
+        val result = transactionService.findByIdForUpdate(transactionId, userId)
+
+        // then
+        assertThat(result).isNull()
+    }
+
+    @Test
     fun `should get filtered transaction page`() {
         // given
         val userId = UUID.randomUUID()
@@ -139,6 +158,56 @@ class TransactionServiceImplTest {
             { assertThat(result.scheduledFor).isNull() },
             { assertThat(result.deletedAt).isNull() },
         )
+    }
+
+    @Test
+    fun `should save idempotent transaction occurrence from recurring template`() {
+        // given
+        val template = createRecurringTemplate()
+        val scheduledFor = LocalDate.parse("2026-08-08")
+        val transactionCaptor = ArgumentCaptor.forClass(Transaction::class.java)
+
+        `when`(transactionRepository.insertIgnoringConflict(captureTransaction(transactionCaptor)))
+            .thenAnswer { transactionCaptor.value }
+
+        // when
+        val result = checkNotNull(transactionService.saveScheduled(template, scheduledFor))
+
+        // then
+        assertAll(
+            { assertThat(result.recurringTransactionTemplateId).isEqualTo(template.id) },
+            { assertThat(result.scheduledFor).isEqualTo(scheduledFor) },
+            { assertThat(result.occurredAt).isEqualTo(OffsetDateTime.parse("2026-08-08T00:00:00Z")) },
+            { assertThat(result.amount).isEqualByComparingTo(template.amount) },
+            { assertThat(result.createdAt).isEqualTo(OffsetDateTime.now(clock)) },
+        )
+    }
+
+    @Test
+    fun `should return existing recurring occurrence after insert conflict`() {
+        // given
+        val template = createRecurringTemplate()
+        val scheduledFor = LocalDate.parse("2026-08-08")
+        val transactionCaptor = ArgumentCaptor.forClass(Transaction::class.java)
+        val existingTransaction = createTransaction(
+            userId = template.userId,
+            accountId = template.accountId,
+        ).copy(
+            recurringTransactionTemplateId = template.id,
+            scheduledFor = scheduledFor,
+        )
+
+        `when`(transactionRepository.insertIgnoringConflict(captureTransaction(transactionCaptor)))
+            .thenReturn(null)
+        `when`(
+            transactionRepository.findByRecurringTemplateIdAndScheduledFor(template.id, scheduledFor),
+        ).thenReturn(existingTransaction)
+
+        // when
+        val result = transactionService.saveScheduled(template, scheduledFor)
+
+        // then
+        assertThat(result).isEqualTo(existingTransaction)
     }
 
     @Test
@@ -290,6 +359,28 @@ class TransactionServiceImplTest {
             createdAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
             updatedAt = OffsetDateTime.parse("2026-08-08T18:00:00Z"),
             deletedAt = null,
+        )
+
+    private fun createRecurringTemplate(): RecurringTransactionTemplate =
+        RecurringTransactionTemplate(
+            id = UUID.randomUUID(),
+            userId = UUID.randomUUID(),
+            accountId = UUID.randomUUID(),
+            categoryId = null,
+            name = "Subscription",
+            type = TransactionType.EXPENSE,
+            amount = AMOUNT,
+            merchant = "Streaming service",
+            note = null,
+            status = RecurringTransactionTemplateStatus.ACTIVE,
+            frequency = RecurringTransactionFrequency.MONTHLY,
+            intervalCount = 1,
+            startDate = LocalDate.parse("2026-08-08"),
+            endDate = null,
+            lastRunDate = null,
+            nextRunDate = LocalDate.parse("2026-08-08"),
+            createdAt = OffsetDateTime.parse("2026-08-01T10:00:00Z"),
+            updatedAt = OffsetDateTime.parse("2026-08-01T10:00:00Z"),
         )
 
     private fun captureTransaction(captor: ArgumentCaptor<Transaction>): Transaction {

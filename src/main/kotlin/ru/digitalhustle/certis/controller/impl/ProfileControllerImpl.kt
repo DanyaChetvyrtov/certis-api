@@ -12,7 +12,7 @@ import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.mapper.ProfileMapper
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.aggregation.ProfileAggregator
+import ru.digitalhustle.certis.service.profile.ProfileAggregator
 import java.util.UUID
 
 @RestController

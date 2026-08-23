@@ -15,8 +15,8 @@ import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PhotoConstants
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
 import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
-import ru.digitalhustle.certis.service.photo.ProfilePhotoProcessor
-import ru.digitalhustle.certis.service.photo.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.service.profile.ProfilePhotoProcessor
+import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.UUID

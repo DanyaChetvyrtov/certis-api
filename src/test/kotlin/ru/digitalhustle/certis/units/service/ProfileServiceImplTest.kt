@@ -11,20 +11,24 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewProfile
-import ru.digitalhustle.certis.model.UpdateProfileData
 import ru.digitalhustle.certis.model.entity.Profile
+import ru.digitalhustle.certis.model.profile.NewProfile
+import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.service.domain.impl.ProfileServiceImpl
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 class ProfileServiceImplTest {
 
     private val profileRepository = mock(ProfileRepository::class.java)
+    private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profileService = ProfileServiceImpl(profileRepository)
+    private val profileService = ProfileServiceImpl(profileRepository, clock)
 
     private companion object {
         private const val NAME = "John"
@@ -111,7 +115,7 @@ class ProfileServiceImplTest {
             { assertThat(profileCaptor.value.name).isEqualTo(newProfile.name) },
             { assertThat(profileCaptor.value.surname).isEqualTo(newProfile.surname) },
             { assertThat(profileCaptor.value.dateOfBirth).isEqualTo(newProfile.dateOfBirth) },
-            { assertThat(profileCaptor.value.updatedAt).isNotNull() },
+            { assertThat(profileCaptor.value.updatedAt).isEqualTo(OffsetDateTime.now(clock)) },
         )
     }
 
@@ -159,7 +163,7 @@ class ProfileServiceImplTest {
             { assertThat(profileCaptor.value.name).isEqualTo(updateProfileData.name) },
             { assertThat(profileCaptor.value.surname).isEqualTo(updateProfileData.surname) },
             { assertThat(profileCaptor.value.dateOfBirth).isEqualTo(updateProfileData.dateOfBirth) },
-            { assertThat(profileCaptor.value.updatedAt).isNotNull() },
+            { assertThat(profileCaptor.value.updatedAt).isEqualTo(OffsetDateTime.now(clock)) },
         )
     }
 

@@ -17,10 +17,13 @@ import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.repository.ProfileRepository
+import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
 import ru.digitalhustle.certis.repository.RefreshSessionRepository
 import ru.digitalhustle.certis.repository.TransactionRepository
+import ru.digitalhustle.certis.repository.TransferRepository
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
+import ru.digitalhustle.certis.service.transaction.impl.RecurringTransactionExecutionServiceImpl
 
 @AutoConfigureMockMvc
 @AutoConfigureEmbeddedDatabase(
@@ -48,6 +51,12 @@ abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
     protected lateinit var transactionRepository: TransactionRepository
 
     @Autowired
+    protected lateinit var recurringTransactionTemplateRepository: RecurringTransactionTemplateRepository
+
+    @Autowired
+    protected lateinit var transferRepository: TransferRepository
+
+    @Autowired
     protected lateinit var categoryRepository: CategoryRepository
 
     @Autowired
@@ -61,6 +70,9 @@ abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
 
     @Autowired
     protected lateinit var jwtTokenProvider: JwtTokenProvider
+
+    @Autowired
+    protected lateinit var recurringTransactionExecutionService: RecurringTransactionExecutionServiceImpl
 
     @Autowired
     protected lateinit var userFixture: UserFixture

@@ -32,7 +32,7 @@ import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
 import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.model.objectName
+import ru.digitalhustle.certis.model.profile.objectName
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate

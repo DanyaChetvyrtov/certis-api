@@ -7,7 +7,7 @@ import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.mapper.CategoryMapper
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.aggregation.CategoryAggregator
+import ru.digitalhustle.certis.service.transaction.CategoryAggregator
 import java.util.UUID
 
 @RestController

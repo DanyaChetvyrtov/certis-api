@@ -41,6 +41,18 @@ digital-hustle:
     api:
       public-url: ${PUBLIC_API_URL:http://localhost:8080}
 
+    time:
+      zone-id: ${APPLICATION_TIME_ZONE:UTC}
+
+    recurring-transactions:
+      scheduler:
+        enabled: ${RECURRING_TRANSACTION_SCHEDULER_ENABLED:true}
+        delay: ${RECURRING_TRANSACTION_SCHEDULER_DELAY:1m}
+        batch-size: ${RECURRING_TRANSACTION_SCHEDULER_BATCH_SIZE:100}
+        max-catch-up-per-template: ${RECURRING_TRANSACTION_SCHEDULER_MAX_CATCH_UP_PER_TEMPLATE:10}
+        retry-initial-delay: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_INITIAL_DELAY:1m}
+        retry-max-delay: ${RECURRING_TRANSACTION_SCHEDULER_RETRY_MAX_DELAY:1h}
+
     security:
       jwt:
         secret: ${JWT_SECRET}

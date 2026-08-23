@@ -14,6 +14,7 @@ import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.provider.DefaultCategoryProvider
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.service.domain.CategoryService
+import ru.digitalhustle.certis.util.normalizer.CategoryNormalizer
 import java.time.Clock
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -48,7 +49,7 @@ class CategoryServiceImpl(
         categoryRepository.findAllByUserId(userId).map(Category::toPreview)
 
     override fun save(category: NewCategory): CategoryPreview = translateNameConflict {
-        categoryRepository.insert(normalize(category).toEntity()).toPreview()
+        categoryRepository.insert(CategoryNormalizer.normalize(category).toEntity()).toPreview()
     }
 
     override fun createDefaults(userId: UUID): Unit = translateNameConflict {
@@ -59,7 +60,7 @@ class CategoryServiceImpl(
     }
 
     override fun update(category: UpdateCategoryData): CategoryPreview = translateNameConflict {
-        val updatedCategory = categoryRepository.updateActive(normalize(category))
+        val updatedCategory = categoryRepository.updateActive(CategoryNormalizer.normalize(category))
             ?: throwUpdateFailure(category.id, category.userId)
 
         updatedCategory.toPreview()
@@ -91,6 +92,10 @@ class CategoryServiceImpl(
         }
     }
 
+    private fun getCategory(id: UUID, userId: UUID): Category =
+        categoryRepository.findByIdAndUserId(id, userId)
+            ?: throw NotFoundException.entity("Category")
+
     private fun throwUpdateFailure(
         id: UUID,
         userId: UUID,
@@ -104,21 +109,12 @@ class CategoryServiceImpl(
         throw NotFoundException.entity("Category")
     }
 
-    private fun getCategory(id: UUID, userId: UUID): Category =
-        categoryRepository.findByIdAndUserId(id, userId)
-            ?: throw NotFoundException.entity("Category")
-
-    private fun normalize(category: NewCategory): NewCategory =
-        category.copy(
-            name = category.name.trim(),
-            icon = category.icon.trim(),
-        )
-
-    private fun normalize(category: UpdateCategoryData): UpdateCategoryData =
-        category.copy(
-            name = category.name.trim(),
-            icon = category.icon.trim(),
-        )
+    private fun <T> translateNameConflict(action: () -> T): T =
+        try {
+            action()
+        } catch (_: DuplicateKeyException) {
+            throw EntityAlreadyExistsException.entity("Category", "name")
+        }
 
     private fun NewCategory.toEntity(): Category =
         Category(
@@ -130,11 +126,4 @@ class CategoryServiceImpl(
             color = color,
             archivedAt = null,
         )
-
-    private fun <T> translateNameConflict(action: () -> T): T =
-        try {
-            action()
-        } catch (_: DuplicateKeyException) {
-            throw EntityAlreadyExistsException.entity("Category", "name")
-        }
 }

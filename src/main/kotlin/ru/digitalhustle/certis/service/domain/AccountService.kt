@@ -1,8 +1,8 @@
 package ru.digitalhustle.certis.service.domain
 
-import ru.digitalhustle.certis.model.AccountPreview
-import ru.digitalhustle.certis.model.NewAccount
-import ru.digitalhustle.certis.model.UpdateAccountData
+import ru.digitalhustle.certis.model.account.AccountPreview
+import ru.digitalhustle.certis.model.account.NewAccount
+import ru.digitalhustle.certis.model.account.UpdateAccountData
 import ru.digitalhustle.certis.model.entity.Account
 import java.util.UUID
 
@@ -11,6 +11,10 @@ interface AccountService {
     fun getById(id: UUID, userId: UUID): AccountPreview
 
     fun getByIdForShare(id: UUID, userId: UUID): Account
+
+    fun getByIdForUpdate(id: UUID, userId: UUID): Account
+
+    fun getAllByIdsForShare(ids: Collection<UUID>, userId: UUID): List<Account>
 
     fun getAllByUserId(userId: UUID): List<AccountPreview>
 

@@ -33,4 +33,6 @@ data class TransactionDto(
     val createdAt: OffsetDateTime,
 
     val updatedAt: OffsetDateTime,
+
+    val transferId: UUID?,
 )

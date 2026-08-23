@@ -9,7 +9,7 @@ import ru.digitalhustle.certis.dto.request.UpdateTransactionRq
 import ru.digitalhustle.certis.dto.response.TransactionPageRs
 import ru.digitalhustle.certis.mapper.TransactionMapper
 import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.aggregation.TransactionAggregator
+import ru.digitalhustle.certis.service.transaction.TransactionAggregator
 import java.util.UUID
 
 @RestController
