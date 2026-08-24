@@ -1,6 +1,7 @@
 package ru.digitalhustle.certis.service.domain.impl
 
 import org.springframework.stereotype.Service
+import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
@@ -16,6 +17,10 @@ class UserServiceImpl(
     private val userRepository: UserRepository,
     private val clock: Clock,
 ) : UserService {
+
+    override fun getUserById(id: UUID): User =
+        userRepository.findById(id)
+            ?: throw NotFoundException.entity("User")
 
     override fun getUserByEmail(email: String): User =
         userRepository.findByEmail(EmailNormalizer.normalize(email))
@@ -37,12 +42,21 @@ class UserServiceImpl(
     }
 
     override fun updateLastLogin(id: UUID) {
-        val user = userRepository.findById(id)
-            ?: throw NotFoundException.entity("User")
+        val user = getUserById(id)
 
         userRepository.save(
             user.copy(
                 lastLogin = OffsetDateTime.now(clock),
+            ),
+        )
+    }
+
+    override fun updatePreferredCurrency(id: UUID, preferredCurrency: Currency) {
+        val user = getUserById(id)
+
+        userRepository.save(
+            user.copy(
+                preferredCurrency = preferredCurrency,
             ),
         )
     }

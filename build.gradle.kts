@@ -21,7 +21,7 @@ plugins {
 }
 
 group = "ru.digital-hustle"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2-SNAPSHOT"
 description = "certis-api"
 
 fun dbProperty(

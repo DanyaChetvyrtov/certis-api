@@ -22,9 +22,9 @@ class ProfileControllerImpl(
 ) : ProfileController {
 
     override fun getUserProfile(jwtDetails: JwtDetails): ProfileDto {
-        val profileWithPhoto = profileAggregator.getProfilePreview(jwtDetails.id)
+        val profilePreview = profileAggregator.getProfilePreview(jwtDetails.id)
 
-        return profileMapper.convert(profileWithPhoto)
+        return profileMapper.convert(profilePreview)
     }
 
     override fun getPhoto(profileId: UUID): ResponseEntity<ByteArray> {
@@ -43,7 +43,12 @@ class ProfileControllerImpl(
     ): ProfileDto {
         val profile = profileMapper.convert(createProfileRq, jwtDetails.id)
 
-        return profileMapper.convert(profileAggregator.saveProfile(profile))
+        val savedProfile = profileAggregator.saveProfile(
+            profile = profile,
+            preferredCurrency = createProfileRq.preferredCurrency,
+        )
+
+        return profileMapper.convert(savedProfile)
     }
 
     override fun uploadPhoto(
@@ -61,9 +66,12 @@ class ProfileControllerImpl(
     ): ProfileDto {
         val profile = profileMapper.convert(updateProfileRq, profileId)
 
-        profileAggregator.updateProfile(profile)
+        val updatedProfile = profileAggregator.updateProfile(
+            profile = profile,
+            preferredCurrency = updateProfileRq.preferredCurrency,
+        )
 
-        return profileMapper.convert(profileAggregator.getProfilePreview(profileId))
+        return profileMapper.convert(updatedProfile)
     }
 
     override fun updatePhoto(

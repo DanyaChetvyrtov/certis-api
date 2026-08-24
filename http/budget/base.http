@@ -1,0 +1,38 @@
+### Get monthly budget
+GET {{host}}/api/v1/budgets/2026-08
+Cookie: access_token={{accessToken}}
+
+### Create or update monthly budget
+PUT {{host}}/api/v1/budgets/2026-08
+Content-Type: application/json
+Cookie: access_token={{accessToken}}
+
+{
+  "monthlyIncome": 185000.00,
+  "savingsTarget": 30500.00,
+  "allocations": [
+    {
+      "categoryId": "{{categoryId}}",
+      "type": "VARIABLE",
+      "limit": 32000.00
+    }
+  ]
+}
+
+### Generate optimization
+POST {{host}}/api/v1/budgets/2026-08/optimizations
+Cookie: access_token={{accessToken}}
+
+> {% client.global.set("optimizationId", response.body.id); %}
+
+### Get latest optimization
+GET {{host}}/api/v1/budgets/2026-08/optimizations/latest
+Cookie: access_token={{accessToken}}
+
+### Apply optimization
+POST {{host}}/api/v1/budgets/2026-08/optimizations/{{optimizationId}}/apply
+Cookie: access_token={{accessToken}}
+
+### Dismiss optimization
+POST {{host}}/api/v1/budgets/2026-08/optimizations/{{optimizationId}}/dismiss
+Cookie: access_token={{accessToken}}

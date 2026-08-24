@@ -14,6 +14,7 @@ import ru.digitalhustle.certis.fixture.UserFixture
 import ru.digitalhustle.certis.gateway.MinioGateway
 import ru.digitalhustle.certis.provider.SecurityRequestProvider
 import ru.digitalhustle.certis.repository.AccountRepository
+import ru.digitalhustle.certis.repository.BudgetRepository
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.repository.ProfileRepository
@@ -58,6 +59,9 @@ abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
 
     @Autowired
     protected lateinit var categoryRepository: CategoryRepository
+
+    @Autowired
+    protected lateinit var budgetRepository: BudgetRepository
 
     @Autowired
     protected lateinit var profileRepository: ProfileRepository

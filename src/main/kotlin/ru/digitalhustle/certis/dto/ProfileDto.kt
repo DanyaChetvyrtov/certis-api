@@ -1,6 +1,7 @@
 package ru.digitalhustle.certis.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import ru.digitalhustle.certis.enums.Currency
 import java.time.LocalDate
 import java.util.UUID
 
@@ -14,6 +15,8 @@ data class ProfileDto(
     val surname: String,
 
     val dateOfBirth: LocalDate,
+
+    val preferredCurrency: Currency,
 
     val photoUrl: String?,
 )

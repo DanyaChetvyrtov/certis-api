@@ -19,6 +19,7 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.enums.AccountType
+import ru.digitalhustle.certis.enums.BudgetExpenseType
 import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
@@ -481,7 +482,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         // given
         val user = userFixture.createInDb()
         val category = createCategory(user.id)
-        createBudgetCategory(category, LocalDate.now(Clock.systemUTC()).plusDays(1))
+        createBudgetCategory(category, LocalDate.now(Clock.systemUTC()).withDayOfMonth(1))
 
         // when
         mvc.perform(
@@ -503,7 +504,10 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         val category = createCategory(user.id)
         val account = createAccount(user.id)
         createRecurringTemplate(account, category, RecurringTransactionTemplateStatus.COMPLETED)
-        createBudgetCategory(category, LocalDate.now(Clock.systemUTC()).minusDays(1))
+        createBudgetCategory(
+            category,
+            LocalDate.now(Clock.systemUTC()).withDayOfMonth(1).minusMonths(1),
+        )
 
         // when
         mvc.perform(
@@ -624,23 +628,27 @@ class CategoryControllerTest : AbstractIntegrationTest() {
 
     private fun createBudgetCategory(
         category: Category,
-        periodEnd: LocalDate,
+        budgetMonth: LocalDate,
     ) {
+        val now = OffsetDateTime.now()
         val budget = Budget(
             id = UUID.randomUUID(),
             userId = category.userId,
-            periodStart = periodEnd.minusMonths(1),
-            periodEnd = periodEnd,
-            totalBudget = BigDecimal("500.00"),
+            budgetMonth = budgetMonth,
+            plannedIncome = BigDecimal("500.00"),
+            savingsTarget = BigDecimal("100.00"),
             currency = Currency.EUR,
-            createdAt = OffsetDateTime.now(),
+            createdAt = now,
+            updatedAt = now,
         )
         val budgetCategory = BudgetCategory(
             id = UUID.randomUUID(),
             userId = category.userId,
             budgetId = budget.id,
             categoryId = category.id,
+            categoryType = CategoryType.EXPENSE,
             limitAmount = BigDecimal("200.00"),
+            expenseType = BudgetExpenseType.VARIABLE,
         )
 
         dsl.insertInto(Tables.BUDGETS)

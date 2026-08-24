@@ -17,9 +17,9 @@ class CategoryUsageProvider(
         userId: UUID,
     ): Boolean =
         categoryUsageRepository.existsInSchedulableRecurringTemplate(categoryId, userId) ||
-            categoryUsageRepository.existsInNonEndedBudget(
+            categoryUsageRepository.existsInCurrentOrFutureBudget(
                 categoryId = categoryId,
                 userId = userId,
-                currentDate = LocalDate.now(clock),
+                currentMonth = LocalDate.now(clock).withDayOfMonth(1),
             )
 }

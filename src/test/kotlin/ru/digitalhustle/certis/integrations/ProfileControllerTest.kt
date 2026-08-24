@@ -30,6 +30,7 @@ import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
 import ru.digitalhustle.certis.dto.request.CreateProfileRq
 import ru.digitalhustle.certis.dto.request.UpdateProfileRq
+import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.profile.objectName
@@ -53,6 +54,8 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         private const val IMAGE_HEIGHT = 2
         private val DATE_OF_BIRTH: LocalDate = LocalDate.of(2000, 1, 1)
         private val UPDATED_DATE_OF_BIRTH: LocalDate = LocalDate.of(2001, 2, 2)
+        private val PREFERRED_CURRENCY = Currency.EUR
+        private val UPDATED_PREFERRED_CURRENCY = Currency.RUB
     }
 
     @Test
@@ -74,6 +77,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.name").value(NAME))
             .andExpect(jsonPath("$.surname").value(SURNAME))
             .andExpect(jsonPath("$.dateOfBirth").value(DATE_OF_BIRTH.toString()))
+            .andExpect(jsonPath("$.preferredCurrency").value(PREFERRED_CURRENCY.name))
             .andExpect(jsonPath("$.photoUrl").doesNotExist())
 
         val profile = requireNotNull(profileRepository.findById(user.id))
@@ -81,6 +85,36 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         assertThat(profile.name).isEqualTo(NAME)
         assertThat(profile.surname).isEqualTo(SURNAME)
         assertThat(profile.dateOfBirth).isEqualTo(DATE_OF_BIRTH)
+        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+            .isEqualTo(PREFERRED_CURRENCY)
+    }
+
+    @Test
+    fun `should use default currency when profile creation omits it`() {
+        // given
+        val user = userFixture.createInDb()
+        val request =
+            """
+            {
+              "name": "$NAME",
+              "surname": "$SURNAME",
+              "dateOfBirth": "$DATE_OF_BIRTH"
+            }
+            """.trimIndent()
+
+        // when
+        mvc.perform(
+            post(PathConstants.PROFILES)
+                .cookie(accessTokenCookie(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request),
+        )
+            // then
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.preferredCurrency").value(Currency.USD.name))
+
+        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+            .isEqualTo(Currency.USD)
     }
 
     @Test
@@ -120,6 +154,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.name").value(NAME))
             .andExpect(jsonPath("$.surname").value(SURNAME))
             .andExpect(jsonPath("$.dateOfBirth").value(DATE_OF_BIRTH.toString()))
+            .andExpect(jsonPath("$.preferredCurrency").value(PREFERRED_CURRENCY.name))
             .andExpect(
                 jsonPath("$.photoUrl")
                     .value("http://localhost:8080${PathConstants.profilePhoto(user.id)}"),
@@ -136,6 +171,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             name = UPDATED_NAME,
             surname = UPDATED_SURNAME,
             dateOfBirth = UPDATED_DATE_OF_BIRTH,
+            preferredCurrency = UPDATED_PREFERRED_CURRENCY,
         )
 
         // when
@@ -151,12 +187,45 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.name").value(UPDATED_NAME))
             .andExpect(jsonPath("$.surname").value(UPDATED_SURNAME))
             .andExpect(jsonPath("$.dateOfBirth").value(UPDATED_DATE_OF_BIRTH.toString()))
+            .andExpect(jsonPath("$.preferredCurrency").value(UPDATED_PREFERRED_CURRENCY.name))
 
         val profile = requireNotNull(profileRepository.findById(user.id))
 
         assertThat(profile.name).isEqualTo(UPDATED_NAME)
         assertThat(profile.surname).isEqualTo(UPDATED_SURNAME)
         assertThat(profile.dateOfBirth).isEqualTo(UPDATED_DATE_OF_BIRTH)
+        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+            .isEqualTo(UPDATED_PREFERRED_CURRENCY)
+    }
+
+    @Test
+    fun `should preserve preferred currency when update omits it`() {
+        // given
+        val user = userFixture.createInDb()
+        createProfile(user)
+
+        val request =
+            """
+            {
+              "name": "$UPDATED_NAME",
+              "surname": "$UPDATED_SURNAME",
+              "dateOfBirth": "$UPDATED_DATE_OF_BIRTH"
+            }
+            """.trimIndent()
+
+        // when
+        mvc.perform(
+            put("${PathConstants.PROFILES}/${user.id}")
+                .cookie(accessTokenCookie(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.preferredCurrency").value(PREFERRED_CURRENCY.name))
+
+        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+            .isEqualTo(PREFERRED_CURRENCY)
     }
 
     @Test
@@ -169,6 +238,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             name = "",
             surname = SURNAME,
             dateOfBirth = LocalDate.now(),
+            preferredCurrency = PREFERRED_CURRENCY,
         )
 
         // when
@@ -465,6 +535,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             name = NAME,
             surname = SURNAME,
             dateOfBirth = DATE_OF_BIRTH,
+            preferredCurrency = PREFERRED_CURRENCY,
         )
 
     private fun accessTokenCookie(user: User): Cookie =

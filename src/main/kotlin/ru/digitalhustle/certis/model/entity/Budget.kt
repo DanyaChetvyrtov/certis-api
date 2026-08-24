@@ -12,13 +12,15 @@ data class Budget(
 
     val userId: UUID,
 
-    val periodStart: LocalDate,
+    val budgetMonth: LocalDate,
 
-    val periodEnd: LocalDate,
+    val plannedIncome: BigDecimal,
 
-    val totalBudget: BigDecimal,
+    val savingsTarget: BigDecimal,
 
     val currency: Currency,
 
     val createdAt: OffsetDateTime,
+
+    val updatedAt: OffsetDateTime,
 )

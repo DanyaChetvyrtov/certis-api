@@ -43,4 +43,12 @@ object PathConstants {
 
     const val RECURRING_TRANSACTIONS = "$API_V1/recurring-transactions"
     const val RECURRING_TRANSACTION_ID = "/{recurringTransactionId}"
+
+    const val BUDGETS = "$API_V1/budgets"
+    const val BUDGET_MONTH = "/{budgetMonth}"
+    const val BUDGET_OPTIMIZATIONS = "$BUDGET_MONTH/optimizations"
+    const val BUDGET_OPTIMIZATIONS_LATEST = "$BUDGET_OPTIMIZATIONS/latest"
+    const val BUDGET_OPTIMIZATION_ID = "$BUDGET_OPTIMIZATIONS/{optimizationId}"
+    const val BUDGET_OPTIMIZATION_APPLY = "$BUDGET_OPTIMIZATION_ID/apply"
+    const val BUDGET_OPTIMIZATION_DISMISS = "$BUDGET_OPTIMIZATION_ID/dismiss"
 }
