@@ -24,27 +24,31 @@ group = "ru.digital-hustle"
 version = "0.0.1-SNAPSHOT"
 description = "certis-api"
 
-val dbHost = providers.gradleProperty("db.host").get()
-val dbPort = providers.gradleProperty("db.port").get()
-val dbName = providers.gradleProperty("db.name").get()
-val dbUser = providers.gradleProperty("db.user").get()
-val dbPassword = providers.gradleProperty("db.password").get()
-val dbSchema = providers.gradleProperty("db.schema").get()
+fun dbProperty(
+    gradleProperty: String,
+    environmentVariable: String,
+    defaultValue: String = "",
+) = providers
+    .gradleProperty(gradleProperty)
+    .orElse(providers.environmentVariable(environmentVariable))
+    .orElse(defaultValue)
+
+val dbHost = dbProperty("db.host", "DB_HOST", "localhost")
+val dbPort = dbProperty("db.port", "DB_PORT", "5432")
+val dbName = dbProperty("db.name", "DB_NAME", "certis")
+val dbUser = dbProperty("db.user", "DB_USER")
+val dbPassword = dbProperty("db.password", "DB_PASSWORD")
+val dbSchema = dbProperty("db.schema", "DB_SCHEMA", "keeper")
+
 val dbDriver = "org.postgresql.Driver"
-val dbUrl = "jdbc:postgresql://$dbHost:$dbPort/$dbName"
+val dbUrl = providers.provider {
+    "jdbc:postgresql://${dbHost.get()}:${dbPort.get()}/${dbName.get()}"
+}
+
 val changelogMasterPath = "src/main/resources/db/changelog"
 val changelogFileName = "db.changelog-master.yaml"
-val changelogFilePath = "/db/changelog/$changelogFileName"
-val jooqPackageName = "ru.digitalhustle.certis.jooq"
 val jooqVersion = libs.versions.jooq.version.get()
-
-val lombokMapstructBindingVersion = "0.2.0"
-val jakartaPersistenceVersion = "3.2.0"
-val apacheCommonsIoVersion = "2.21.0"
-val kotlinLoggingVersion = "8.0.02"
-val apacheTikaVersion = "3.2.3"
-val twelveMonkeysImageioVersion = "3.14.0"
-val minioVersion = "8.5.7"
+val sarif4kVersion = libs.versions.sarif4k.get()
 
 val jacocoExcludes = listOf(
     "org/jooq/generated/**",
@@ -76,42 +80,43 @@ dependencies {
     implementation(libs.liquibase.core)
 
     // minio
-    implementation("io.minio:minio:$minioVersion")
-
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation(libs.minio)
 
     // persist
-    implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+    implementation(libs.jakarta.persistence)
 
     // swagger
     implementation(libs.springdoc)
 
     // utils
-    implementation("commons-io:commons-io:$apacheCommonsIoVersion")
-    implementation("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
-    implementation("org.apache.tika:tika-core:$apacheTikaVersion")
-    implementation("com.twelvemonkeys.imageio:imageio-webp:$twelveMonkeysImageioVersion")
+    implementation(libs.commons.io)
+    implementation(libs.kotlin.logging)
+    implementation(libs.tika.core)
+    implementation(libs.twelvemonkeys.imageio.webp)
     implementation(libs.bucket4j.core)
     implementation(libs.caffeine)
 
     // mapper
     implementation(libs.mapstruct)
-    annotationProcessor(libs.mapstruct.processor)
-    implementation("org.mapstruct:mapstruct:1.6.3")
-    kapt("org.mapstruct:mapstruct-processor:1.6.3")
+    kapt(libs.mapstruct.processor)
 
     // JWT
     implementation(libs.bundles.jwt)
 
     // tests
     testImplementation(libs.spring.boot.starter.test)
-    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation(libs.spring.security.test)
     testImplementation(libs.kotlin.test.junit5)
-    testImplementation("org.assertj:assertj-core")
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.zonky.embedded.postgres)
+    testImplementation(libs.zonky.embedded.database.spring.test)
     testRuntimeOnly(libs.junit.platform.launcher)
+}
 
-    testImplementation("io.zonky.test:embedded-postgres:2.2.0")
-    testImplementation("io.zonky.test:embedded-database-spring-test:2.7.1")
+buildscript {
+    dependencies {
+        classpath(libs.liquibase.core)
+    }
 }
 
 configurations.configureEach {
@@ -123,16 +128,9 @@ configurations.configureEach {
 
     if (name.startsWith("ktlint")) {
         resolutionStrategy.force(
-            "io.github.detekt.sarif4k:sarif4k:0.6.0",
-            "io.github.detekt.sarif4k:sarif4k-jvm:0.6.0",
+            "io.github.detekt.sarif4k:sarif4k:$sarif4kVersion",
+            "io.github.detekt.sarif4k:sarif4k-jvm:$sarif4kVersion",
         )
-    }
-}
-
-buildscript {
-    dependencies {
-        classpath("org.postgresql:postgresql:42.7.11")
-        classpath("org.liquibase:liquibase-core:4.33.0")
     }
 }
 
@@ -141,9 +139,9 @@ liquibase {
         create("main") {
             this.arguments = mapOf(
                 "changelogFile" to "$changelogMasterPath/$changelogFileName",
-                "url" to dbUrl,
-                "username" to dbUser,
-                "password" to dbPassword,
+                "url" to dbUrl.get(),
+                "username" to dbUser.get(),
+                "password" to dbPassword.get(),
                 "driver" to dbDriver,
             )
         }
@@ -159,15 +157,15 @@ jooq {
                 logging = Logging.WARN
                 jdbc = Jdbc().apply {
                     driver = dbDriver
-                    url = dbUrl
-                    user = dbUser
-                    password = dbPassword
+                    url = dbUrl.get()
+                    user = dbUser.get()
+                    password = dbPassword.get()
                 }
                 generator = Generator().apply {
                     name = "org.jooq.codegen.DefaultGenerator"
                     database = org.jooq.meta.jaxb.Database().apply {
                         name = "org.jooq.meta.postgres.PostgresDatabase"
-                        inputSchema = dbSchema
+                        inputSchema = dbSchema.get()
                         excludes = "databasechangelog|databasechangeloglock"
                     }
                     generate = org.jooq.meta.jaxb.Generate().apply {
@@ -188,6 +186,45 @@ jooq {
             }
         }
     }
+}
+
+val databaseConfiguration = mapOf(
+    "db.host / DB_HOST" to dbHost,
+    "db.port / DB_PORT" to dbPort,
+    "db.name / DB_NAME" to dbName,
+    "db.user / DB_USER" to dbUser,
+    "db.password / DB_PASSWORD" to dbPassword,
+    "db.schema / DB_SCHEMA" to dbSchema,
+)
+
+val validateDatabaseConfiguration = tasks.register("validateDatabaseConfiguration") {
+    group = "database"
+    description = "Validates database configuration required by database tasks."
+
+    doLast {
+        val missingConfiguration = databaseConfiguration
+            .filterValues { it.get().isBlank() }
+            .keys
+
+        if (missingConfiguration.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("Missing required database configuration:")
+                    missingConfiguration.forEach { appendLine(" - $it") }
+                    appendLine()
+                    append("Use Gradle properties (-Pdb.*) or DB_* environment variables.")
+                },
+            )
+        }
+    }
+}
+
+tasks.named("update") {
+    dependsOn(validateDatabaseConfiguration)
+}
+
+tasks.matching { it.name.startsWith("generateJooq") }.configureEach {
+    dependsOn(validateDatabaseConfiguration)
 }
 
 ktlint {
@@ -211,11 +248,11 @@ kotlin {
     }
 }
 
-tasks.withType<Test> {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
-tasks.withType<JacocoReport> {
+tasks.withType<JacocoReport>().configureEach {
     classDirectories.setFrom(
         files(
             classDirectories.files.map {
@@ -225,7 +262,7 @@ tasks.withType<JacocoReport> {
     )
 }
 
-tasks.withType<JacocoCoverageVerification> {
+tasks.withType<JacocoCoverageVerification>().configureEach {
     classDirectories.setFrom(
         files(
             classDirectories.files.map {
@@ -241,6 +278,10 @@ tasks.withType<JacocoCoverageVerification> {
             }
         }
     }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
 }
 
 tasks.check {
