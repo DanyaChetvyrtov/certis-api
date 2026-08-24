@@ -1,7 +1,7 @@
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
 import org.jooq.meta.jaxb.Logging
-import java.sql.DriverManager
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -21,25 +21,38 @@ plugins {
 }
 
 group = "ru.digital-hustle"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.1"
 description = "certis-api"
 
-val dbHost = providers.gradleProperty("db.host").get()
-val dbPort = providers.gradleProperty("db.port").get()
-val dbName = providers.gradleProperty("db.name").get()
-val dbUser = providers.gradleProperty("db.user").get()
-val dbPassword = providers.gradleProperty("db.password").get()
-val dbSchema = providers.gradleProperty("db.schema").get()
+fun dbProperty(
+    gradleProperty: String,
+    environmentVariable: String,
+    defaultValue: String = "",
+) = providers
+    .gradleProperty(gradleProperty)
+    .orElse(providers.environmentVariable(environmentVariable))
+    .orElse(defaultValue)
+
+val dbHost = dbProperty("db.host", "DB_HOST", "localhost")
+val dbPort = dbProperty("db.port", "DB_PORT", "5432")
+val dbName = dbProperty("db.name", "DB_NAME", "certis")
+val dbUser = dbProperty("db.user", "DB_USER")
+val dbPassword = dbProperty("db.password", "DB_PASSWORD")
+val dbSchema = dbProperty("db.schema", "DB_SCHEMA", "keeper")
+
 val dbDriver = "org.postgresql.Driver"
-val dbUrl = "jdbc:postgresql://$dbHost:$dbPort/$dbName"
+val dbUrl = providers.provider {
+    "jdbc:postgresql://${dbHost.get()}:${dbPort.get()}/${dbName.get()}"
+}
+
 val changelogMasterPath = "src/main/resources/db/changelog"
 val changelogFileName = "db.changelog-master.yaml"
-val changelogFilePath = "/db/changelog/$changelogFileName"
-val jooqPackageName = "ru.digitalhustle.certis.jooq"
+val jooqVersion = libs.versions.jooq.version.get()
+val sarif4kVersion = libs.versions.sarif4k.get()
 
-val lombokMapstructBindingVersion = "0.2.0"
-val jakartaPersistenceVersion = "3.2.0"
-val kotlinLoggingVersion = "8.0.02"
+val jacocoExcludes = listOf(
+    "org/jooq/generated/**",
+)
 
 java {
     toolchain {
@@ -54,6 +67,7 @@ dependencies {
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.spring.boot.starter.jooq)
     implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.validation)
 
     implementation(libs.kotlin.reflect)
@@ -63,34 +77,60 @@ dependencies {
     runtimeOnly(libs.postgresql)
     jooqGenerator(libs.postgresql)
     liquibaseRuntime(libs.bundles.liquibase.runtime)
+    implementation(libs.liquibase.core)
+
+    // minio
+    implementation(libs.minio)
 
     // persist
-    implementation("jakarta.persistence:jakarta.persistence-api:$jakartaPersistenceVersion")
+    implementation(libs.jakarta.persistence)
 
     // swagger
     implementation(libs.springdoc)
 
     // utils
-    implementation("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
+    implementation(libs.commons.io)
+    implementation(libs.kotlin.logging)
+    implementation(libs.tika.core)
+    implementation(libs.twelvemonkeys.imageio.webp)
+    implementation(libs.bucket4j.core)
+    implementation(libs.caffeine)
 
     // mapper
     implementation(libs.mapstruct)
-    annotationProcessor(libs.mapstruct.processor)
-    implementation("org.mapstruct:mapstruct:1.6.3")
-    kapt("org.mapstruct:mapstruct-processor:1.6.3")
+    kapt(libs.mapstruct.processor)
 
     // JWT
     implementation(libs.bundles.jwt)
 
+    // tests
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.security.test)
     testImplementation(libs.kotlin.test.junit5)
+    testImplementation(libs.assertj.core)
+    testImplementation(libs.zonky.embedded.postgres)
+    testImplementation(libs.zonky.embedded.database.spring.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 buildscript {
     dependencies {
-        classpath("org.postgresql:postgresql:42.7.8")
-        classpath("org.liquibase:liquibase-core:4.33.0")
+        classpath(libs.liquibase.core)
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jooq") {
+            useVersion(jooqVersion)
+        }
+    }
+
+    if (name.startsWith("ktlint")) {
+        resolutionStrategy.force(
+            "io.github.detekt.sarif4k:sarif4k:$sarif4kVersion",
+            "io.github.detekt.sarif4k:sarif4k-jvm:$sarif4kVersion",
+        )
     }
 }
 
@@ -99,12 +139,10 @@ liquibase {
         create("main") {
             this.arguments = mapOf(
                 "changelogFile" to "$changelogMasterPath/$changelogFileName",
-                "url" to dbUrl,
-                "username" to dbUser,
-                "password" to dbPassword,
+                "url" to dbUrl.get(),
+                "username" to dbUser.get(),
+                "password" to dbPassword.get(),
                 "driver" to dbDriver,
-                "defaultSchemaName" to dbSchema,
-                "liquibaseSchemaName" to dbSchema
             )
         }
     }
@@ -112,22 +150,22 @@ liquibase {
 }
 
 jooq {
-    version.set(libs.versions.jooq.version.get())
+    version.set(jooqVersion)
     configurations {
         create("main") {
             jooqConfiguration.apply {
                 logging = Logging.WARN
                 jdbc = Jdbc().apply {
                     driver = dbDriver
-                    url = dbUrl
-                    user = dbUser
-                    password = dbPassword
+                    url = dbUrl.get()
+                    user = dbUser.get()
+                    password = dbPassword.get()
                 }
                 generator = Generator().apply {
                     name = "org.jooq.codegen.DefaultGenerator"
                     database = org.jooq.meta.jaxb.Database().apply {
                         name = "org.jooq.meta.postgres.PostgresDatabase"
-                        inputSchema = dbSchema
+                        inputSchema = dbSchema.get()
                         excludes = "databasechangelog|databasechangeloglock"
                     }
                     generate = org.jooq.meta.jaxb.Generate().apply {
@@ -135,6 +173,7 @@ jooq {
                         isRecords = true
                         isImmutablePojos = false
                         isFluentSetters = false
+                        isImplicitJoinPathsToMany = false
                     }
                     target = org.jooq.meta.jaxb.Target().apply {
                         packageName = "org.jooq.generated"
@@ -149,27 +188,58 @@ jooq {
     }
 }
 
-detekt {
-    config.setFrom("$projectDir/detekt.yml")
-    buildUponDefaultConfig = true
-    allRules = false
-}
+val databaseConfiguration = mapOf(
+    "db.host / DB_HOST" to dbHost,
+    "db.port / DB_PORT" to dbPort,
+    "db.name / DB_NAME" to dbName,
+    "db.user / DB_USER" to dbUser,
+    "db.password / DB_PASSWORD" to dbPassword,
+    "db.schema / DB_SCHEMA" to dbSchema,
+)
 
-tasks.register("ensureSchemaExists") {
+val validateDatabaseConfiguration = tasks.register("validateDatabaseConfiguration") {
     group = "database"
-    description = "Creates the application schema in PostgreSQL before running Liquibase."
+    description = "Validates database configuration required by database tasks."
 
     doLast {
-        DriverManager.getConnection(dbUrl, dbUser, dbPassword).use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("CREATE SCHEMA IF NOT EXISTS $dbSchema")
-            }
+        val missingConfiguration = databaseConfiguration
+            .filterValues { it.get().isBlank() }
+            .keys
+
+        if (missingConfiguration.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("Missing required database configuration:")
+                    missingConfiguration.forEach { appendLine(" - $it") }
+                    appendLine()
+                    append("Use Gradle properties (-Pdb.*) or DB_* environment variables.")
+                },
+            )
         }
     }
 }
 
 tasks.named("update") {
-    dependsOn("ensureSchemaExists")
+    dependsOn(validateDatabaseConfiguration)
+}
+
+tasks.matching { it.name.startsWith("generateJooq") }.configureEach {
+    dependsOn(validateDatabaseConfiguration)
+}
+
+ktlint {
+    relative.set(true)
+
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.SARIF)
+    }
+}
+
+detekt {
+    config.setFrom("$projectDir/detekt.yml")
+    buildUponDefaultConfig = true
+    allRules = false
 }
 
 kotlin {
@@ -178,11 +248,29 @@ kotlin {
     }
 }
 
-tasks.withType<Test> {
+tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
-tasks.jacocoTestCoverageVerification {
+tasks.withType<JacocoReport>().configureEach {
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it).apply { exclude(jacocoExcludes) }
+            },
+        ),
+    )
+}
+
+tasks.withType<JacocoCoverageVerification>().configureEach {
+    classDirectories.setFrom(
+        files(
+            classDirectories.files.map {
+                fileTree(it).apply { exclude(jacocoExcludes) }
+            },
+        ),
+    )
+
     violationRules {
         rule {
             limit {
@@ -192,10 +280,12 @@ tasks.jacocoTestCoverageVerification {
     }
 }
 
-tasks.check {
-    dependsOn(tasks.jacocoTestCoverageVerification)
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
 }
 
 tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
     dependsOn(tasks.detekt)
+    dependsOn(tasks.ktlintCheck)
 }
