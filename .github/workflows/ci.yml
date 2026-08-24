@@ -4,7 +4,7 @@ on:
   push:
     branches: [ dev ]
   pull_request:
-    branches: [ dev, main ]
+    branches: [ dev, master ]
 
 permissions:
   contents: read
@@ -62,25 +62,10 @@ jobs:
         run: chmod +x gradlew
 
       - name: Apply Liquibase migrations
-        run: |
-          ./gradlew update \
-            -Pdb.host=${{ env.DB_HOST }} \
-            -Pdb.port=${{ env.DB_PORT }} \
-            -Pdb.name=${{ env.DB_NAME }} \
-            -Pdb.user=${{ env.DB_USER }} \
-            -Pdb.password=${{ env.DB_PASSWORD }} \
-            -Pdb.schema=${{ env.DB_SCHEMA }}
+        run: ./gradlew update
 
       - name: Build and run checks (tests, detekt, ktlint, jacoco)
-        run: |
-          ./gradlew check --continue \
-            -Pdb.host=${{ env.DB_HOST }} \
-            -Pdb.port=${{ env.DB_PORT }} \
-            -Pdb.name=${{ env.DB_NAME }} \
-            -Pdb.user=${{ env.DB_USER }} \
-            -Pdb.password=${{ env.DB_PASSWORD }} \
-            -Pdb.schema=${{ env.DB_SCHEMA }} \
-            -Dspring.profiles.active=test
+        run: ./gradlew check --continue -Dspring.profiles.active=test
 
       - name: Publish JUnit Test Report
         if: ${{ always() && hashFiles('build/test-results/test/TEST-*.xml') != '' }}
