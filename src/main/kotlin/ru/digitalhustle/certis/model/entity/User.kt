@@ -1,5 +1,6 @@
 package ru.digitalhustle.certis.model.entity
 
+import ru.digitalhustle.certis.enums.Currency
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -10,6 +11,8 @@ data class User(
     val email: String,
 
     val passwordHash: String,
+
+    val preferredCurrency: Currency = Currency.USD,
 
     val lastLogin: OffsetDateTime?,
 

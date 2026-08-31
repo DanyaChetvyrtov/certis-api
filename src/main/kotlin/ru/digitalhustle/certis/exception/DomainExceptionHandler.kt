@@ -12,10 +12,12 @@ import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.AccountClosedException
 import ru.digitalhustle.certis.exception.custom.AccountInUseException
+import ru.digitalhustle.certis.exception.custom.BudgetOptimizationConflictException
 import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.CategoryInUseException
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.InvalidBudgetException
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
 import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
@@ -71,6 +73,17 @@ class DomainExceptionHandler(
         )
     }
 
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ExceptionHandler(InvalidBudgetException::class)
+    fun handleInvalidBudgetException(exception: InvalidBudgetException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createResponse(
+            status = HttpStatus.UNPROCESSABLE_ENTITY,
+            message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
     @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
     @ExceptionHandler(UnsupportedPhotoMediaTypeException::class)
     fun handleUnsupportedPhotoMediaTypeException(exception: UnsupportedPhotoMediaTypeException): ExceptionRs {
@@ -117,6 +130,7 @@ class DomainExceptionHandler(
         EntityAlreadyExistsException::class,
         AccountClosedException::class,
         AccountInUseException::class,
+        BudgetOptimizationConflictException::class,
         CategoryArchivedException::class,
         CategoryInUseException::class,
     )

@@ -25,10 +25,10 @@ class CategoryUsageRepository(
                 ),
         )
 
-    fun existsInNonEndedBudget(
+    fun existsInCurrentOrFutureBudget(
         categoryId: UUID,
         userId: UUID,
-        currentDate: LocalDate,
+        currentMonth: LocalDate,
     ): Boolean =
         dsl.fetchExists(
             dsl.selectOne()
@@ -41,7 +41,7 @@ class CategoryUsageRepository(
                 .where(
                     Tables.BUDGET_CATEGORIES.CATEGORY_ID.eq(categoryId)
                         .and(Tables.BUDGET_CATEGORIES.USER_ID.eq(userId))
-                        .and(Tables.BUDGETS.PERIOD_END.ge(currentDate)),
+                        .and(Tables.BUDGETS.BUDGET_MONTH.ge(currentMonth)),
                 ),
         )
 }

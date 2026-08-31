@@ -6,12 +6,12 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile
+import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
 import ru.digitalhustle.certis.gateway.MinioGateway
 import ru.digitalhustle.certis.mapper.toPreview
-import ru.digitalhustle.certis.model.entity.Profile
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
 import ru.digitalhustle.certis.model.profile.NewProfile
 import ru.digitalhustle.certis.model.profile.ProfilePhoto
@@ -20,6 +20,7 @@ import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.model.profile.objectName
 import ru.digitalhustle.certis.service.domain.ProfilePhotoMetaService
 import ru.digitalhustle.certis.service.domain.ProfileService
+import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.profile.ProfileAggregator
 import ru.digitalhustle.certis.service.profile.ProfilePhotoProcessor
 import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
@@ -28,6 +29,7 @@ import java.util.UUID
 @Service
 class ProfileAggregatorImpl(
     private val profileService: ProfileService,
+    private val userService: UserService,
     private val profilePhotoMetaService: ProfilePhotoMetaService,
     private val minioGateway: MinioGateway,
     private val profilePhotoProcessor: ProfilePhotoProcessor,
@@ -38,10 +40,12 @@ class ProfileAggregatorImpl(
 
     override fun getProfilePreview(profileId: UUID): ProfilePreview {
         val profile = profileService.getById(profileId)
-        val photoUrl = profilePhotoMetaService.getByProfileId(profileId)
-            ?.let { profilePhotoUrlProvider.get(profileId) }
+        val user = userService.getUserById(profileId)
 
-        return profile.toPreview(photoUrl)
+        return profile.toPreview(
+            photoUrl = getPhotoUrl(profileId),
+            preferredCurrency = user.preferredCurrency,
+        )
     }
 
     override fun getPhoto(profileId: UUID): ProfilePhoto {
@@ -56,7 +60,19 @@ class ProfileAggregatorImpl(
         )
     }
 
-    override fun saveProfile(profile: NewProfile): Profile = profileService.save(profile)
+    @Transactional
+    override fun saveProfile(
+        profile: NewProfile,
+        preferredCurrency: Currency,
+    ): ProfilePreview {
+        val savedProfile = profileService.save(profile)
+        userService.updatePreferredCurrency(savedProfile.id, preferredCurrency)
+
+        return savedProfile.toPreview(
+            photoUrl = null,
+            preferredCurrency = preferredCurrency,
+        )
+    }
 
     @Transactional
     override fun uploadPhoto(profileId: UUID, photo: MultipartFile): ProfilePhotoMeta {
@@ -70,7 +86,23 @@ class ProfileAggregatorImpl(
         return saveNewPhoto(profileId, photo)
     }
 
-    override fun updateProfile(profile: UpdateProfileData): Profile = profileService.update(profile)
+    @Transactional
+    override fun updateProfile(
+        profile: UpdateProfileData,
+        preferredCurrency: Currency?,
+    ): ProfilePreview {
+        val updatedProfile = profileService.update(profile)
+        val effectiveCurrency = preferredCurrency ?: userService.getUserById(updatedProfile.id).preferredCurrency
+
+        preferredCurrency?.let {
+            userService.updatePreferredCurrency(updatedProfile.id, it)
+        }
+
+        return updatedProfile.toPreview(
+            photoUrl = getPhotoUrl(updatedProfile.id),
+            preferredCurrency = effectiveCurrency,
+        )
+    }
 
     @Transactional
     override fun updatePhoto(profileId: UUID, photo: MultipartFile): ProfilePhotoMeta {
@@ -117,6 +149,10 @@ class ProfileAggregatorImpl(
         profilePhotoMetaService.deleteByProfileId(profileId)
         photoMeta?.let(::deletePhotoAfterCommit)
     }
+
+    private fun getPhotoUrl(profileId: UUID): String? =
+        profilePhotoMetaService.getByProfileId(profileId)
+            ?.let { profilePhotoUrlProvider.get(profileId) }
 
     private fun saveNewPhoto(profileId: UUID, photo: MultipartFile): ProfilePhotoMeta {
         val processedPhoto = profilePhotoProcessor.process(profileId, photo)

@@ -13,12 +13,14 @@ import org.springframework.http.MediaType
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile
+import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
 import ru.digitalhustle.certis.gateway.MinioGateway
 import ru.digitalhustle.certis.model.entity.Profile
 import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
+import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.model.profile.NewProfile
 import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import ru.digitalhustle.certis.model.profile.ProcessedProfilePhoto
@@ -26,6 +28,7 @@ import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.model.profile.objectName
 import ru.digitalhustle.certis.service.domain.ProfilePhotoMetaService
 import ru.digitalhustle.certis.service.domain.ProfileService
+import ru.digitalhustle.certis.service.domain.UserService
 import ru.digitalhustle.certis.service.profile.ProfilePhotoProcessor
 import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
 import ru.digitalhustle.certis.service.profile.impl.ProfileAggregatorImpl
@@ -36,6 +39,7 @@ import java.util.UUID
 class ProfileAggregatorImplTest {
 
     private val profileService = mock(ProfileService::class.java)
+    private val userService = mock(UserService::class.java)
     private val profilePhotoMetaService = mock(ProfilePhotoMetaService::class.java)
     private val minioGateway = mock(MinioGateway::class.java)
     private val profilePhotoProcessor = mock(ProfilePhotoProcessor::class.java)
@@ -43,6 +47,7 @@ class ProfileAggregatorImplTest {
 
     private val profileAggregator = ProfileAggregatorImpl(
         profileService = profileService,
+        userService = userService,
         profilePhotoMetaService = profilePhotoMetaService,
         minioGateway = minioGateway,
         profilePhotoProcessor = profilePhotoProcessor,
@@ -60,10 +65,17 @@ class ProfileAggregatorImplTest {
     fun `should get profile preview`() {
         // given
         val profile = createProfile()
+        val user = createUser(
+            id = profile.id,
+            preferredCurrency = Currency.EUR,
+        )
         val photoMeta = createProfilePhotoMeta(profileId = profile.id)
 
         `when`(profileService.getById(profile.id))
             .thenReturn(profile)
+
+        `when`(userService.getUserById(profile.id))
+            .thenReturn(user)
 
         `when`(profilePhotoMetaService.getByProfileId(profile.id))
             .thenReturn(photoMeta)
@@ -79,6 +91,7 @@ class ProfileAggregatorImplTest {
         assertThat(profilePreview.name).isEqualTo(profile.name)
         assertThat(profilePreview.surname).isEqualTo(profile.surname)
         assertThat(profilePreview.dateOfBirth).isEqualTo(profile.dateOfBirth)
+        assertThat(profilePreview.preferredCurrency).isEqualTo(user.preferredCurrency)
         assertThat(profilePreview.photoUrl).isEqualTo(PHOTO_URL)
     }
 
@@ -135,13 +148,18 @@ class ProfileAggregatorImplTest {
             .thenReturn(profile)
 
         // when
-        val savedProfile = profileAggregator.saveProfile(newProfile)
+        val savedProfile = profileAggregator.saveProfile(newProfile, Currency.EUR)
 
         // then
-        assertThat(savedProfile).isEqualTo(profile)
+        assertThat(savedProfile.id).isEqualTo(profile.id)
+        assertThat(savedProfile.preferredCurrency).isEqualTo(Currency.EUR)
+        assertThat(savedProfile.photoUrl).isNull()
 
         verify(profileService)
             .save(newProfile)
+
+        verify(userService)
+            .updatePreferredCurrency(profile.id, Currency.EUR)
     }
 
     @Test
@@ -154,13 +172,43 @@ class ProfileAggregatorImplTest {
             .thenReturn(profile)
 
         // when
-        val updatedProfile = profileAggregator.updateProfile(updateProfileData)
+        val updatedProfile = profileAggregator.updateProfile(updateProfileData, Currency.RUB)
 
         // then
-        assertThat(updatedProfile).isEqualTo(profile)
+        assertThat(updatedProfile.id).isEqualTo(profile.id)
+        assertThat(updatedProfile.preferredCurrency).isEqualTo(Currency.RUB)
 
         verify(profileService)
             .update(updateProfileData)
+
+        verify(userService)
+            .updatePreferredCurrency(profile.id, Currency.RUB)
+    }
+
+    @Test
+    fun `should preserve preferred currency when profile update omits it`() {
+        // given
+        val updateProfileData = createUpdateProfileData()
+        val profile = createProfile(id = updateProfileData.id)
+        val user = createUser(
+            id = profile.id,
+            preferredCurrency = Currency.EUR,
+        )
+
+        `when`(profileService.update(updateProfileData))
+            .thenReturn(profile)
+
+        `when`(userService.getUserById(profile.id))
+            .thenReturn(user)
+
+        // when
+        val updatedProfile = profileAggregator.updateProfile(updateProfileData, null)
+
+        // then
+        assertThat(updatedProfile.preferredCurrency).isEqualTo(Currency.EUR)
+
+        verify(userService, never())
+            .updatePreferredCurrency(profile.id, Currency.EUR)
     }
 
     @Test
@@ -572,6 +620,19 @@ class ProfileAggregatorImplTest {
             surname = surname,
             dateOfBirth = dateOfBirth,
             updatedAt = OffsetDateTime.now(),
+        )
+
+    private fun createUser(
+        id: UUID = UUID.randomUUID(),
+        preferredCurrency: Currency = Currency.USD,
+    ): User =
+        User(
+            id = id,
+            email = "user@test.com",
+            passwordHash = "password_hash",
+            preferredCurrency = preferredCurrency,
+            lastLogin = OffsetDateTime.now(),
+            createdAt = OffsetDateTime.now(),
         )
 
     private fun createNewProfilePhotoMeta(
