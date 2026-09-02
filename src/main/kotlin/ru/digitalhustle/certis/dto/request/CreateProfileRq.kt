@@ -19,5 +19,5 @@ data class CreateProfileRq(
     @field:Past
     val dateOfBirth: LocalDate,
 
-    val preferredCurrency: Currency = Currency.USD,
+    val preferredCurrency: Currency = Currency.RUB,
 )

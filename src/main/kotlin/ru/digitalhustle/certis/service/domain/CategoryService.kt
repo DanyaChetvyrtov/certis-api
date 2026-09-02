@@ -12,6 +12,8 @@ interface CategoryService {
 
     fun getByIdForShare(id: UUID, userId: UUID): Category
 
+    fun getAllByIdsForShare(ids: Collection<UUID>, userId: UUID): List<Category>
+
     fun getByIdForUpdate(id: UUID, userId: UUID): Category
 
     fun getAllByUserId(userId: UUID): List<CategoryPreview>

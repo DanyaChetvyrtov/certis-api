@@ -36,6 +36,9 @@ complexity:
   MethodOverloading:
     active: true
     allowedOverloads: 5
+    excludes:
+      - '**/mapper/**'
+      - '**/mappers/**'
 
   LargeClass:
     active: true

@@ -38,6 +38,19 @@ class CategoryServiceImpl(
         categoryRepository.findByIdAndUserIdForShare(id, userId)
             ?: throw NotFoundException.entity("Category")
 
+    override fun getAllByIdsForShare(
+        ids: Collection<UUID>,
+        userId: UUID,
+    ): List<Category> {
+        val categories = categoryRepository.findAllByIdsAndUserIdForShare(ids, userId)
+
+        if (categories.size != ids.toSet().size) {
+            throw NotFoundException.entity("Category")
+        }
+
+        return categories
+    }
+
     override fun getByIdForUpdate(
         id: UUID,
         userId: UUID,

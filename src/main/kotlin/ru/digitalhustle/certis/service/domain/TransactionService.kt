@@ -2,6 +2,7 @@ package ru.digitalhustle.certis.service.domain
 
 import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.AssignTransactionsCategory
 import ru.digitalhustle.certis.model.transaction.NewTransaction
 import ru.digitalhustle.certis.model.transaction.TransactionFilter
 import ru.digitalhustle.certis.model.transaction.TransactionPage
@@ -19,6 +20,8 @@ interface TransactionService {
 
     fun getAllByUserId(userId: UUID, filter: TransactionFilter): TransactionPage
 
+    fun getAllByIdsForUpdate(ids: Collection<UUID>, userId: UUID): List<Transaction>
+
     fun save(newTransaction: NewTransaction): Transaction
 
     fun saveScheduled(
@@ -27,6 +30,8 @@ interface TransactionService {
     ): Transaction
 
     fun update(transaction: UpdateTransactionData): Transaction
+
+    fun assignCategories(assignment: AssignTransactionsCategory)
 
     fun delete(id: UUID, userId: UUID)
 }

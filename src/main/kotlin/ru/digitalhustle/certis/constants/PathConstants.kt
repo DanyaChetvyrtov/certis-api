@@ -3,8 +3,8 @@ package ru.digitalhustle.certis.constants
 import java.util.UUID
 
 object PathConstants {
-    const val API = "/api"
 
+    const val API = "/api"
     const val API_V1 = "$API/v1"
 
     const val AUTH = "$API_V1/auth"
@@ -31,10 +31,14 @@ object PathConstants {
     const val ACCOUNT_ID = "/{accountId}"
 
     const val CATEGORIES = "$API_V1/categories"
+    const val CATEGORY_ANALYTICS = "/analytics"
+    const val CATEGORY_OPTIONS = "/options"
     const val CATEGORY_ID = "/{categoryId}"
     const val CATEGORY_RESTORE = "$CATEGORY_ID/restore"
 
     const val TRANSACTIONS = "$API_V1/transactions"
+    const val TRANSACTION_UNCATEGORIZED = "/uncategorized"
+    const val TRANSACTION_CATEGORY_ASSIGNMENTS = "/category-assignments"
     const val TRANSACTION_ID = "/{transactionId}"
 
     const val TRANSFERS = "$API_V1/transfers"
