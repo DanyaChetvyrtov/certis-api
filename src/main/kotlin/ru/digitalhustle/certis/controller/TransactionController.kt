@@ -16,10 +16,14 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.TransactionDto
 import ru.digitalhustle.certis.dto.request.AssignTransactionsCategoryRq
+import ru.digitalhustle.certis.dto.request.CashFlowAnalyticsRq
 import ru.digitalhustle.certis.dto.request.CreateTransactionRq
+import ru.digitalhustle.certis.dto.request.MonthlyTransactionAnalyticsRq
 import ru.digitalhustle.certis.dto.request.TransactionFilterRq
 import ru.digitalhustle.certis.dto.request.UncategorizedTransactionFilterRq
 import ru.digitalhustle.certis.dto.request.UpdateTransactionRq
+import ru.digitalhustle.certis.dto.response.CashFlowAnalyticsRs
+import ru.digitalhustle.certis.dto.response.MonthlyTransactionAnalyticsRs
 import ru.digitalhustle.certis.dto.response.TransactionPageRs
 import ru.digitalhustle.certis.dto.response.UncategorizedTransactionPageRs
 import ru.digitalhustle.certis.model.security.JwtDetails
@@ -33,6 +37,18 @@ interface TransactionController {
         @ModelAttribute @Valid filterRq: TransactionFilterRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): TransactionPageRs
+
+    @GetMapping(PathConstants.TRANSACTION_ANALYTICS_MONTHLY)
+    fun getMonthlyAnalytics(
+        @ModelAttribute @Valid analyticsRq: MonthlyTransactionAnalyticsRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): MonthlyTransactionAnalyticsRs
+
+    @GetMapping(PathConstants.TRANSACTION_ANALYTICS_CASH_FLOW)
+    fun getCashFlowAnalytics(
+        @ModelAttribute @Valid analyticsRq: CashFlowAnalyticsRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): CashFlowAnalyticsRs
 
     @GetMapping(PathConstants.TRANSACTION_UNCATEGORIZED)
     fun getUncategorizedTransactions(
