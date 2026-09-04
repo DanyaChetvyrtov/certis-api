@@ -150,6 +150,12 @@ Examples:
   needed.
 - Return project domain/entity models rather than leaking generated jOOQ records
   to higher layers.
+- Try to use declarative mapping for jooq queries with `Records.mapping`, `fetchOneInto`, e.t.c
+- If request require a joins, create specific repository<br>
+    Examples:
+    * Allowed: `AccountRepository` works only with `Account` table
+    * Allowed: `AccountTransactionRepository` works only with request with `Account` and `Transaction`
+    * Not Allowed: `AccountRepository` contains queries with `Account` table only as well as queries with `Account` and `Transaction`
 
 ### Gateways and external APIs
 
@@ -249,6 +255,7 @@ principals from endpoints.
   exception or handle it at the boundary responsible for recovery.
 - Do not expose stack traces, credentials, tokens, database details, or external
   provider error payloads in API responses.
+- Use MapStruct to map dto to entity and entity to dto. Mapper method should use `convert` name 
 
 ### Ownership and access responses
 

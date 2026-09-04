@@ -111,10 +111,10 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.preferredCurrency").value(Currency.USD.name))
+            .andExpect(jsonPath("$.preferredCurrency").value(Currency.RUB.name))
 
         assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
-            .isEqualTo(Currency.USD)
+            .isEqualTo(Currency.RUB)
     }
 
     @Test

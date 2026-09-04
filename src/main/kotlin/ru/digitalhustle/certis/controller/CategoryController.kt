@@ -5,16 +5,24 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.CategoryDto
+import ru.digitalhustle.certis.dto.request.CategoryAnalyticsRq
+import ru.digitalhustle.certis.dto.request.CategoryCardPageRq
 import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
+import ru.digitalhustle.certis.dto.response.CategoryAnalyticsRs
+import ru.digitalhustle.certis.dto.response.CategoryCardsRs
+import ru.digitalhustle.certis.dto.response.CategoryOptionRs
+import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.model.security.JwtDetails
 import java.util.UUID
 
@@ -23,8 +31,21 @@ interface CategoryController {
 
     @GetMapping
     fun getCategories(
+        @Valid @ModelAttribute pageRq: CategoryCardPageRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
-    ): List<CategoryDto>
+    ): CategoryCardsRs
+
+    @GetMapping(PathConstants.CATEGORY_ANALYTICS)
+    fun getCategoryAnalytics(
+        @Valid @ModelAttribute analyticsRq: CategoryAnalyticsRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): CategoryAnalyticsRs
+
+    @GetMapping(PathConstants.CATEGORY_OPTIONS)
+    fun getCategoryOptions(
+        @RequestParam type: CategoryType,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): List<CategoryOptionRs>
 
     @GetMapping(PathConstants.CATEGORY_ID)
     fun getCategoryById(
@@ -35,14 +56,14 @@ interface CategoryController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createCategory(
-        @RequestBody @Valid createCategoryRq: CreateCategoryRq,
+        @Valid @RequestBody createCategoryRq: CreateCategoryRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): CategoryDto
 
     @PutMapping(PathConstants.CATEGORY_ID)
     fun updateCategory(
         @PathVariable categoryId: UUID,
-        @RequestBody @Valid updateCategoryRq: UpdateCategoryRq,
+        @Valid @RequestBody updateCategoryRq: UpdateCategoryRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): CategoryDto
 

@@ -1,5 +1,6 @@
 package ru.digitalhustle.certis.integrations
 
+import com.fasterxml.jackson.databind.JsonNode
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
@@ -20,6 +21,7 @@ import ru.digitalhustle.certis.dto.request.CreateCategoryRq
 import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.BudgetExpenseType
+import ru.digitalhustle.certis.enums.CategoryCardSort
 import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
@@ -30,6 +32,7 @@ import ru.digitalhustle.certis.model.entity.Budget
 import ru.digitalhustle.certis.model.entity.BudgetCategory
 import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
+import ru.digitalhustle.certis.model.entity.Transaction
 import ru.digitalhustle.certis.model.entity.User
 import java.math.BigDecimal
 import java.time.Clock
@@ -49,12 +52,17 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         private const val COLOR = "#10B981"
         private const val UPDATED_COLOR = "#B08D57"
         private const val CATEGORY_NAME_CONFLICT = "Category with such name already exists"
+        private const val MONTH = "2026-09"
     }
 
     @Test
     fun `should require authentication`() {
         // when
-        mvc.perform(get(PathConstants.CATEGORIES))
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.RUB.name),
+        )
             // then
             .andExpect(status().isUnauthorized)
     }
@@ -291,19 +299,242 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         // when
         mvc.perform(
             get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.USD.name)
                 .cookie(accessTokenCookie(user)),
         )
             // then
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.month").value(MONTH))
+            .andExpect(jsonPath("$.currency").value(Currency.USD.name))
+            .andExpect(jsonPath("$.categories.length()").value(2))
+            .andExpect(jsonPath("$.page").value(0))
+            .andExpect(jsonPath("$.size").value(20))
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(1))
             .andExpect(
-                jsonPath("$[*].id").value(
+                jsonPath("$.categories[*].id").value(
                     containsInAnyOrder(
                         activeCategory.id.toString(),
                         archivedCategory.id.toString(),
                     ),
                 ),
             )
+    }
+
+    @Test
+    fun `should return only active owned category options of requested type`() {
+        // given
+        val user = userFixture.createInDb()
+        val anotherUser = userFixture.createInDb {
+            copy(email = "category-options-other@test.com")
+        }
+        val food = createCategory(user.id, name = "food")
+        val transport = createCategory(user.id, name = "Transport")
+        createCategory(user.id, name = "Archived", archivedAt = OffsetDateTime.now())
+        createCategory(user.id, name = "Salary", type = CategoryType.INCOME)
+        createCategory(anotherUser.id, name = "Hidden")
+
+        // when
+        mvc.perform(
+            get("${PathConstants.CATEGORIES}${PathConstants.CATEGORY_OPTIONS}")
+                .param("type", CategoryType.EXPENSE.name)
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].id").value(food.id.toString()))
+            .andExpect(jsonPath("$[0].name").value(food.name))
+            .andExpect(jsonPath("$[0].icon").value(food.icon))
+            .andExpect(jsonPath("$[0].color").value(food.color))
+            .andExpect(jsonPath("$[0].type").doesNotExist())
+            .andExpect(jsonPath("$[0].archivedAt").doesNotExist())
+            .andExpect(jsonPath("$[1].id").value(transport.id.toString()))
+    }
+
+    @Test
+    fun `should validate category options parameters and authentication`() {
+        // given
+        val user = userFixture.createInDb()
+        val path = "${PathConstants.CATEGORIES}${PathConstants.CATEGORY_OPTIONS}"
+
+        // when, then
+        mvc.perform(
+            get(path)
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(path)
+                .param("type", CategoryType.EXPENSE.name),
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `should calculate monthly category cards in requested currency`() {
+        // given
+        val user = userFixture.createInDb { copy(preferredCurrency = Currency.USD) }
+        val groceries = createCategory(user.id, name = "Groceries")
+        val housing = createCategory(user.id, name = "Housing")
+        val education = createCategory(user.id, name = "Education")
+        val salary = createCategory(user.id, name = "Salary", type = CategoryType.INCOME)
+        val rubAccount = createAccount(user.id, Currency.RUB)
+        val eurAccount = createAccount(user.id, Currency.EUR)
+
+        createTransaction(rubAccount, groceries, "40.00", "2026-09-01T00:00:00Z")
+        createTransaction(rubAccount, groceries, "60.00", "2026-09-30T23:59:59Z")
+        createTransaction(rubAccount, housing, "100.00", "2026-09-15T12:00:00Z")
+        createTransaction(rubAccount, salary, "300.00", "2026-09-10T12:00:00Z")
+        createTransaction(eurAccount, groceries, "999.00", "2026-09-12T12:00:00Z")
+        createTransaction(rubAccount, groceries, "70.00", "2026-08-31T23:59:59Z")
+        createTransaction(rubAccount, groceries, "80.00", "2026-10-01T00:00:00Z")
+        createTransaction(
+            account = rubAccount,
+            category = groceries,
+            amount = "90.00",
+            occurredAt = "2026-09-20T12:00:00Z",
+            deleted = true,
+        )
+
+        // when
+        val result = mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.RUB.name)
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.month").value(MONTH))
+            .andExpect(jsonPath("$.currency").value(Currency.RUB.name))
+            .andExpect(jsonPath("$.categories.length()").value(4))
+            .andReturn()
+
+        val response = objectMapper.readTree(result.response.contentAsByteArray)
+        val cardsByName = response["categories"].associateBy { card -> card["name"].asText() }
+
+        assertCategoryCard(cardsByName.getValue("Groceries"), 2, "100.00", "50.00")
+        assertCategoryCard(cardsByName.getValue("Housing"), 1, "100.00", "50.00")
+        assertCategoryCard(cardsByName.getValue("Education"), 0, "0.00", "0.00")
+        assertCategoryCard(cardsByName.getValue("Salary"), 1, "300.00", "100.00")
+        assertThat(cardsByName.getValue("Education").has("archivedAt")).isTrue()
+        assertThat(cardsByName.getValue("Education")["archivedAt"].isNull).isTrue()
+
+        // when
+        val eurResult = mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.EUR.name)
+                .cookie(accessTokenCookie(user)),
+        )
+            // then
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.month").value(MONTH))
+            .andExpect(jsonPath("$.currency").value(Currency.EUR.name))
+            .andExpect(jsonPath("$.categories.length()").value(4))
+            .andReturn()
+
+        val eurResponse = objectMapper.readTree(eurResult.response.contentAsByteArray)
+        val eurCardsByName = eurResponse["categories"].associateBy { card -> card["name"].asText() }
+
+        assertCategoryCard(eurCardsByName.getValue("Groceries"), 1, "999.00", "100.00")
+        assertCategoryCard(eurCardsByName.getValue("Housing"), 0, "0.00", "0.00")
+        assertCategoryCard(eurCardsByName.getValue("Education"), 0, "0.00", "0.00")
+        assertCategoryCard(eurCardsByName.getValue("Salary"), 0, "0.00", "0.00")
+    }
+
+    @Test
+    fun `should paginate and sort category cards`() {
+        // given
+        val user = userFixture.createInDb()
+        val account = createAccount(user.id, Currency.RUB)
+        val alpha = createCategory(user.id, name = "Alpha")
+        val beta = createCategory(user.id, name = "Beta")
+        val gamma = createCategory(user.id, name = "Gamma")
+        createCategory(user.id, name = "Zulu")
+
+        createTransaction(account, alpha, "50.00", "2026-09-10T12:00:00Z")
+        createTransaction(account, beta, "200.00", "2026-09-10T12:00:00Z")
+        createTransaction(account, gamma, "100.00", "2026-09-10T12:00:00Z")
+
+        // when
+        val firstPage = getCategoryCards(user, page = 0, size = 2)
+        val secondPage = getCategoryCards(user, page = 1, size = 2)
+        val sortedByName = getCategoryCards(user, sort = CategoryCardSort.NAME)
+        val sortedByAmountAsc = getCategoryCards(user, sort = CategoryCardSort.AMOUNT_ASC)
+
+        // then
+        assertThat(firstPage["categories"].map { card -> card["name"].asText() })
+            .containsExactly("Beta", "Gamma")
+        assertThat(firstPage["page"].asInt()).isZero()
+        assertThat(firstPage["size"].asInt()).isEqualTo(2)
+        assertThat(firstPage["totalElements"].asLong()).isEqualTo(4)
+        assertThat(firstPage["totalPages"].asInt()).isEqualTo(2)
+        assertCategoryCard(firstPage["categories"][0], 1, "200.00", "57.14")
+        assertThat(secondPage["categories"].map { card -> card["name"].asText() })
+            .containsExactly("Alpha", "Zulu")
+        assertThat(sortedByName["categories"].map { card -> card["name"].asText() })
+            .containsExactly("Alpha", "Beta", "Gamma", "Zulu")
+        assertThat(sortedByAmountAsc["categories"].map { card -> card["name"].asText() })
+            .containsExactly("Zulu", "Alpha", "Gamma", "Beta")
+    }
+
+    @Test
+    fun `should require valid category card parameters`() {
+        // given
+        val user = userFixture.createInDb()
+
+        // when, then
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("currency", Currency.RUB.name)
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", "2026-13")
+                .param("currency", Currency.RUB.name)
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", "GBP")
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.RUB.name)
+                .param("page", "-1")
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.RUB.name)
+                .param("size", "101")
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
+
+        mvc.perform(
+            get(PathConstants.CATEGORIES)
+                .param("month", MONTH)
+                .param("currency", Currency.RUB.name)
+                .param("sort", "UNKNOWN")
+                .cookie(accessTokenCookie(user)),
+        ).andExpect(status().isBadRequest)
     }
 
     @Test
@@ -579,7 +810,10 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             ),
         )
 
-    private fun createAccount(userId: UUID): Account =
+    private fun createAccount(
+        userId: UUID,
+        currency: Currency = Currency.EUR,
+    ): Account =
         accountRepository.insert(
             Account(
                 id = UUID.randomUUID(),
@@ -587,11 +821,72 @@ class CategoryControllerTest : AbstractIntegrationTest() {
                 name = "Main card",
                 type = AccountType.CARD,
                 openingBalance = BigDecimal("1000.00"),
-                currency = Currency.EUR,
+                currency = currency,
                 createdAt = OffsetDateTime.now(),
                 closedAt = null,
             ),
         )
+
+    private fun createTransaction(
+        account: Account,
+        category: Category,
+        amount: String,
+        occurredAt: String,
+        deleted: Boolean = false,
+    ): Transaction {
+        val timestamp = OffsetDateTime.parse(occurredAt)
+
+        return transactionRepository.insert(
+            Transaction(
+                id = UUID.randomUUID(),
+                userId = account.userId,
+                accountId = account.id,
+                categoryId = category.id,
+                recurringTransactionTemplateId = null,
+                type = TransactionType.valueOf(category.type.name),
+                amount = BigDecimal(amount),
+                merchant = null,
+                note = null,
+                scheduledFor = null,
+                occurredAt = timestamp,
+                createdAt = timestamp,
+                updatedAt = timestamp,
+                deletedAt = if (deleted) timestamp.plusHours(1) else null,
+            ),
+        )
+    }
+
+    private fun assertCategoryCard(
+        card: JsonNode,
+        transactionCount: Int,
+        amount: String,
+        percentage: String,
+    ) {
+        assertThat(card["monthlyTransactionCount"].asInt()).isEqualTo(transactionCount)
+        assertThat(card["monthlyAmount"].decimalValue()).isEqualByComparingTo(amount)
+        assertThat(card["monthlySharePercentage"].decimalValue()).isEqualByComparingTo(percentage)
+    }
+
+    private fun getCategoryCards(
+        user: User,
+        page: Int = 0,
+        size: Int = 20,
+        sort: CategoryCardSort? = null,
+    ): JsonNode {
+        val request = get(PathConstants.CATEGORIES)
+            .param("month", MONTH)
+            .param("currency", Currency.RUB.name)
+            .param("page", page.toString())
+            .param("size", size.toString())
+
+        sort?.let { request.param("sort", it.name) }
+
+        val result = mvc.perform(request.cookie(accessTokenCookie(user)))
+            .andExpect(status().isOk)
+            .andReturn()
+
+        return objectMapper.readTree(result.response.contentAsByteArray)
+    }
 
     private fun createRecurringTemplate(
         account: Account,

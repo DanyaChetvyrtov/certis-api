@@ -7,12 +7,17 @@ import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
 import ru.digitalhustle.certis.model.entity.Category
+import ru.digitalhustle.certis.repository.CategoryUsageRepository
 import ru.digitalhustle.certis.service.domain.CategoryService
+import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 
 @Component
 class CategoryValidator(
+    private val clock: Clock,
     private val categoryService: CategoryService,
+    private val categoryUsageRepository: CategoryUsageRepository,
 ) {
 
     fun validateActiveCategory(
@@ -26,6 +31,17 @@ class CategoryValidator(
         validateCategoryArchive(category)
         validateCategoryType(category, transactionType)
     }
+
+    fun isRequired(
+        categoryId: UUID,
+        userId: UUID,
+    ): Boolean =
+        categoryUsageRepository.existsInSchedulableRecurringTemplate(categoryId, userId) ||
+            categoryUsageRepository.existsInCurrentOrFutureBudget(
+                categoryId = categoryId,
+                userId = userId,
+                currentMonth = LocalDate.now(clock).withDayOfMonth(1),
+            )
 
     private fun validateCategoryArchive(category: Category) {
         if (category.archivedAt != null) {

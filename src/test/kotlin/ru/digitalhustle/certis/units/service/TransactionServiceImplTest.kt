@@ -9,13 +9,16 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
 import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
 import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.AssignTransactionsCategory
 import ru.digitalhustle.certis.model.transaction.NewTransaction
+import ru.digitalhustle.certis.model.transaction.TransactionCategoryAssignment
 import ru.digitalhustle.certis.model.transaction.TransactionFilter
 import ru.digitalhustle.certis.model.transaction.TransactionPage
 import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
@@ -138,6 +141,42 @@ class TransactionServiceImplTest {
     }
 
     @Test
+    fun `should lock all requested transactions`() {
+        // given
+        val userId = UUID.randomUUID()
+        val transactions = listOf(
+            createTransaction(userId = userId),
+            createTransaction(userId = userId),
+        )
+        val ids = transactions.map(Transaction::id)
+
+        `when`(transactionRepository.findAllByIdsAndUserIdForUpdate(ids, userId))
+            .thenReturn(transactions)
+
+        // when
+        val result = transactionService.getAllByIdsForUpdate(ids, userId)
+
+        // then
+        assertThat(result).isEqualTo(transactions)
+    }
+
+    @Test
+    fun `should reject batch when any requested transaction is unavailable`() {
+        // given
+        val userId = UUID.randomUUID()
+        val availableTransaction = createTransaction(userId = userId)
+        val ids = listOf(availableTransaction.id, UUID.randomUUID())
+
+        `when`(transactionRepository.findAllByIdsAndUserIdForUpdate(ids, userId))
+            .thenReturn(listOf(availableTransaction))
+
+        // when, then
+        assertThatThrownBy {
+            transactionService.getAllByIdsForUpdate(ids, userId)
+        }.isInstanceOf(NotFoundException::class.java)
+    }
+
+    @Test
     fun `should save transaction`() {
         // given
         val newTransaction = createNewTransaction()
@@ -243,6 +282,63 @@ class TransactionServiceImplTest {
         assertThatThrownBy {
             transactionService.update(updateData)
         }.isInstanceOf(NotFoundException::class.java)
+    }
+
+    @Test
+    fun `should assign categories to requested transactions`() {
+        // given
+        val assignment = AssignTransactionsCategory(
+            userId = UUID.randomUUID(),
+            assignments = listOf(
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+            ),
+        )
+
+        `when`(
+            transactionRepository.assignCategories(
+                assignment.assignments,
+                assignment.userId,
+                OffsetDateTime.now(clock),
+            ),
+        ).thenReturn(assignment.assignments.size)
+
+        // when
+        transactionService.assignCategories(assignment)
+
+        // then
+        verify(transactionRepository).assignCategories(
+            assignment.assignments,
+            assignment.userId,
+            OffsetDateTime.now(clock),
+        )
+    }
+
+    @Test
+    fun `should fail when category assignment batch is incomplete`() {
+        // given
+        val assignment = AssignTransactionsCategory(
+            userId = UUID.randomUUID(),
+            assignments = listOf(
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+                TransactionCategoryAssignment(UUID.randomUUID(), UUID.randomUUID()),
+            ),
+        )
+
+        `when`(
+            transactionRepository.assignCategories(
+                assignment.assignments,
+                assignment.userId,
+                OffsetDateTime.now(clock),
+            ),
+        ).thenReturn(1)
+
+        // when, then
+        assertThatThrownBy {
+            transactionService.assignCategories(assignment)
+        }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessage(ErrorMessages.TRANSACTION_CATEGORY_ASSIGNMENT_FAILED)
     }
 
     @Test

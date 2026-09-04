@@ -6,6 +6,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.ModelAttribute
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -14,10 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.dto.TransactionDto
+import ru.digitalhustle.certis.dto.request.AssignTransactionsCategoryRq
 import ru.digitalhustle.certis.dto.request.CreateTransactionRq
 import ru.digitalhustle.certis.dto.request.TransactionFilterRq
+import ru.digitalhustle.certis.dto.request.UncategorizedTransactionFilterRq
 import ru.digitalhustle.certis.dto.request.UpdateTransactionRq
 import ru.digitalhustle.certis.dto.response.TransactionPageRs
+import ru.digitalhustle.certis.dto.response.UncategorizedTransactionPageRs
 import ru.digitalhustle.certis.model.security.JwtDetails
 import java.util.UUID
 
@@ -29,6 +33,12 @@ interface TransactionController {
         @ModelAttribute @Valid filterRq: TransactionFilterRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): TransactionPageRs
+
+    @GetMapping(PathConstants.TRANSACTION_UNCATEGORIZED)
+    fun getUncategorizedTransactions(
+        @ModelAttribute @Valid filterRq: UncategorizedTransactionFilterRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): UncategorizedTransactionPageRs
 
     @GetMapping(PathConstants.TRANSACTION_ID)
     fun getTransactionById(
@@ -49,6 +59,13 @@ interface TransactionController {
         @RequestBody @Valid updateTransactionRq: UpdateTransactionRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): TransactionDto
+
+    @PatchMapping(PathConstants.TRANSACTION_CATEGORY_ASSIGNMENTS)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun assignTransactionsCategory(
+        @RequestBody @Valid assignCategoryRq: AssignTransactionsCategoryRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    )
 
     @DeleteMapping(PathConstants.TRANSACTION_ID)
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -4,6 +4,7 @@ import org.jooq.DSLContext
 import org.jooq.generated.Tables
 import org.springframework.stereotype.Repository
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.TransactionCategoryAssignment
 import ru.digitalhustle.certis.model.transaction.TransactionFilter
 import ru.digitalhustle.certis.model.transaction.TransactionPage
 import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
@@ -109,6 +110,20 @@ class TransactionRepository(
             )
             .fetchOneInto(Transaction::class.java)
 
+    fun findAllByIdsAndUserIdForUpdate(
+        ids: Collection<UUID>,
+        userId: UUID,
+    ): List<Transaction> =
+        dsl.selectFrom(Tables.TRANSACTIONS)
+            .where(
+                Tables.TRANSACTIONS.ID.`in`(ids)
+                    .and(Tables.TRANSACTIONS.USER_ID.eq(userId))
+                    .and(Tables.TRANSACTIONS.DELETED_AT.isNull()),
+            )
+            .orderBy(Tables.TRANSACTIONS.ID)
+            .forUpdate()
+            .fetchInto(Transaction::class.java)
+
     fun insert(transaction: Transaction): Transaction =
         dsl.insertInto(Tables.TRANSACTIONS)
             .set(dsl.newRecord(Tables.TRANSACTIONS, transaction))
@@ -142,6 +157,31 @@ class TransactionRepository(
             )
             .returning()
             .fetchOneInto(Transaction::class.java)!!
+
+    fun assignCategories(
+        assignments: Collection<TransactionCategoryAssignment>,
+        userId: UUID,
+        updatedAt: OffsetDateTime,
+    ): Int {
+        if (assignments.isEmpty()) {
+            return 0
+        }
+
+        val queries = assignments.map { assignment ->
+            dsl.update(Tables.TRANSACTIONS)
+                .set(Tables.TRANSACTIONS.CATEGORY_ID, assignment.categoryId)
+                .set(Tables.TRANSACTIONS.UPDATED_AT, updatedAt)
+                .where(
+                    Tables.TRANSACTIONS.ID.eq(assignment.transactionId)
+                        .and(Tables.TRANSACTIONS.USER_ID.eq(userId))
+                        .and(Tables.TRANSACTIONS.CATEGORY_ID.isNull())
+                        .and(Tables.TRANSACTIONS.DELETED_AT.isNull())
+                        .and(Tables.TRANSACTIONS.TRANSFER_ID.isNull()),
+                )
+        }
+
+        return dsl.batch(queries).execute().sum()
+    }
 
     fun softDelete(
         id: UUID,

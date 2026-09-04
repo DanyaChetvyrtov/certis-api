@@ -97,6 +97,42 @@ class CategoryServiceImplTest {
     }
 
     @Test
+    fun `should get requested categories with shared lock`() {
+        // given
+        val userId = UUID.randomUUID()
+        val categories = listOf(
+            createCategory(userId = userId),
+            createCategory(userId = userId),
+        )
+        val categoryIds = categories.mapTo(linkedSetOf(), Category::id)
+
+        `when`(categoryRepository.findAllByIdsAndUserIdForShare(categoryIds, userId))
+            .thenReturn(categories)
+
+        // when
+        val result = categoryService.getAllByIdsForShare(categoryIds, userId)
+
+        // then
+        assertThat(result).isEqualTo(categories)
+    }
+
+    @Test
+    fun `should throw not found when shared category batch is incomplete`() {
+        // given
+        val userId = UUID.randomUUID()
+        val category = createCategory(userId = userId)
+        val categoryIds = setOf(category.id, UUID.randomUUID())
+
+        `when`(categoryRepository.findAllByIdsAndUserIdForShare(categoryIds, userId))
+            .thenReturn(listOf(category))
+
+        // when, then
+        assertThatThrownBy {
+            categoryService.getAllByIdsForShare(categoryIds, userId)
+        }.isInstanceOf(NotFoundException::class.java)
+    }
+
+    @Test
     fun `should get category with exclusive lock`() {
         // given
         val category = createCategory()

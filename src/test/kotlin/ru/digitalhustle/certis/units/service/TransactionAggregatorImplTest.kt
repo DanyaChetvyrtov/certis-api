@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.enums.AccountType
@@ -18,14 +19,20 @@ import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
 import ru.digitalhustle.certis.model.entity.Account
 import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.AssignTransactionsCategory
 import ru.digitalhustle.certis.model.transaction.NewTransaction
+import ru.digitalhustle.certis.model.transaction.TransactionCategoryAssignment
+import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionFilter
+import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionPage
 import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
 import ru.digitalhustle.certis.service.domain.AccountService
 import ru.digitalhustle.certis.service.domain.CategoryService
 import ru.digitalhustle.certis.service.domain.TransactionService
+import ru.digitalhustle.certis.service.domain.UncategorizedTransactionService
 import ru.digitalhustle.certis.service.transaction.impl.TransactionAggregatorImpl
 import java.math.BigDecimal
 import java.time.OffsetDateTime
+import java.time.YearMonth
 import java.util.UUID
 
 class TransactionAggregatorImplTest {
@@ -33,11 +40,46 @@ class TransactionAggregatorImplTest {
     private val transactionService = mock(TransactionService::class.java)
     private val accountService = mock(AccountService::class.java)
     private val categoryService = mock(CategoryService::class.java)
+    private val uncategorizedTransactionService = mock(UncategorizedTransactionService::class.java)
     private val transactionAggregator = TransactionAggregatorImpl(
         transactionService,
         accountService,
         categoryService,
+        uncategorizedTransactionService,
     )
+
+    @Test
+    fun `should delegate uncategorized transaction search`() {
+        // given
+        val userId = UUID.randomUUID()
+        val filter = UncategorizedTransactionFilter(
+            month = YearMonth.of(2026, 9),
+            currency = Currency.RUB,
+            type = TransactionType.EXPENSE,
+            accountId = null,
+            search = null,
+            page = 0,
+            size = 20,
+        )
+        val page = UncategorizedTransactionPage(
+            month = filter.month,
+            currency = filter.currency,
+            type = filter.type,
+            items = emptyList(),
+            page = filter.page,
+            size = filter.size,
+            totalElements = 0,
+        )
+
+        `when`(uncategorizedTransactionService.getAllByUserId(userId, filter))
+            .thenReturn(page)
+
+        // when
+        val result = transactionAggregator.getUncategorizedByUserId(userId, filter)
+
+        // then
+        assertThat(result).isEqualTo(page)
+    }
 
     @Test
     fun `should save transaction after locking active account and category`() {
@@ -207,6 +249,139 @@ class TransactionAggregatorImplTest {
             .hasMessage(ErrorMessages.TRANSACTION_ACCOUNT_CLOSED)
 
         verify(transactionService, never()).update(updateData)
+    }
+
+    @Test
+    fun `should assign different categories to uncategorized transactions`() {
+        // given
+        val firstCategory = createCategory()
+        val secondCategory = createCategory(userId = firstCategory.userId)
+        val categories = listOf(firstCategory, secondCategory)
+        val transactions = listOf(
+            createTransaction(userId = firstCategory.userId),
+            createTransaction(userId = firstCategory.userId),
+        )
+        val assignment = AssignTransactionsCategory(
+            userId = firstCategory.userId,
+            assignments = transactions.zip(categories).map { (transaction, category) ->
+                TransactionCategoryAssignment(transaction.id, category.id)
+            },
+        )
+
+        `when`(categoryService.getAllByIdsForShare(categories.mapTo(linkedSetOf(), Category::id), assignment.userId))
+            .thenReturn(categories)
+        `when`(
+            transactionService.getAllByIdsForUpdate(
+                assignment.assignments.map(TransactionCategoryAssignment::transactionId),
+                assignment.userId,
+            ),
+        )
+            .thenReturn(transactions)
+
+        // when
+        transactionAggregator.assignCategories(assignment)
+
+        // then
+        verify(transactionService).assignCategories(assignment)
+    }
+
+    @Test
+    fun `should reject assignment of archived category`() {
+        // given
+        val category = createCategory(archivedAt = OffsetDateTime.now())
+        val assignment = AssignTransactionsCategory(
+            userId = category.userId,
+            assignments = listOf(TransactionCategoryAssignment(UUID.randomUUID(), category.id)),
+        )
+
+        `when`(categoryService.getAllByIdsForShare(setOf(category.id), category.userId))
+            .thenReturn(listOf(category))
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.assignCategories(assignment)
+        }
+            .isInstanceOf(CategoryArchivedException::class.java)
+            .hasMessage(ErrorMessages.TRANSACTION_CATEGORY_ARCHIVED)
+
+        verify(transactionService, never())
+            .getAllByIdsForUpdate(listOf(assignment.assignments.single().transactionId), assignment.userId)
+    }
+
+    @Test
+    fun `should reject category assignment to categorized transaction`() {
+        // given
+        val category = createCategory()
+        val transaction = createTransaction(
+            userId = category.userId,
+            categoryId = UUID.randomUUID(),
+        )
+        val assignment = AssignTransactionsCategory(
+            userId = category.userId,
+            assignments = listOf(TransactionCategoryAssignment(transaction.id, category.id)),
+        )
+
+        `when`(categoryService.getAllByIdsForShare(setOf(category.id), category.userId))
+            .thenReturn(listOf(category))
+        `when`(transactionService.getAllByIdsForUpdate(listOf(transaction.id), assignment.userId))
+            .thenReturn(listOf(transaction))
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.assignCategories(assignment)
+        }
+            .isInstanceOf(InvalidTransactionException::class.java)
+            .hasMessage(ErrorMessages.TRANSACTION_ALREADY_CATEGORIZED)
+
+        verify(transactionService, never()).assignCategories(assignment)
+    }
+
+    @Test
+    fun `should reject category assignment with different transaction type`() {
+        // given
+        val category = createCategory(type = CategoryType.INCOME)
+        val transaction = createTransaction(userId = category.userId)
+        val assignment = AssignTransactionsCategory(
+            userId = category.userId,
+            assignments = listOf(TransactionCategoryAssignment(transaction.id, category.id)),
+        )
+
+        `when`(categoryService.getAllByIdsForShare(setOf(category.id), category.userId))
+            .thenReturn(listOf(category))
+        `when`(transactionService.getAllByIdsForUpdate(listOf(transaction.id), assignment.userId))
+            .thenReturn(listOf(transaction))
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.assignCategories(assignment)
+        }
+            .isInstanceOf(InvalidTransactionException::class.java)
+            .hasMessage(ErrorMessages.TRANSACTION_CATEGORY_TYPE_MISMATCH)
+
+        verify(transactionService, never()).assignCategories(assignment)
+    }
+
+    @Test
+    fun `should reject duplicate transaction assignments before locking resources`() {
+        // given
+        val transactionId = UUID.randomUUID()
+        val assignment = AssignTransactionsCategory(
+            userId = UUID.randomUUID(),
+            assignments = listOf(
+                TransactionCategoryAssignment(transactionId, UUID.randomUUID()),
+                TransactionCategoryAssignment(transactionId, UUID.randomUUID()),
+            ),
+        )
+
+        // when, then
+        assertThatThrownBy {
+            transactionAggregator.assignCategories(assignment)
+        }
+            .isInstanceOf(InvalidTransactionException::class.java)
+            .hasMessage(ErrorMessages.TRANSACTION_DUPLICATE_CATEGORY_ASSIGNMENTS)
+
+        verifyNoInteractions(categoryService)
+        verify(transactionService, never()).assignCategories(assignment)
     }
 
     @Test

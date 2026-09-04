@@ -1,9 +1,11 @@
 package ru.digitalhustle.certis.service.domain.impl
 
 import org.springframework.stereotype.Service
+import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.model.transaction.AssignTransactionsCategory
 import ru.digitalhustle.certis.model.transaction.NewTransaction
 import ru.digitalhustle.certis.model.transaction.TransactionFilter
 import ru.digitalhustle.certis.model.transaction.TransactionPage
@@ -44,6 +46,19 @@ class TransactionServiceImpl(
         userId: UUID,
         filter: TransactionFilter,
     ): TransactionPage = transactionRepository.findAllByUserId(userId, filter)
+
+    override fun getAllByIdsForUpdate(
+        ids: Collection<UUID>,
+        userId: UUID,
+    ): List<Transaction> {
+        val transactions = transactionRepository.findAllByIdsAndUserIdForUpdate(ids, userId)
+
+        if (transactions.size != ids.size) {
+            throw NotFoundException.entity("Transaction")
+        }
+
+        return transactions
+    }
 
     override fun save(newTransaction: NewTransaction): Transaction {
         val now = OffsetDateTime.now(clock)
@@ -103,6 +118,20 @@ class TransactionServiceImpl(
             updatedAt = OffsetDateTime.now(clock),
         )
             ?: throw NotFoundException.entity("Transaction")
+
+    override fun assignCategories(
+        assignment: AssignTransactionsCategory,
+    ) {
+        val assignedCount = transactionRepository.assignCategories(
+            assignments = assignment.assignments,
+            userId = assignment.userId,
+            updatedAt = OffsetDateTime.now(clock),
+        )
+
+        check(assignedCount == assignment.assignments.size) {
+            ErrorMessages.TRANSACTION_CATEGORY_ASSIGNMENT_FAILED
+        }
+    }
 
     override fun delete(
         id: UUID,
