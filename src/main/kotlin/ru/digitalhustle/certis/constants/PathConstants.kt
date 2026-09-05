@@ -40,6 +40,9 @@ object PathConstants {
     const val TRANSACTION_UNCATEGORIZED = "/uncategorized"
     const val TRANSACTION_CATEGORY_ASSIGNMENTS = "/category-assignments"
     const val TRANSACTION_ID = "/{transactionId}"
+    const val TRANSACTION_ANALYTICS = "/analytics"
+    const val TRANSACTION_ANALYTICS_MONTHLY = "$TRANSACTION_ANALYTICS/monthly"
+    const val TRANSACTION_ANALYTICS_CASH_FLOW = "$TRANSACTION_ANALYTICS/cash-flow"
 
     const val TRANSFERS = "$API_V1/transfers"
     const val TRANSFER_ID = "/{transferId}"
