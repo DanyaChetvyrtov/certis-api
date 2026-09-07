@@ -24,6 +24,7 @@ import ru.digitalhustle.certis.model.transaction.TransactionPage
 import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
 import ru.digitalhustle.certis.repository.TransactionRepository
 import ru.digitalhustle.certis.service.domain.impl.TransactionServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -36,7 +37,7 @@ class TransactionServiceImplTest {
 
     private val transactionRepository = mock(TransactionRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-08T19:00:00Z"), ZoneOffset.UTC)
-    private val transactionService = TransactionServiceImpl(transactionRepository, clock)
+    private val transactionService = TransactionServiceImpl(transactionRepository, ApplicationClock(clock))
 
     private companion object {
         private val AMOUNT = BigDecimal("42.50")

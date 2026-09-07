@@ -15,6 +15,7 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
 import ru.digitalhustle.certis.service.domain.impl.RecurringTransactionExecutionStateServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Duration
@@ -38,7 +39,7 @@ class RecurringTransactionExecutionStateServiceImplTest {
             retryMaxDelay = Duration.ofHours(1),
         ),
     )
-    private val service = RecurringTransactionExecutionStateServiceImpl(repository, clock, properties)
+    private val service = RecurringTransactionExecutionStateServiceImpl(repository, properties, ApplicationClock(clock))
 
     @Test
     fun `should get recurring transaction template for update`() {

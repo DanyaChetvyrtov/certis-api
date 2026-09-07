@@ -14,6 +14,7 @@ import ru.digitalhustle.certis.model.transaction.MonthlyTransactionAnalyticsFilt
 import ru.digitalhustle.certis.model.transaction.MonthlyTransactionTotal
 import ru.digitalhustle.certis.repository.TransactionAnalyticsRepository
 import ru.digitalhustle.certis.service.domain.impl.TransactionAnalyticsServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -31,7 +32,7 @@ class TransactionAnalyticsServiceImplTest {
         ZoneId.of("Europe/Riga"),
     )
     private val transactionAnalyticsService =
-        TransactionAnalyticsServiceImpl(transactionAnalyticsRepository, clock)
+        TransactionAnalyticsServiceImpl(transactionAnalyticsRepository, ApplicationClock(clock))
 
     private companion object {
         private val MONTH = YearMonth.of(2026, 9)

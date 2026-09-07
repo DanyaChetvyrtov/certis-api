@@ -13,36 +13,34 @@ import ru.digitalhustle.certis.model.transaction.MonthlyTransactionAnalytics
 import ru.digitalhustle.certis.model.transaction.MonthlyTransactionAnalyticsFilter
 import ru.digitalhustle.certis.repository.TransactionAnalyticsRepository
 import ru.digitalhustle.certis.service.domain.TransactionAnalyticsService
+import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.time.nextMonthStart
+import ru.digitalhustle.certis.time.nextWeekStart
+import ru.digitalhustle.certis.time.startOfMonth
+import ru.digitalhustle.certis.time.startOfWeek
 import java.math.BigDecimal
-import java.time.Clock
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZonedDateTime
-import java.time.temporal.TemporalAdjusters
 import java.util.UUID
 
 @Service
 class TransactionAnalyticsServiceImpl(
     private val transactionAnalyticsRepository: TransactionAnalyticsRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : TransactionAnalyticsService {
 
     @Transactional(readOnly = true)
     override fun getMonthlyAnalytics(
         userId: UUID,
         filter: MonthlyTransactionAnalyticsFilter,
-    ): MonthlyTransactionAnalytics {
-        val monthStart = filter.month.atDay(1).atStartOfDay(clock.zone).toOffsetDateTime()
-        val nextMonthStart = filter.month.plusMonths(1).atDay(1).atStartOfDay(clock.zone).toOffsetDateTime()
-
-        return transactionAnalyticsRepository.findMonthlyByUserId(
+    ): MonthlyTransactionAnalytics =
+        transactionAnalyticsRepository.findMonthlyByUserId(
             userId = userId,
             filter = filter,
-            monthStart = monthStart,
-            nextMonthStart = nextMonthStart,
+            monthStart = applicationClock.startOfMonth(filter.month),
+            nextMonthStart = applicationClock.startOfNextMonth(filter.month),
         )
-    }
 
     @Transactional(readOnly = true)
     override fun getCashFlowAnalytics(
@@ -57,6 +55,7 @@ class TransactionAnalyticsServiceImpl(
             from = period.from.toOffsetDateTime(),
             toExclusive = period.toExclusive.toOffsetDateTime(),
         ).associateBy { point -> point.bucketStart.toInstant() }
+
         val points = generatePoints(period, existingPoints)
         val totalIncome = points.fold(ZERO_AMOUNT) { total, point -> total + point.income }
         val totalExpenses = points.fold(ZERO_AMOUNT) { total, point -> total + point.expenses }
@@ -89,26 +88,30 @@ class TransactionAnalyticsServiceImpl(
             }
 
             CashFlowRange.WEEK -> {
-                startDate = filter.anchorDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                endDate = startDate.plusWeeks(1)
+                startDate = filter.anchorDate.startOfWeek()
+                endDate = startDate.nextWeekStart()
                 granularity = CashFlowGranularity.DAY
             }
 
             CashFlowRange.MONTH -> {
-                startDate = filter.anchorDate.withDayOfMonth(1)
-                endDate = startDate.plusMonths(1)
+                startDate = filter.anchorDate.startOfMonth()
+                endDate = startDate.nextMonthStart()
                 granularity = CashFlowGranularity.DAY
             }
 
             CashFlowRange.SIX_MONTHS -> {
-                startDate = filter.anchorDate.withDayOfMonth(1).minusMonths(SIX_MONTHS_OFFSET)
-                endDate = filter.anchorDate.withDayOfMonth(1).plusMonths(1)
+                val currentMonthStart = filter.anchorDate.startOfMonth()
+
+                startDate = currentMonthStart.minusMonths(SIX_MONTHS_OFFSET)
+                endDate = currentMonthStart.nextMonthStart()
                 granularity = CashFlowGranularity.MONTH
             }
 
             CashFlowRange.YEAR -> {
-                startDate = filter.anchorDate.withDayOfMonth(1).minusMonths(YEAR_OFFSET)
-                endDate = filter.anchorDate.withDayOfMonth(1).plusMonths(1)
+                val currentMonthStart = filter.anchorDate.startOfMonth()
+
+                startDate = currentMonthStart.minusMonths(YEAR_OFFSET)
+                endDate = currentMonthStart.nextMonthStart()
                 granularity = CashFlowGranularity.MONTH
             }
         }

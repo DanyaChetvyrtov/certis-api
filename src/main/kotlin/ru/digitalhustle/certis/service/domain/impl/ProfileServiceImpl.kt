@@ -8,14 +8,13 @@ import ru.digitalhustle.certis.model.profile.NewProfile
 import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.service.domain.ProfileService
-import java.time.Clock
-import java.time.OffsetDateTime
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.util.UUID
 
 @Service
 class ProfileServiceImpl(
     private val profileRepository: ProfileRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : ProfileService {
 
     override fun getById(id: UUID): Profile =
@@ -35,7 +34,7 @@ class ProfileServiceImpl(
                 name = profile.name,
                 surname = profile.surname,
                 dateOfBirth = profile.dateOfBirth,
-                updatedAt = OffsetDateTime.now(clock),
+                updatedAt = applicationClock.now(),
             ),
         )
     }
@@ -51,7 +50,7 @@ class ProfileServiceImpl(
                 name = profile.name,
                 surname = profile.surname,
                 dateOfBirth = profile.dateOfBirth,
-                updatedAt = OffsetDateTime.now(clock),
+                updatedAt = applicationClock.now(),
             ),
         )
     }

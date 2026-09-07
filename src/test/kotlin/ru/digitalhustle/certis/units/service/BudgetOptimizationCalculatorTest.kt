@@ -16,8 +16,6 @@ import java.util.UUID
 
 class BudgetOptimizationCalculatorTest {
 
-    private val calculator = BudgetOptimizationCalculator()
-
     @Test
     fun `should preserve fixed costs reallocate released budget and increase savings`() {
         // given
@@ -31,7 +29,7 @@ class BudgetOptimizationCalculatorTest {
         )
 
         // when
-        val result = calculator.calculate(budget)
+        val result = BudgetOptimizationCalculator.calculate(budget)
 
         // then
         assertThat(result.savingsBefore).isEqualByComparingTo("200.0000")
@@ -55,7 +53,7 @@ class BudgetOptimizationCalculatorTest {
         )
 
         // when
-        val result = calculator.calculate(budget)
+        val result = BudgetOptimizationCalculator.calculate(budget)
 
         // then
         val recommendation = result.resultSnapshot.allocations.single()

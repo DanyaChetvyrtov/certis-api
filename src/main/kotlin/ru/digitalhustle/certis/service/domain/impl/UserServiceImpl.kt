@@ -7,15 +7,14 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.UserService
+import ru.digitalhustle.certis.time.ApplicationClock
 import ru.digitalhustle.certis.util.normalizer.EmailNormalizer
-import java.time.Clock
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : UserService {
 
     override fun getUserById(id: UUID): User =
@@ -27,7 +26,7 @@ class UserServiceImpl(
             ?: throw NotFoundException.entity("User")
 
     override fun save(email: String, password: String): User {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
         val normalizedEmail = EmailNormalizer.normalize(email)
 
         return userRepository.create(
@@ -46,7 +45,7 @@ class UserServiceImpl(
 
         userRepository.save(
             user.copy(
-                lastLogin = OffsetDateTime.now(clock),
+                lastLogin = applicationClock.now(),
             ),
         )
     }

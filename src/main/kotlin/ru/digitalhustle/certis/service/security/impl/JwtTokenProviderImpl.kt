@@ -15,7 +15,7 @@ import ru.digitalhustle.certis.enums.JwtTokenType
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.model.security.RefreshTokenPayload
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Instant
 import java.util.Date
 import java.util.UUID
@@ -25,7 +25,7 @@ import javax.crypto.SecretKey
 class JwtTokenProviderImpl(
     private val jwtProperties: JwtProperties,
     private val userDetailsService: UserDetailsService,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : JwtTokenProvider {
 
     companion object {
@@ -41,7 +41,7 @@ class JwtTokenProviderImpl(
     }
 
     override fun createAccessToken(userId: UUID, email: String): String {
-        val issuedAt = Instant.now(clock)
+        val issuedAt = applicationClock.instant()
         val claims = Jwts.claims()
             .subject(email)
             .add(ID, userId)
@@ -64,7 +64,7 @@ class JwtTokenProviderImpl(
         sessionId: UUID,
         expiresAt: Instant,
     ): String {
-        val issuedAt = Instant.now(clock)
+        val issuedAt = applicationClock.instant()
         val claims = Jwts.claims()
             .subject(email)
             .add(ID, userId)
@@ -120,7 +120,7 @@ class JwtTokenProviderImpl(
     private fun getClaims(token: String, expectedType: JwtTokenType): Claims {
         val claims = Jwts.parser()
             .verifyWith(secretKey)
-            .clock { Date.from(Instant.now(clock)) }
+            .clock { Date.from(applicationClock.instant()) }
             .build()
             .parseSignedClaims(token)
             .payload

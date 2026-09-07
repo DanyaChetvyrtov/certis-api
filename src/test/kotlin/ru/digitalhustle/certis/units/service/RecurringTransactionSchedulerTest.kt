@@ -12,8 +12,10 @@ import ru.digitalhustle.certis.exception.custom.RecurringTransactionExecutionExc
 import ru.digitalhustle.certis.model.transaction.RecurringTransactionExecutionResult
 import ru.digitalhustle.certis.model.transaction.RecurringTransactionRetryState
 import ru.digitalhustle.certis.scheduler.RecurringTransactionScheduler
+import ru.digitalhustle.certis.scheduler.RecurringTransactionSchedulerMetrics
 import ru.digitalhustle.certis.service.domain.RecurringTransactionExecutionStateService
 import ru.digitalhustle.certis.service.transaction.RecurringTransactionExecutionService
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -42,8 +44,8 @@ class RecurringTransactionSchedulerTest {
         executionStateService = executionStateService,
         executionService = executionService,
         properties = properties,
-        clock = clock,
-        meterRegistry = meterRegistry,
+        applicationClock = ApplicationClock(clock),
+        metrics = RecurringTransactionSchedulerMetrics(meterRegistry),
     )
 
     @Test

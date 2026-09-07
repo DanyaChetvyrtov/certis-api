@@ -10,6 +10,7 @@ import ru.digitalhustle.certis.model.category.CategoryCardFilter
 import ru.digitalhustle.certis.model.category.CategoryCards
 import ru.digitalhustle.certis.repository.CategoryCardRepository
 import ru.digitalhustle.certis.service.domain.impl.CategoryCardServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -24,7 +25,7 @@ class CategoryCardServiceImplTest {
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),
     )
-    private val categoryCardService = CategoryCardServiceImpl(categoryCardRepository, clock)
+    private val categoryCardService = CategoryCardServiceImpl(categoryCardRepository, ApplicationClock(clock))
 
     private companion object {
         private val MONTH = YearMonth.of(2026, 9)

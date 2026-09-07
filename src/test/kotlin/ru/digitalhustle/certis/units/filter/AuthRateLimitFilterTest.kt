@@ -13,6 +13,7 @@ import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.filter.AuthRateLimitFilter
 import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -30,7 +31,9 @@ class AuthRateLimitFilterTest {
             refresh = rule(capacity = 1),
         ),
         exceptionResponseProvider = ExceptionResponseProvider(
-            Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC),
+            ApplicationClock(
+                Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC),
+            ),
         ),
         objectMapper = objectMapper,
     )

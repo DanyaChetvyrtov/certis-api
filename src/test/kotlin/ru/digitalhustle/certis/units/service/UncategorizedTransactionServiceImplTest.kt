@@ -11,6 +11,7 @@ import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionFilter
 import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionPage
 import ru.digitalhustle.certis.repository.UncategorizedTransactionRepository
 import ru.digitalhustle.certis.service.domain.impl.UncategorizedTransactionServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -25,7 +26,7 @@ class UncategorizedTransactionServiceImplTest {
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),
     )
-    private val service = UncategorizedTransactionServiceImpl(repository, clock)
+    private val service = UncategorizedTransactionServiceImpl(repository, ApplicationClock(clock))
 
     @Test
     fun `should get transactions using application time zone boundaries`() {

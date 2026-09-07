@@ -16,6 +16,8 @@ import ru.digitalhustle.certis.provider.SecurityRequestProvider
 import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.repository.BudgetRepository
 import ru.digitalhustle.certis.repository.CategoryRepository
+import ru.digitalhustle.certis.repository.GoalRepository
+import ru.digitalhustle.certis.repository.GoalTransactionRepository
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
@@ -59,6 +61,12 @@ abstract class AbstractIntegrationTest : AbstractResultActionsHelper() {
 
     @Autowired
     protected lateinit var categoryRepository: CategoryRepository
+
+    @Autowired
+    protected lateinit var goalRepository: GoalRepository
+
+    @Autowired
+    protected lateinit var goalTransactionRepository: GoalTransactionRepository
 
     @Autowired
     protected lateinit var budgetRepository: BudgetRepository

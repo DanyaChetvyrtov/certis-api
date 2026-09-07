@@ -21,6 +21,7 @@ import ru.digitalhustle.certis.model.entity.Account
 import ru.digitalhustle.certis.repository.AccountBalanceRepository
 import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.service.domain.impl.AccountServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -33,7 +34,11 @@ class AccountServiceImplTest {
     private val accountRepository = mock(AccountRepository::class.java)
     private val accountBalanceRepository = mock(AccountBalanceRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-07-31T10:15:30Z"), ZoneOffset.UTC)
-    private val accountService = AccountServiceImpl(accountRepository, accountBalanceRepository, clock)
+    private val accountService = AccountServiceImpl(
+        accountRepository,
+        accountBalanceRepository,
+        ApplicationClock(clock),
+    )
 
     private companion object {
         private const val NAME = "Main card"

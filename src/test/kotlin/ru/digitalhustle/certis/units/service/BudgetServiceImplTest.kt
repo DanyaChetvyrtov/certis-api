@@ -27,6 +27,7 @@ import ru.digitalhustle.certis.model.budget.SaveBudgetData
 import ru.digitalhustle.certis.model.entity.Budget
 import ru.digitalhustle.certis.repository.BudgetRepository
 import ru.digitalhustle.certis.service.domain.impl.BudgetServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -39,7 +40,7 @@ class BudgetServiceImplTest {
 
     private val budgetRepository = mock(BudgetRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-15T10:15:30Z"), ZoneOffset.UTC)
-    private val budgetService = BudgetServiceImpl(budgetRepository, clock)
+    private val budgetService = BudgetServiceImpl(budgetRepository, ApplicationClock(clock))
 
     private companion object {
         private val BUDGET_MONTH = LocalDate.parse("2026-08-01")

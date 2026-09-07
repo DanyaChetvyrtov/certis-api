@@ -13,6 +13,7 @@ import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
 import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.service.domain.impl.ProfilePhotoMetaServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -24,7 +25,10 @@ class ProfilePhotoMetaServiceImplTest {
     private val profilePhotoMetaRepository = mock(ProfilePhotoMetaRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(profilePhotoMetaRepository, clock)
+    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(
+        profilePhotoMetaRepository,
+        ApplicationClock(clock),
+    )
 
     private companion object {
         private const val ORIGINAL_FILE_NAME = "profile-photo"

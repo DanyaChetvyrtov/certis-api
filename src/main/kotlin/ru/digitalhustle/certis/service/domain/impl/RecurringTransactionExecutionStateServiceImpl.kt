@@ -9,7 +9,7 @@ import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.transaction.RecurringTransactionRetryState
 import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
 import ru.digitalhustle.certis.service.domain.RecurringTransactionExecutionStateService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Duration
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -18,8 +18,8 @@ import java.util.UUID
 @Service
 class RecurringTransactionExecutionStateServiceImpl(
     private val recurringTransactionTemplateRepository: RecurringTransactionTemplateRepository,
-    private val clock: Clock,
     private val properties: RecurringTransactionProperties,
+    private val applicationClock: ApplicationClock,
 ) : RecurringTransactionExecutionStateService {
 
     override fun getByIdForUpdate(id: UUID): RecurringTransactionTemplate =
@@ -50,7 +50,7 @@ class RecurringTransactionExecutionStateServiceImpl(
                 },
                 lastRunDate = lastRunDate,
                 nextRunDate = nextRunDate,
-                updatedAt = OffsetDateTime.now(clock),
+                updatedAt = applicationClock.now(),
             ),
         )
 
@@ -62,7 +62,7 @@ class RecurringTransactionExecutionStateServiceImpl(
         val currentFailures = recurringTransactionTemplateRepository.findFailureCountForUpdate(id, scheduledFor)
             ?: return null
         val consecutiveFailures = currentFailures + 1
-        val retryAfter = OffsetDateTime.now(clock).plus(calculateRetryDelay(currentFailures))
+        val retryAfter = applicationClock.now().plus(calculateRetryDelay(currentFailures))
         val recorded = recurringTransactionTemplateRepository.recordExecutionFailure(
             id = id,
             scheduledFor = scheduledFor,

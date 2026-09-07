@@ -24,6 +24,9 @@ complexity:
   ComplexInterface:
     active: true
     allowedDefinitions: 10
+    excludes:
+      - '**/mapper/**'
+      - '**/mappers/**'
 
   CyclomaticComplexMethod:
     active: true

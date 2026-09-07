@@ -58,4 +58,11 @@ object PathConstants {
     const val BUDGET_OPTIMIZATION_ID = "$BUDGET_OPTIMIZATIONS/{optimizationId}"
     const val BUDGET_OPTIMIZATION_APPLY = "$BUDGET_OPTIMIZATION_ID/apply"
     const val BUDGET_OPTIMIZATION_DISMISS = "$BUDGET_OPTIMIZATION_ID/dismiss"
+
+    const val GOALS = "$API_V1/goals"
+    const val GOAL_ID = "/{goalId}"
+    const val GOAL_OVERVIEW = "/overview"
+    const val GOAL_PLAN_PREVIEW = "/plan-preview"
+    const val GOAL_CONTRIBUTIONS = "$GOAL_ID/contributions"
+    const val GOAL_CONTRIBUTION_ID = "$GOAL_CONTRIBUTIONS/{contributionId}"
 }

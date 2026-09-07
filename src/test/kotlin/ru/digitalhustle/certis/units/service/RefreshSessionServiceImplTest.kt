@@ -15,6 +15,7 @@ import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.model.entity.RefreshSession
 import ru.digitalhustle.certis.repository.RefreshSessionRepository
 import ru.digitalhustle.certis.service.domain.impl.RefreshSessionServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -33,7 +34,7 @@ class RefreshSessionServiceImplTest {
             accessDuration = ACCESS_DURATION,
             refreshDuration = REFRESH_DURATION,
         ),
-        clock = clock,
+        applicationClock = ApplicationClock(clock),
     )
 
     private companion object {

@@ -17,16 +17,17 @@ import ru.digitalhustle.certis.model.entity.Budget
 import ru.digitalhustle.certis.model.entity.BudgetCategory
 import ru.digitalhustle.certis.repository.BudgetRepository
 import ru.digitalhustle.certis.service.domain.BudgetService
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
-import java.time.Clock
 import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.YearMonth
 import java.util.UUID
 
 @Service
 class BudgetServiceImpl(
     private val budgetRepository: BudgetRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : BudgetService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -59,7 +60,7 @@ class BudgetServiceImpl(
                 userId = budget.userId,
                 budgetMonth = budget.budgetMonth,
             )
-            val now = OffsetDateTime.now(clock)
+            val now = applicationClock.now()
 
             currentBudget?.let { budgetRepository.deleteAllocations(it.id) }
 
@@ -111,7 +112,7 @@ class BudgetServiceImpl(
 
         return translateConstraintViolation {
             budgetRepository.deleteAllocations(currentBudget.id)
-            budgetRepository.update(currentBudget.copy(updatedAt = OffsetDateTime.now(clock)))
+            budgetRepository.update(currentBudget.copy(updatedAt = applicationClock.now()))
             budgetRepository.insertAllocations(
                 data.allocations.map { allocation ->
                     BudgetCategory(
@@ -134,8 +135,9 @@ class BudgetServiceImpl(
         userId: UUID,
         budgetMonth: LocalDate,
     ): BudgetDetails {
-        val monthStart = budgetMonth.atStartOfDay(clock.zone).toOffsetDateTime()
-        val nextMonthStart = budgetMonth.plusMonths(1).atStartOfDay(clock.zone).toOffsetDateTime()
+        val month = YearMonth.from(budgetMonth)
+        val monthStart = applicationClock.startOfMonth(month)
+        val nextMonthStart = applicationClock.startOfNextMonth(month)
 
         return budgetRepository.findDetailsByUserIdAndMonth(
             userId = userId,

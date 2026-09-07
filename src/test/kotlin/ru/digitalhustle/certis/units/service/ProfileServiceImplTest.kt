@@ -16,6 +16,7 @@ import ru.digitalhustle.certis.model.profile.NewProfile
 import ru.digitalhustle.certis.model.profile.UpdateProfileData
 import ru.digitalhustle.certis.repository.ProfileRepository
 import ru.digitalhustle.certis.service.domain.impl.ProfileServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -28,7 +29,7 @@ class ProfileServiceImplTest {
     private val profileRepository = mock(ProfileRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profileService = ProfileServiceImpl(profileRepository, clock)
+    private val profileService = ProfileServiceImpl(profileRepository, ApplicationClock(clock))
 
     private companion object {
         private const val NAME = "John"
