@@ -16,11 +16,17 @@ data class GoalTransaction(
 
     val accountId: UUID,
 
+    val reversalOfGoalTransactionId: UUID?,
+
     val currency: Currency,
 
     val type: GoalTransactionType,
 
     val amount: BigDecimal,
+
+    val idempotencyKey: String?,
+
+    val note: String?,
 
     val date: OffsetDateTime,
 

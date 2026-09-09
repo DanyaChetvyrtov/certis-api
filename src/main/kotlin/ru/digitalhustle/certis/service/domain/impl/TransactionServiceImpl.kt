@@ -12,15 +12,14 @@ import ru.digitalhustle.certis.model.transaction.TransactionPage
 import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
 import ru.digitalhustle.certis.repository.TransactionRepository
 import ru.digitalhustle.certis.service.domain.TransactionService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class TransactionServiceImpl(
     private val transactionRepository: TransactionRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : TransactionService {
 
     override fun getById(
@@ -61,7 +60,7 @@ class TransactionServiceImpl(
     }
 
     override fun save(newTransaction: NewTransaction): Transaction {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
 
         return transactionRepository.insert(
             Transaction(
@@ -88,7 +87,7 @@ class TransactionServiceImpl(
         template: RecurringTransactionTemplate,
         scheduledFor: LocalDate,
     ): Transaction {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
         val transaction = Transaction(
             id = UUID.randomUUID(),
             userId = template.userId,
@@ -100,7 +99,7 @@ class TransactionServiceImpl(
             merchant = template.merchant,
             note = template.note,
             scheduledFor = scheduledFor,
-            occurredAt = scheduledFor.atStartOfDay(clock.zone).toOffsetDateTime(),
+            occurredAt = applicationClock.startOfDay(scheduledFor),
             createdAt = now,
             updatedAt = now,
             deletedAt = null,
@@ -115,7 +114,7 @@ class TransactionServiceImpl(
     override fun update(transaction: UpdateTransactionData): Transaction =
         transactionRepository.updateActive(
             transaction = transaction,
-            updatedAt = OffsetDateTime.now(clock),
+            updatedAt = applicationClock.now(),
         )
             ?: throw NotFoundException.entity("Transaction")
 
@@ -125,7 +124,7 @@ class TransactionServiceImpl(
         val assignedCount = transactionRepository.assignCategories(
             assignments = assignment.assignments,
             userId = assignment.userId,
-            updatedAt = OffsetDateTime.now(clock),
+            updatedAt = applicationClock.now(),
         )
 
         check(assignedCount == assignment.assignments.size) {
@@ -140,7 +139,7 @@ class TransactionServiceImpl(
         val deleted = transactionRepository.softDelete(
             id = id,
             userId = userId,
-            deletedAt = OffsetDateTime.now(clock),
+            deletedAt = applicationClock.now(),
         )
 
         if (!deleted && !transactionRepository.existsIncludingDeletedByIdAndUserId(id, userId)) {

@@ -18,6 +18,7 @@ import ru.digitalhustle.certis.enums.JwtTokenType
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.service.security.JwtTokenProvider
 import ru.digitalhustle.certis.service.security.impl.JwtTokenProviderImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -193,7 +194,7 @@ class JwtTokenProviderImplTest {
                 refreshDuration = REFRESH_DURATION,
             ),
             userDetailsService = userDetailsService,
-            clock = clock,
+            applicationClock = ApplicationClock(clock),
         ).also {
             it.init()
         }

@@ -3,12 +3,11 @@ package ru.digitalhustle.certis.provider
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
 import ru.digitalhustle.certis.dto.response.ExceptionRs
-import java.time.Clock
-import java.time.OffsetDateTime
+import ru.digitalhustle.certis.time.ApplicationClock
 
 @Component
 class ExceptionResponseProvider(
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) {
 
     fun createResponse(
@@ -20,7 +19,7 @@ class ExceptionResponseProvider(
             status = status.value(),
             error = status.reasonPhrase,
             message = message,
-            timestamp = OffsetDateTime.now(clock),
+            timestamp = applicationClock.now(),
             errors = errors,
         )
 

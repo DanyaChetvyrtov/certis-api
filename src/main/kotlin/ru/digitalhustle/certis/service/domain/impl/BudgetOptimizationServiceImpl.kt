@@ -13,16 +13,15 @@ import ru.digitalhustle.certis.model.budget.CalculatedBudgetOptimization
 import ru.digitalhustle.certis.model.entity.BudgetOptimization
 import ru.digitalhustle.certis.repository.BudgetOptimizationRepository
 import ru.digitalhustle.certis.service.domain.BudgetOptimizationService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class BudgetOptimizationServiceImpl(
     private val budgetOptimizationRepository: BudgetOptimizationRepository,
     private val objectMapper: ObjectMapper,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : BudgetOptimizationService {
 
     private companion object {
@@ -61,7 +60,7 @@ class BudgetOptimizationServiceImpl(
         userId: UUID,
         calculation: CalculatedBudgetOptimization,
     ): BudgetOptimizationDetails {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
 
         budgetOptimizationRepository.dismissProposedByBudgetId(
             budgetId = calculation.inputSnapshot.budgetId,
@@ -94,7 +93,7 @@ class BudgetOptimizationServiceImpl(
             id = id,
             userId = userId,
             status = BudgetOptimizationStatus.APPLIED,
-            appliedAt = OffsetDateTime.now(clock),
+            appliedAt = applicationClock.now(),
         )?.toDetails()
             ?: throw BudgetOptimizationConflictException(ErrorMessages.BUDGET_OPTIMIZATION_NOT_PROPOSED)
 

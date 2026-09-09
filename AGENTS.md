@@ -64,6 +64,7 @@ Use the existing package structure according to these responsibilities:
 - `provider`: focused data or object providers that do not own a complete
   business workflow;
 - `filter`: servlet and security filters;
+- `time`: the application clock and reusable calendar/time operations;
 - `config` and `config.properties`: Spring configuration and typed properties;
 - `exception`: exception hierarchy and centralized boundary handlers;
 - `util`: small reusable utilities without business orchestration.
@@ -101,8 +102,8 @@ it by responsibility and dependencies.
   and the reason must be documented in the implementation or handoff.
 - Keep direct jOOQ access inside repositories.
 - A domain service may use focused helpers such as a mapper, validator, or
-  injected `Clock`, but it must not become an orchestrator for unrelated
-  entities.
+  injected `ApplicationClock`, but it must not become an orchestrator for
+  unrelated entities.
 - If a use case needs data or mutations from multiple entities or lower-level
   services, coordinate them in a facade/orchestration service.
 
@@ -322,8 +323,10 @@ asks for it.
 - Keep direct SQL and jOOQ DSL usage inside repositories or migration tooling.
 - Keep monetary values as `BigDecimal`; do not use floating-point types for
   balances or amounts.
-- Use an injected `Clock` for new time-dependent business logic so tests remain
-  deterministic.
+- Use the injected `ApplicationClock` for time-dependent application logic so
+  tests remain deterministic and the configured application zone is applied
+  consistently. Inject the underlying `Clock` only into `ApplicationClock` and
+  its Spring configuration.
 
 ## Financial domain invariants
 

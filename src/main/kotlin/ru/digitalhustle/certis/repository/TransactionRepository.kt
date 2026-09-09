@@ -140,7 +140,7 @@ class TransactionRepository(
     fun updateActive(
         transaction: UpdateTransactionData,
         updatedAt: OffsetDateTime,
-    ): Transaction =
+    ): Transaction? =
         dsl.update(Tables.TRANSACTIONS)
             .set(Tables.TRANSACTIONS.ACCOUNT_ID, transaction.accountId)
             .set(Tables.TRANSACTIONS.TYPE, transaction.type.name)
@@ -156,7 +156,7 @@ class TransactionRepository(
                     .and(Tables.TRANSACTIONS.DELETED_AT.isNull()),
             )
             .returning()
-            .fetchOneInto(Transaction::class.java)!!
+            .fetchOneInto(Transaction::class.java)
 
     fun assignCategories(
         assignments: Collection<TransactionCategoryAssignment>,

@@ -20,6 +20,7 @@ import ru.digitalhustle.certis.dto.request.CreateAccountRq
 import ru.digitalhustle.certis.dto.request.UpdateAccountRq
 import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
+import ru.digitalhustle.certis.enums.GoalContributionPlanType
 import ru.digitalhustle.certis.enums.GoalStatus
 import ru.digitalhustle.certis.enums.GoalTransactionType
 import ru.digitalhustle.certis.enums.TransactionType
@@ -341,6 +342,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
     }
 
     private fun createGoal(account: Account): Goal {
+        val now = OffsetDateTime.now()
         val goal = Goal(
             id = UUID.randomUUID(),
             userId = account.userId,
@@ -348,7 +350,13 @@ class AccountControllerTest : AbstractIntegrationTest() {
             targetAmount = BigDecimal("1000.00"),
             currency = account.currency,
             deadline = null,
+            contributionPlanType = GoalContributionPlanType.RECOMMENDED,
+            monthlyContributionAmount = BigDecimal("100.00"),
+            icon = "target",
+            color = "#10B981",
             status = GoalStatus.ACTIVE,
+            createdAt = now,
+            updatedAt = now,
             achievedAt = null,
             archivedAt = null,
         )
@@ -372,9 +380,12 @@ class AccountControllerTest : AbstractIntegrationTest() {
             userId = account.userId,
             goalId = goal.id,
             accountId = account.id,
+            reversalOfGoalTransactionId = null,
             currency = account.currency,
             type = type,
             amount = amount,
+            idempotencyKey = null,
+            note = null,
             date = now,
             createdAt = now,
         )

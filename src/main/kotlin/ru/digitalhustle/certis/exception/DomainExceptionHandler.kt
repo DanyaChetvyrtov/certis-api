@@ -18,6 +18,7 @@ import ru.digitalhustle.certis.exception.custom.CategoryInUseException
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.InvalidBudgetException
+import ru.digitalhustle.certis.exception.custom.InvalidGoalException
 import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
 import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
 import ru.digitalhustle.certis.exception.custom.InvalidTokenException
@@ -64,6 +65,7 @@ class DomainExceptionHandler(
         InvalidTransactionException::class,
         InvalidRecurringTransactionException::class,
         InvalidTransferException::class,
+        InvalidGoalException::class,
     )
     fun handleInvalidFinancialOperationException(exception: DomainException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }

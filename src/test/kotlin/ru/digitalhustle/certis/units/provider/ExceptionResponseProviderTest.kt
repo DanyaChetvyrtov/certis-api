@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 import org.springframework.http.HttpStatus
 import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -13,7 +14,9 @@ import java.time.ZoneOffset
 class ExceptionResponseProviderTest {
 
     private val exceptionResponseProvider = ExceptionResponseProvider(
-        Clock.fixed(NOW, ZoneOffset.UTC),
+        ApplicationClock(
+            Clock.fixed(NOW, ZoneOffset.UTC),
+        ),
     )
 
     private companion object {

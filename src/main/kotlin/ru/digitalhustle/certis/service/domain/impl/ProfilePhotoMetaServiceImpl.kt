@@ -6,14 +6,13 @@ import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
 import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
 import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
 import ru.digitalhustle.certis.service.domain.ProfilePhotoMetaService
-import java.time.Clock
-import java.time.OffsetDateTime
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.util.UUID
 
 @Service
 class ProfilePhotoMetaServiceImpl(
     private val profilePhotoMetaRepository: ProfilePhotoMetaRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : ProfilePhotoMetaService {
 
     override fun getById(id: UUID): ProfilePhotoMeta =
@@ -35,7 +34,7 @@ class ProfilePhotoMetaServiceImpl(
                 height = profilePhotoMeta.height,
                 contentType = profilePhotoMeta.contentType,
                 url = profilePhotoMeta.url,
-                uploadedAt = OffsetDateTime.now(clock),
+                uploadedAt = applicationClock.now(),
             ),
         )
 

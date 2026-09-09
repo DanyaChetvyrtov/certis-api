@@ -17,7 +17,6 @@ import java.util.UUID
 class BudgetOptimizationAggregatorImpl(
     private val budgetService: BudgetService,
     private val budgetOptimizationService: BudgetOptimizationService,
-    private val budgetOptimizationCalculator: BudgetOptimizationCalculator,
 ) : BudgetOptimizationAggregator {
 
     @Transactional(readOnly = true)
@@ -32,7 +31,7 @@ class BudgetOptimizationAggregatorImpl(
         budgetMonth: LocalDate,
     ): BudgetOptimizationDetails {
         val budget = budgetService.getByMonthForUpdate(userId, budgetMonth)
-        val calculation = budgetOptimizationCalculator.calculate(budget)
+        val calculation = BudgetOptimizationCalculator.calculate(budget)
 
         return budgetOptimizationService.create(userId, calculation)
     }

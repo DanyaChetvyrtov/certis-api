@@ -141,7 +141,7 @@ class ProfileAggregatorImpl(
     @Transactional
     override fun deletePhotoByProfileId(profileId: UUID) {
         if (!profileService.exists(profileId)) {
-            throw NotFoundException.Companion.entity("Profile")
+            throw NotFoundException.entity("Profile")
         }
 
         val photoMeta = profilePhotoMetaService.getByProfileId(profileId)

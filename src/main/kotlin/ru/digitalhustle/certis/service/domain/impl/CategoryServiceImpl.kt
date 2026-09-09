@@ -14,16 +14,15 @@ import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.provider.DefaultCategoryProvider
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.service.domain.CategoryService
+import ru.digitalhustle.certis.time.ApplicationClock
 import ru.digitalhustle.certis.util.normalizer.CategoryNormalizer
-import java.time.Clock
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class CategoryServiceImpl(
     private val categoryRepository: CategoryRepository,
     private val defaultCategoryProvider: DefaultCategoryProvider,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : CategoryService {
 
     override fun getById(
@@ -97,7 +96,7 @@ class CategoryServiceImpl(
         val archived = categoryRepository.archive(
             id = id,
             userId = userId,
-            archivedAt = OffsetDateTime.now(clock),
+            archivedAt = applicationClock.now(),
         )
 
         if (!archived) {

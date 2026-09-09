@@ -10,6 +10,7 @@ import ru.digitalhustle.certis.model.category.CategoryAnalytics
 import ru.digitalhustle.certis.model.category.CategoryAnalyticsFilter
 import ru.digitalhustle.certis.repository.CategoryAnalyticsRepository
 import ru.digitalhustle.certis.service.domain.impl.CategoryAnalyticsServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -25,7 +26,10 @@ class CategoryAnalyticsServiceImplTest {
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),
     )
-    private val categoryAnalyticsService = CategoryAnalyticsServiceImpl(categoryAnalyticsRepository, clock)
+    private val categoryAnalyticsService = CategoryAnalyticsServiceImpl(
+        categoryAnalyticsRepository,
+        ApplicationClock(clock),
+    )
 
     private companion object {
         private val MONTH = YearMonth.of(2026, 9)

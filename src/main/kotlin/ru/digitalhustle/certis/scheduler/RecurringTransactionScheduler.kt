@@ -1,20 +1,15 @@
 package ru.digitalhustle.certis.scheduler
 
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.Timer
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import ru.digitalhustle.certis.config.properties.RecurringTransactionProperties
 import ru.digitalhustle.certis.exception.custom.RecurringTransactionExecutionException
-import ru.digitalhustle.certis.model.transaction.RecurringTransactionRetryState
 import ru.digitalhustle.certis.service.domain.RecurringTransactionExecutionStateService
 import ru.digitalhustle.certis.service.transaction.RecurringTransactionExecutionService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Component
@@ -28,27 +23,15 @@ class RecurringTransactionScheduler(
     private val executionStateService: RecurringTransactionExecutionStateService,
     private val executionService: RecurringTransactionExecutionService,
     private val properties: RecurringTransactionProperties,
-    private val clock: Clock,
-    private val meterRegistry: MeterRegistry,
+    private val applicationClock: ApplicationClock,
+    private val metrics: RecurringTransactionSchedulerMetrics,
 ) {
-
-    private val successfulExecutions: Counter = meterRegistry.counter(
-        EXECUTION_METRIC,
-        OUTCOME_TAG,
-        SUCCESS_OUTCOME,
-    )
-    private val failedExecutions: Counter = meterRegistry.counter(
-        EXECUTION_METRIC,
-        OUTCOME_TAG,
-        FAILURE_OUTCOME,
-    )
-    private val batchTimer: Timer = meterRegistry.timer(BATCH_DURATION_METRIC)
 
     @Scheduled(fixedDelayString = $$"${digital-hustle.certis.recurring-transactions.scheduler.delay:10m}")
     fun executeDueTransactions() {
-        val sample = Timer.start(meterRegistry)
-        val batchResult = executeBatch()
-        sample.stop(batchTimer)
+        val batchResult = metrics.recordBatch {
+            executeBatch()
+        }
 
         if (batchResult.attempted > 0) {
             log.info {
@@ -59,7 +42,7 @@ class RecurringTransactionScheduler(
     }
 
     private fun executeBatch(): BatchResult {
-        val currentDate = LocalDate.now(clock)
+        val currentDate = applicationClock.today()
 
         val excludedTemplateIds = mutableSetOf<UUID>()
         val executionsByTemplate = mutableMapOf<UUID, Int>()
@@ -75,7 +58,7 @@ class RecurringTransactionScheduler(
             ) {
                 is ExecutionAttempt.Succeeded -> {
                     succeeded++
-                    successfulExecutions.increment()
+                    metrics.recordSuccess()
 
                     val executionCount = executionsByTemplate.merge(attempt.templateId, 1, Int::plus) ?: 1
 
@@ -86,9 +69,9 @@ class RecurringTransactionScheduler(
 
                 is ExecutionAttempt.Failed -> {
                     failed++
-                    failedExecutions.increment()
-                    excludedTemplateIds += attempt.exception.templateId
+                    metrics.recordFailure()
 
+                    excludedTemplateIds += attempt.exception.templateId
                     handleExecutionFailure(attempt.exception)
                 }
 
@@ -123,7 +106,7 @@ class RecurringTransactionScheduler(
     ): ExecutionAttempt = try {
         executionService.executeNext(
             currentDate = currentDate,
-            currentTime = OffsetDateTime.now(clock),
+            currentTime = applicationClock.now(),
             excludedTemplateIds = excludedTemplateIds.toSet(),
         )?.let { result ->
             ExecutionAttempt.Succeeded(result.templateId)
@@ -147,13 +130,6 @@ class RecurringTransactionScheduler(
             null
         }
 
-        logExecutionFailure(exception, retryState)
-    }
-
-    private fun logExecutionFailure(
-        exception: RecurringTransactionExecutionException,
-        retryState: RecurringTransactionRetryState?,
-    ) {
         val retryMessage = retryState?.let {
             "; retry ${it.consecutiveFailures} scheduled after ${it.retryAfter}"
         }.orEmpty()
@@ -165,11 +141,6 @@ class RecurringTransactionScheduler(
 
     private companion object {
         private val log = KotlinLogging.logger {}
-        private const val EXECUTION_METRIC = "certis.recurring.transactions.executions"
-        private const val BATCH_DURATION_METRIC = "certis.recurring.transactions.batch.duration"
-        private const val OUTCOME_TAG = "outcome"
-        private const val SUCCESS_OUTCOME = "success"
-        private const val FAILURE_OUTCOME = "failure"
     }
 
     private data class BatchResult(

@@ -1,6 +1,5 @@
 package ru.digitalhustle.certis.service.budget
 
-import org.springframework.stereotype.Component
 import ru.digitalhustle.certis.enums.BudgetAllocationStatus
 import ru.digitalhustle.certis.enums.BudgetExpenseType
 import ru.digitalhustle.certis.enums.BudgetOptimizationReason
@@ -14,15 +13,15 @@ import ru.digitalhustle.certis.model.budget.CalculatedBudgetOptimization
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
+import kotlin.collections.forEach
+import kotlin.collections.sumOf
+import kotlin.minus
 
-@Component
-class BudgetOptimizationCalculator {
+object BudgetOptimizationCalculator {
 
-    private companion object {
-        private const val MONEY_SCALE = 4
-        private val RELEASE_FACTOR = BigDecimal("0.25")
-        private val RISK_BUFFER_FACTOR = BigDecimal("1.10")
-    }
+    private const val MONEY_SCALE = 4
+    private val RELEASE_FACTOR = BigDecimal("0.25")
+    private val RISK_BUFFER_FACTOR = BigDecimal("1.10")
 
     fun calculate(budget: BudgetDetails): CalculatedBudgetOptimization {
         val recommendedLimits = budget.allocations.associate { allocation ->
@@ -99,6 +98,7 @@ class BudgetOptimizationCalculator {
             BudgetAllocationStatus.OVERSPENT -> allocation.spentAmount - allocation.limitAmount
             BudgetAllocationStatus.NEAR_LIMIT ->
                 allocation.spentAmount.multiply(RISK_BUFFER_FACTOR) - allocation.limitAmount
+
             BudgetAllocationStatus.ON_TRACK -> BigDecimal.ZERO
         }.max(BigDecimal.ZERO).money()
 
@@ -123,6 +123,7 @@ class BudgetOptimizationCalculator {
             recommendedLimit < limitAmount -> BudgetOptimizationReason.LOW_UTILIZATION_REDUCTION
             recommendedLimit > limitAmount && status == BudgetAllocationStatus.OVERSPENT ->
                 BudgetOptimizationReason.OVERSPENDING_REALLOCATION
+
             recommendedLimit > limitAmount -> BudgetOptimizationReason.NEAR_LIMIT_REALLOCATION
             status != BudgetAllocationStatus.ON_TRACK -> BudgetOptimizationReason.RISK_UNCHANGED
             else -> BudgetOptimizationReason.NO_CHANGE

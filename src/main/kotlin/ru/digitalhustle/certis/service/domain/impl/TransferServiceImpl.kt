@@ -6,14 +6,13 @@ import ru.digitalhustle.certis.model.entity.Transfer
 import ru.digitalhustle.certis.model.transfer.NewTransfer
 import ru.digitalhustle.certis.repository.TransferRepository
 import ru.digitalhustle.certis.service.domain.TransferService
-import java.time.Clock
-import java.time.OffsetDateTime
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.util.UUID
 
 @Service
 class TransferServiceImpl(
     private val transferRepository: TransferRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : TransferService {
 
     override fun getById(
@@ -49,7 +48,7 @@ class TransferServiceImpl(
                 amount = newTransfer.amount,
                 note = newTransfer.note,
                 occurredAt = newTransfer.occurredAt,
-                createdAt = OffsetDateTime.now(clock),
+                createdAt = applicationClock.now(),
                 reversalOfTransferId = newTransfer.reversalOfTransferId,
             ),
         )

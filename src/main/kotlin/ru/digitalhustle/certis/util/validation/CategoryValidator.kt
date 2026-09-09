@@ -9,13 +9,12 @@ import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionExcep
 import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.repository.CategoryUsageRepository
 import ru.digitalhustle.certis.service.domain.CategoryService
-import java.time.Clock
-import java.time.LocalDate
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.util.UUID
 
 @Component
 class CategoryValidator(
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
     private val categoryService: CategoryService,
     private val categoryUsageRepository: CategoryUsageRepository,
 ) {
@@ -40,7 +39,7 @@ class CategoryValidator(
             categoryUsageRepository.existsInCurrentOrFutureBudget(
                 categoryId = categoryId,
                 userId = userId,
-                currentMonth = LocalDate.now(clock).withDayOfMonth(1),
+                currentMonth = applicationClock.currentMonth().atDay(1),
             )
 
     private fun validateCategoryArchive(category: Category) {

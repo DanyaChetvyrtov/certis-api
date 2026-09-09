@@ -13,16 +13,15 @@ import ru.digitalhustle.certis.model.entity.Account
 import ru.digitalhustle.certis.repository.AccountBalanceRepository
 import ru.digitalhustle.certis.repository.AccountRepository
 import ru.digitalhustle.certis.service.domain.AccountService
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
-import java.time.Clock
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class AccountServiceImpl(
     private val accountRepository: AccountRepository,
     private val accountBalanceRepository: AccountBalanceRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : AccountService {
 
     override fun getById(
@@ -74,7 +73,7 @@ class AccountServiceImpl(
                 type = newAccount.type,
                 openingBalance = newAccount.openingBalance,
                 currency = newAccount.currency,
-                createdAt = OffsetDateTime.now(clock),
+                createdAt = applicationClock.now(),
                 closedAt = null,
             ),
         )
@@ -96,7 +95,7 @@ class AccountServiceImpl(
         val closed = accountRepository.close(
             id = id,
             userId = userId,
-            closedAt = OffsetDateTime.now(clock),
+            closedAt = applicationClock.now(),
         )
 
         if (!closed) {

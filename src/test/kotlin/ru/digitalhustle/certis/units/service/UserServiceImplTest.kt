@@ -12,6 +12,7 @@ import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.model.entity.User
 import ru.digitalhustle.certis.repository.UserRepository
 import ru.digitalhustle.certis.service.domain.impl.UserServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -22,7 +23,7 @@ class UserServiceImplTest {
 
     private val repository = mock(UserRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
-    private val service = UserServiceImpl(repository, clock)
+    private val service = UserServiceImpl(repository, ApplicationClock(clock))
 
     @Test
     fun `should read user by id`() {

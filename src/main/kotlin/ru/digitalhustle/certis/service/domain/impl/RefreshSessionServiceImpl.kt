@@ -8,7 +8,7 @@ import ru.digitalhustle.certis.exception.custom.InvalidTokenException
 import ru.digitalhustle.certis.model.entity.RefreshSession
 import ru.digitalhustle.certis.repository.RefreshSessionRepository
 import ru.digitalhustle.certis.service.domain.RefreshSessionService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -16,15 +16,15 @@ import java.util.UUID
 class RefreshSessionServiceImpl(
     private val refreshSessionRepository: RefreshSessionRepository,
     private val jwtProperties: JwtProperties,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : RefreshSessionService {
 
     override fun getActiveByUserId(userId: UUID): List<RefreshSession> =
-        refreshSessionRepository.findActiveByUserId(userId, OffsetDateTime.now(clock))
+        refreshSessionRepository.findActiveByUserId(userId, applicationClock.now())
 
     @Transactional
     override fun create(userId: UUID): RefreshSession {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
 
         return refreshSessionRepository.save(
             RefreshSession(
@@ -41,7 +41,7 @@ class RefreshSessionServiceImpl(
 
     @Transactional(noRollbackFor = [InvalidTokenException::class])
     override fun rotate(sessionId: UUID, userId: UUID): RefreshSession {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
         val consumedSession = refreshSessionRepository.consume(sessionId, userId, now)
             ?: handleRejectedSession(sessionId, userId, now)
 
@@ -62,17 +62,17 @@ class RefreshSessionServiceImpl(
     override fun revokeBySessionId(sessionId: UUID, userId: UUID) {
         val session = refreshSessionRepository.findByIdAndUserId(sessionId, userId) ?: return
 
-        refreshSessionRepository.revokeFamily(session.familyId, userId, OffsetDateTime.now(clock))
+        refreshSessionRepository.revokeFamily(session.familyId, userId, applicationClock.now())
     }
 
     @Transactional
     override fun revokeFamily(familyId: UUID, userId: UUID) {
-        refreshSessionRepository.revokeFamily(familyId, userId, OffsetDateTime.now(clock))
+        refreshSessionRepository.revokeFamily(familyId, userId, applicationClock.now())
     }
 
     @Transactional
     override fun revokeAll(userId: UUID) {
-        refreshSessionRepository.revokeAllByUserId(userId, OffsetDateTime.now(clock))
+        refreshSessionRepository.revokeAllByUserId(userId, applicationClock.now())
     }
 
     private fun handleRejectedSession(sessionId: UUID, userId: UUID, now: OffsetDateTime): Nothing {

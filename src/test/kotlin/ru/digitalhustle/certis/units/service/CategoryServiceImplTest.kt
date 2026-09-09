@@ -21,6 +21,7 @@ import ru.digitalhustle.certis.model.entity.Category
 import ru.digitalhustle.certis.provider.DefaultCategoryProvider
 import ru.digitalhustle.certis.repository.CategoryRepository
 import ru.digitalhustle.certis.service.domain.impl.CategoryServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -32,7 +33,11 @@ class CategoryServiceImplTest {
     private val categoryRepository = mock(CategoryRepository::class.java)
     private val defaultCategoryProvider = DefaultCategoryProvider()
     private val clock = Clock.fixed(Instant.parse("2026-08-08T20:00:00Z"), ZoneOffset.UTC)
-    private val categoryService = CategoryServiceImpl(categoryRepository, defaultCategoryProvider, clock)
+    private val categoryService = CategoryServiceImpl(
+        categoryRepository,
+        defaultCategoryProvider,
+        ApplicationClock(clock),
+    )
 
     private companion object {
         private const val DEFAULT_CATEGORY_COUNT = 11

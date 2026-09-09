@@ -13,6 +13,7 @@ import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
 import ru.digitalhustle.certis.model.transaction.NewRecurringTransactionTemplate
 import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
 import ru.digitalhustle.certis.service.domain.impl.RecurringTransactionTemplateServiceImpl
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -25,7 +26,7 @@ class RecurringTransactionTemplateServiceImplTest {
 
     private val repository = mock(RecurringTransactionTemplateRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-12T18:00:00Z"), ZoneOffset.UTC)
-    private val service = RecurringTransactionTemplateServiceImpl(repository, clock)
+    private val service = RecurringTransactionTemplateServiceImpl(repository, ApplicationClock(clock))
 
     @Test
     fun `should save active recurring transaction starting on requested date`() {

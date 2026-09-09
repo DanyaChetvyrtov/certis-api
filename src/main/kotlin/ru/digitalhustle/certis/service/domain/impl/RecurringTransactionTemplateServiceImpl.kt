@@ -8,15 +8,14 @@ import ru.digitalhustle.certis.model.transaction.NewRecurringTransactionTemplate
 import ru.digitalhustle.certis.model.transaction.UpdateRecurringTransactionTemplateData
 import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
 import ru.digitalhustle.certis.service.domain.RecurringTransactionTemplateService
-import java.time.Clock
+import ru.digitalhustle.certis.time.ApplicationClock
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @Service
 class RecurringTransactionTemplateServiceImpl(
     private val recurringTransactionTemplateRepository: RecurringTransactionTemplateRepository,
-    private val clock: Clock,
+    private val applicationClock: ApplicationClock,
 ) : RecurringTransactionTemplateService {
 
     override fun getById(
@@ -42,7 +41,7 @@ class RecurringTransactionTemplateServiceImpl(
     ): Boolean = recurringTransactionTemplateRepository.existsSchedulableByAccountIdAndUserId(accountId, userId)
 
     override fun save(template: NewRecurringTransactionTemplate): RecurringTransactionTemplate {
-        val now = OffsetDateTime.now(clock)
+        val now = applicationClock.now()
 
         return recurringTransactionTemplateRepository.insert(
             RecurringTransactionTemplate(
@@ -94,7 +93,7 @@ class RecurringTransactionTemplateServiceImpl(
                 startDate = updateData.startDate,
                 endDate = updateData.endDate,
                 nextRunDate = nextRunDate,
-                updatedAt = OffsetDateTime.now(clock),
+                updatedAt = applicationClock.now(),
             ),
         )
     }
@@ -104,7 +103,7 @@ class RecurringTransactionTemplateServiceImpl(
             template.copy(
                 status = RecurringTransactionTemplateStatus.CANCELLED,
                 nextRunDate = null,
-                updatedAt = OffsetDateTime.now(clock),
+                updatedAt = applicationClock.now(),
             ),
         )
 
