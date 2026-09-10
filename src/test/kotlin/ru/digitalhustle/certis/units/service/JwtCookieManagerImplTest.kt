@@ -7,7 +7,7 @@ import org.junit.jupiter.api.assertAll
 import org.springframework.mock.web.MockHttpServletRequest
 import ru.digitalhustle.certis.config.properties.JwtProperties
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.service.security.impl.JwtCookieManagerImpl
+import ru.digitalhustle.certis.features.security.infrastructure.service.impl.JwtCookieManagerImpl
 import java.time.Duration
 
 class JwtCookieManagerImplTest {

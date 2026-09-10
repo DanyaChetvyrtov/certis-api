@@ -7,22 +7,31 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.custom.AccountInUseException
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.service.account.impl.AccountAggregatorImpl
-import ru.digitalhustle.certis.service.domain.AccountService
-import ru.digitalhustle.certis.service.domain.RecurringTransactionTemplateService
+import ru.digitalhustle.certis.features.account.application.service.impl.AccountApplicationServiceImpl
+import ru.digitalhustle.certis.features.account.command.service.AccountService
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.exceptions.AccountInUseException
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.account.query.service.AccountQueryService
+import ru.digitalhustle.certis.features.account.validator.AccountClosureValidator
+import ru.digitalhustle.certis.features.transaction.api.RecurringTransactionUsage
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
 class AccountAggregatorImplTest {
 
+    private val accountQueryService = mock(AccountQueryService::class.java)
+
     private val accountService = mock(AccountService::class.java)
-    private val recurringTransactionTemplateService = mock(RecurringTransactionTemplateService::class.java)
-    private val aggregator = AccountAggregatorImpl(accountService, recurringTransactionTemplateService)
+    private val recurringTransactionUsage = mock(RecurringTransactionUsage::class.java)
+    private val aggregator = AccountApplicationServiceImpl(
+        accountQueryService,
+        accountService,
+        recurringTransactionUsage,
+        AccountClosureValidator(),
+    )
 
     @Test
     fun `should close account without schedulable recurring transactions`() {
@@ -30,7 +39,7 @@ class AccountAggregatorImplTest {
         val account = createAccount()
 
         `when`(accountService.getByIdForUpdate(account.id, account.userId)).thenReturn(account)
-        `when`(recurringTransactionTemplateService.existsSchedulableByAccountId(account.id, account.userId))
+        `when`(recurringTransactionUsage.existsSchedulableByAccountId(account.id, account.userId))
             .thenReturn(false)
 
         // when
@@ -46,7 +55,7 @@ class AccountAggregatorImplTest {
         val account = createAccount()
 
         `when`(accountService.getByIdForUpdate(account.id, account.userId)).thenReturn(account)
-        `when`(recurringTransactionTemplateService.existsSchedulableByAccountId(account.id, account.userId))
+        `when`(recurringTransactionUsage.existsSchedulableByAccountId(account.id, account.userId))
             .thenReturn(true)
 
         // when, then

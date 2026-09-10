@@ -7,11 +7,11 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
-import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Transaction
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID

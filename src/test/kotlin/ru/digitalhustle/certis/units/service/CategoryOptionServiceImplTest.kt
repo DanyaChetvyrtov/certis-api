@@ -4,15 +4,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.CategoryType
-import ru.digitalhustle.certis.model.category.CategoryOption
-import ru.digitalhustle.certis.repository.CategoryOptionRepository
-import ru.digitalhustle.certis.service.domain.impl.CategoryOptionServiceImpl
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.query.model.CategoryOption
+import ru.digitalhustle.certis.features.category.query.repository.CategoryOptionQueryRepository
+import ru.digitalhustle.certis.features.category.query.service.impl.CategoryOptionServiceImpl
 import java.util.UUID
 
 class CategoryOptionServiceImplTest {
 
-    private val categoryOptionRepository = mock(CategoryOptionRepository::class.java)
+    private val categoryOptionRepository = mock(CategoryOptionQueryRepository::class.java)
     private val categoryOptionService = CategoryOptionServiceImpl(categoryOptionRepository)
 
     @Test

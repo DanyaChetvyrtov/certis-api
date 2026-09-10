@@ -8,27 +8,26 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import ru.digitalhustle.certis.api.dto.response.ExceptionRs
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.exception.custom.AccountClosedException
-import ru.digitalhustle.certis.exception.custom.AccountInUseException
-import ru.digitalhustle.certis.exception.custom.BudgetOptimizationConflictException
-import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
-import ru.digitalhustle.certis.exception.custom.CategoryInUseException
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
-import ru.digitalhustle.certis.exception.custom.InvalidBudgetException
-import ru.digitalhustle.certis.exception.custom.InvalidGoalException
-import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
-import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
-import ru.digitalhustle.certis.exception.custom.InvalidTokenException
-import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
-import ru.digitalhustle.certis.exception.custom.InvalidTransferException
-import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
-import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.features.account.exceptions.AccountClosedException
+import ru.digitalhustle.certis.features.account.exceptions.AccountInUseException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetOptimizationConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.InvalidBudgetException
+import ru.digitalhustle.certis.features.category.exceptions.CategoryArchivedException
+import ru.digitalhustle.certis.features.category.exceptions.CategoryInUseException
+import ru.digitalhustle.certis.features.goal.exceptions.InvalidGoalException
+import ru.digitalhustle.certis.features.profile.exceptions.InvalidPhotoException
+import ru.digitalhustle.certis.features.profile.exceptions.UnsupportedPhotoMediaTypeException
+import ru.digitalhustle.certis.features.security.exceptions.InvalidTokenException
+import ru.digitalhustle.certis.features.security.exceptions.MissedTokenException
+import ru.digitalhustle.certis.features.security.exceptions.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidRecurringTransactionException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidTransactionException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidTransferException
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice

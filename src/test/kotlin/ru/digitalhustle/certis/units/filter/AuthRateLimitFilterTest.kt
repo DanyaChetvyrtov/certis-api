@@ -8,12 +8,12 @@ import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import ru.digitalhustle.certis.config.filter.AuthRateLimitFilter
 import ru.digitalhustle.certis.config.properties.AuthRateLimitProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.filter.AuthRateLimitFilter
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.exception.ExceptionResponseProvider
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

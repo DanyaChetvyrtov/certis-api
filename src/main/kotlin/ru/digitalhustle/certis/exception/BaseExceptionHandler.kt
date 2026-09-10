@@ -13,10 +13,9 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import ru.digitalhustle.certis.api.dto.response.ExceptionRs
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
 
 @RestControllerAdvice
 class BaseExceptionHandler(

@@ -3,12 +3,12 @@ package ru.digitalhustle.certis.units.service
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.groups.Tuple.tuple
 import org.junit.jupiter.api.Test
-import ru.digitalhustle.certis.enums.BudgetExpenseType
-import ru.digitalhustle.certis.enums.BudgetOptimizationReason
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.model.budget.BudgetAllocationDetails
-import ru.digitalhustle.certis.model.budget.BudgetDetails
-import ru.digitalhustle.certis.service.budget.BudgetOptimizationCalculator
+import ru.digitalhustle.certis.features.budget.enums.BudgetExpenseType
+import ru.digitalhustle.certis.features.budget.enums.BudgetOptimizationReason
+import ru.digitalhustle.certis.features.budget.model.BudgetAllocationDetails
+import ru.digitalhustle.certis.features.budget.model.BudgetDetails
+import ru.digitalhustle.certis.features.budget.util.BudgetOptimizationCalculator
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.OffsetDateTime

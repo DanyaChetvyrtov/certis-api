@@ -16,22 +16,26 @@ import org.springframework.web.multipart.MultipartFile
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.gateway.MinioGateway
-import ru.digitalhustle.certis.model.entity.Profile
-import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.model.profile.NewProfile
-import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
-import ru.digitalhustle.certis.model.profile.ProcessedProfilePhoto
-import ru.digitalhustle.certis.model.profile.UpdateProfileData
-import ru.digitalhustle.certis.model.profile.objectName
-import ru.digitalhustle.certis.service.domain.ProfilePhotoMetaService
-import ru.digitalhustle.certis.service.domain.ProfileService
-import ru.digitalhustle.certis.service.domain.UserService
-import ru.digitalhustle.certis.service.profile.ProfilePhotoProcessor
-import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
-import ru.digitalhustle.certis.service.profile.impl.ProfileAggregatorImpl
+import ru.digitalhustle.certis.features.profile.application.service.impl.ProfileApplicationServiceImpl
+import ru.digitalhustle.certis.features.profile.command.model.NewProfile
+import ru.digitalhustle.certis.features.profile.command.model.NewProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.command.model.ProcessedProfilePhoto
+import ru.digitalhustle.certis.features.profile.command.model.UpdateProfileData
+import ru.digitalhustle.certis.features.profile.command.service.ProfilePhotoMetaService
+import ru.digitalhustle.certis.features.profile.command.service.ProfileService
+import ru.digitalhustle.certis.features.profile.command.util.ProfilePhotoProcessor
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
+import ru.digitalhustle.certis.features.profile.gateway.MinioGateway
+import ru.digitalhustle.certis.features.profile.model.Profile
+import ru.digitalhustle.certis.features.profile.model.ProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.model.objectName
+import ru.digitalhustle.certis.features.profile.query.service.ProfilePhotoMetaQueryService
+import ru.digitalhustle.certis.features.profile.query.service.ProfileRecordQueryService
+import ru.digitalhustle.certis.features.profile.query.service.impl.ProfileQueryServiceImpl
+import ru.digitalhustle.certis.features.profile.util.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.features.security.api.UserPreferencesCommand
+import ru.digitalhustle.certis.features.security.api.UserPreferencesQuery
+import ru.digitalhustle.certis.features.security.model.User
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -39,19 +43,31 @@ import java.util.UUID
 class ProfileAggregatorImplTest {
 
     private val profileService = mock(ProfileService::class.java)
-    private val userService = mock(UserService::class.java)
+    private val userPreferencesQuery = mock(UserPreferencesQuery::class.java)
+    private val userPreferencesCommand = mock(UserPreferencesCommand::class.java)
     private val profilePhotoMetaService = mock(ProfilePhotoMetaService::class.java)
     private val minioGateway = mock(MinioGateway::class.java)
     private val profilePhotoProcessor = mock(ProfilePhotoProcessor::class.java)
     private val profilePhotoUrlProvider = mock(ProfilePhotoUrlProvider::class.java)
 
-    private val profileAggregator = ProfileAggregatorImpl(
+    private val profileApplicationService = ProfileApplicationServiceImpl(
         profileService = profileService,
-        userService = userService,
+        userPreferencesQuery = userPreferencesQuery,
+        userPreferencesCommand = userPreferencesCommand,
         profilePhotoMetaService = profilePhotoMetaService,
         minioGateway = minioGateway,
         profilePhotoProcessor = profilePhotoProcessor,
         profilePhotoUrlProvider = profilePhotoUrlProvider,
+    )
+
+    private val profileRecordQueryService = mock(ProfileRecordQueryService::class.java)
+    private val photoMetaQueryService = mock(ProfilePhotoMetaQueryService::class.java)
+    private val profileQueryService = ProfileQueryServiceImpl(
+        profileRecordQueryService,
+        userPreferencesQuery,
+        photoMetaQueryService,
+        minioGateway,
+        profilePhotoUrlProvider,
     )
 
     private companion object {
@@ -71,20 +87,20 @@ class ProfileAggregatorImplTest {
         )
         val photoMeta = createProfilePhotoMeta(profileId = profile.id)
 
-        `when`(profileService.getById(profile.id))
+        `when`(profileRecordQueryService.getById(profile.id))
             .thenReturn(profile)
 
-        `when`(userService.getUserById(profile.id))
-            .thenReturn(user)
+        `when`(userPreferencesQuery.getPreferredCurrency(profile.id))
+            .thenReturn(user.preferredCurrency)
 
-        `when`(profilePhotoMetaService.getByProfileId(profile.id))
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
             .thenReturn(photoMeta)
 
         `when`(profilePhotoUrlProvider.get(profile.id))
             .thenReturn(PHOTO_URL)
 
         // when
-        val profilePreview = profileAggregator.getProfilePreview(profile.id)
+        val profilePreview = profileQueryService.getProfilePreview(profile.id)
 
         // then
         assertThat(profilePreview.id).isEqualTo(profile.id)
@@ -102,17 +118,17 @@ class ProfileAggregatorImplTest {
         val photoMeta = createProfilePhotoMeta(profileId = profile.id)
         val photoContent = "photo-content".toByteArray()
 
-        `when`(profileService.getById(profile.id))
+        `when`(profileRecordQueryService.getById(profile.id))
             .thenReturn(profile)
 
-        `when`(profilePhotoMetaService.getByProfileId(profile.id))
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
             .thenReturn(photoMeta)
 
         `when`(minioGateway.getPhoto(photoMeta.objectName))
             .thenReturn(photoContent)
 
         // when
-        val photo = profileAggregator.getPhoto(profile.id)
+        val photo = profileQueryService.getPhoto(profile.id)
 
         // then
         assertThat(photo.content).isEqualTo(photoContent)
@@ -124,15 +140,15 @@ class ProfileAggregatorImplTest {
         // given
         val profile = createProfile()
 
-        `when`(profileService.getById(profile.id))
+        `when`(profileRecordQueryService.getById(profile.id))
             .thenReturn(profile)
 
-        `when`(profilePhotoMetaService.getByProfileId(profile.id))
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
             .thenReturn(null)
 
         // when, then
         assertThatThrownBy {
-            profileAggregator.getPhoto(profile.id)
+            profileQueryService.getPhoto(profile.id)
         }.isInstanceOf(NotFoundException::class.java)
 
         verifyNoInteractions(minioGateway)
@@ -148,7 +164,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(profile)
 
         // when
-        val savedProfile = profileAggregator.saveProfile(newProfile, Currency.EUR)
+        val savedProfile = profileApplicationService.saveProfile(newProfile, Currency.EUR)
 
         // then
         assertThat(savedProfile.id).isEqualTo(profile.id)
@@ -158,7 +174,7 @@ class ProfileAggregatorImplTest {
         verify(profileService)
             .save(newProfile)
 
-        verify(userService)
+        verify(userPreferencesCommand)
             .updatePreferredCurrency(profile.id, Currency.EUR)
     }
 
@@ -172,7 +188,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(profile)
 
         // when
-        val updatedProfile = profileAggregator.updateProfile(updateProfileData, Currency.RUB)
+        val updatedProfile = profileApplicationService.updateProfile(updateProfileData, Currency.RUB)
 
         // then
         assertThat(updatedProfile.id).isEqualTo(profile.id)
@@ -181,7 +197,7 @@ class ProfileAggregatorImplTest {
         verify(profileService)
             .update(updateProfileData)
 
-        verify(userService)
+        verify(userPreferencesCommand)
             .updatePreferredCurrency(profile.id, Currency.RUB)
     }
 
@@ -198,16 +214,16 @@ class ProfileAggregatorImplTest {
         `when`(profileService.update(updateProfileData))
             .thenReturn(profile)
 
-        `when`(userService.getUserById(profile.id))
-            .thenReturn(user)
+        `when`(userPreferencesQuery.getPreferredCurrency(profile.id))
+            .thenReturn(user.preferredCurrency)
 
         // when
-        val updatedProfile = profileAggregator.updateProfile(updateProfileData, null)
+        val updatedProfile = profileApplicationService.updateProfile(updateProfileData, null)
 
         // then
         assertThat(updatedProfile.preferredCurrency).isEqualTo(Currency.EUR)
 
-        verify(userService, never())
+        verify(userPreferencesCommand, never())
             .updatePreferredCurrency(profile.id, Currency.EUR)
     }
 
@@ -236,7 +252,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(savedPhotoMeta)
 
         // when
-        val photoMeta = profileAggregator.uploadPhoto(profileId, photo)
+        val photoMeta = profileApplicationService.uploadPhoto(profileId, photo)
 
         // then
         assertThat(photoMeta).isEqualTo(savedPhotoMeta)
@@ -272,7 +288,7 @@ class ProfileAggregatorImplTest {
         TransactionSynchronizationManager.initSynchronization()
         try {
             // when
-            profileAggregator.uploadPhoto(profileId, photo)
+            profileApplicationService.uploadPhoto(profileId, photo)
             TransactionSynchronizationManager.getSynchronizations()
                 .forEach { it.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK) }
 
@@ -295,7 +311,7 @@ class ProfileAggregatorImplTest {
 
         // when, then
         assertThatThrownBy {
-            profileAggregator.uploadPhoto(profileId, photo)
+            profileApplicationService.uploadPhoto(profileId, photo)
         }.isInstanceOf(NotFoundException::class.java)
 
         verifyNoInteractions(profilePhotoProcessor)
@@ -316,7 +332,7 @@ class ProfileAggregatorImplTest {
 
         // when, then
         assertThatThrownBy {
-            profileAggregator.uploadPhoto(profileId, photo)
+            profileApplicationService.uploadPhoto(profileId, photo)
         }.isInstanceOf(EntityAlreadyExistsException::class.java)
 
         verifyNoInteractions(profilePhotoProcessor)
@@ -349,7 +365,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(savedPhotoMeta)
 
         // when
-        val photoMeta = profileAggregator.updatePhoto(profileId, photo)
+        val photoMeta = profileApplicationService.updatePhoto(profileId, photo)
 
         // then
         assertThat(photoMeta).isEqualTo(savedPhotoMeta)
@@ -392,7 +408,7 @@ class ProfileAggregatorImplTest {
         TransactionSynchronizationManager.initSynchronization()
         try {
             // when
-            profileAggregator.updatePhoto(profileId, photo)
+            profileApplicationService.updatePhoto(profileId, photo)
 
             // then
             verify(minioGateway, never())
@@ -433,7 +449,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(savedPhotoMeta)
 
         // when
-        val photoMeta = profileAggregator.updatePhoto(profileId, photo)
+        val photoMeta = profileApplicationService.updatePhoto(profileId, photo)
 
         // then
         assertThat(photoMeta).isEqualTo(savedPhotoMeta)
@@ -475,7 +491,7 @@ class ProfileAggregatorImplTest {
             .deletePhoto(oldPhotoMeta.objectName)
 
         // when
-        val photoMeta = profileAggregator.updatePhoto(profileId, photo)
+        val photoMeta = profileApplicationService.updatePhoto(profileId, photo)
 
         // then
         assertThat(photoMeta).isEqualTo(savedPhotoMeta)
@@ -495,7 +511,7 @@ class ProfileAggregatorImplTest {
 
         // when, then
         assertThatThrownBy {
-            profileAggregator.updatePhoto(profileId, photo)
+            profileApplicationService.updatePhoto(profileId, photo)
         }.isInstanceOf(NotFoundException::class.java)
 
         verifyNoInteractions(profilePhotoProcessor)
@@ -515,7 +531,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(photoMeta)
 
         // when
-        profileAggregator.deleteProfile(profileId)
+        profileApplicationService.deleteProfile(profileId)
 
         // then
         verify(profilePhotoMetaService)
@@ -541,7 +557,7 @@ class ProfileAggregatorImplTest {
             .thenReturn(photoMeta)
 
         // when
-        profileAggregator.deletePhotoByProfileId(profileId)
+        profileApplicationService.deletePhotoByProfileId(profileId)
 
         // then
         verify(profilePhotoMetaService)
@@ -561,7 +577,7 @@ class ProfileAggregatorImplTest {
 
         // when, then
         assertThatThrownBy {
-            profileAggregator.deletePhotoByProfileId(profileId)
+            profileApplicationService.deletePhotoByProfileId(profileId)
         }.isInstanceOf(NotFoundException::class.java)
 
         verify(profilePhotoMetaService, never())

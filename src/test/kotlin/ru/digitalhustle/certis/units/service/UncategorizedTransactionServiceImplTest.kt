@@ -6,12 +6,12 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionFilter
-import ru.digitalhustle.certis.model.transaction.UncategorizedTransactionPage
-import ru.digitalhustle.certis.repository.UncategorizedTransactionRepository
-import ru.digitalhustle.certis.service.domain.impl.UncategorizedTransactionServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.query.model.UncategorizedTransactionFilter
+import ru.digitalhustle.certis.features.transaction.query.model.UncategorizedTransactionPage
+import ru.digitalhustle.certis.features.transaction.query.repository.UncategorizedTransactionQueryRepository
+import ru.digitalhustle.certis.features.transaction.query.service.impl.UncategorizedTransactionServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -21,7 +21,7 @@ import java.util.UUID
 
 class UncategorizedTransactionServiceImplTest {
 
-    private val repository = mock(UncategorizedTransactionRepository::class.java)
+    private val repository = mock(UncategorizedTransactionQueryRepository::class.java)
     private val clock = Clock.fixed(
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),

@@ -17,27 +17,28 @@ import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.crypto.password.PasswordEncoder
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.custom.InvalidTokenException
-import ru.digitalhustle.certis.exception.custom.MissedTokenException
-import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
-import ru.digitalhustle.certis.model.entity.RefreshSession
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.model.security.JwtData
-import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.model.security.RefreshTokenPayload
-import ru.digitalhustle.certis.model.security.UserCredentials
-import ru.digitalhustle.certis.service.domain.CategoryService
-import ru.digitalhustle.certis.service.domain.RefreshSessionService
-import ru.digitalhustle.certis.service.domain.UserService
-import ru.digitalhustle.certis.service.security.JwtTokenProvider
-import ru.digitalhustle.certis.service.security.impl.AuthServiceImpl
+import ru.digitalhustle.certis.features.category.api.DefaultCategoryProvisioner
+import ru.digitalhustle.certis.features.security.command.model.UserCredentials
+import ru.digitalhustle.certis.features.security.command.service.RefreshSessionService
+import ru.digitalhustle.certis.features.security.command.service.UserService
+import ru.digitalhustle.certis.features.security.command.service.impl.AuthServiceImpl
+import ru.digitalhustle.certis.features.security.command.validator.CredentialsValidator
+import ru.digitalhustle.certis.features.security.exceptions.InvalidTokenException
+import ru.digitalhustle.certis.features.security.exceptions.MissedTokenException
+import ru.digitalhustle.certis.features.security.exceptions.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.features.security.infrastructure.service.JwtTokenProvider
+import ru.digitalhustle.certis.features.security.model.JwtData
+import ru.digitalhustle.certis.features.security.model.JwtDetails
+import ru.digitalhustle.certis.features.security.model.RefreshSession
+import ru.digitalhustle.certis.features.security.model.RefreshTokenPayload
+import ru.digitalhustle.certis.features.security.model.User
 import java.time.OffsetDateTime
 import java.util.UUID
 
 class AuthServiceImplTest {
 
     private val userService = mock(UserService::class.java)
-    private val categoryService = mock(CategoryService::class.java)
+    private val defaultCategoryProvisioner = mock(DefaultCategoryProvisioner::class.java)
     private val passwordEncoder = mock(PasswordEncoder::class.java)
     private val jwtTokenProvider = mock(JwtTokenProvider::class.java)
     private val refreshSessionService = mock(RefreshSessionService::class.java)
@@ -45,11 +46,12 @@ class AuthServiceImplTest {
 
     private val authService = AuthServiceImpl(
         userService = userService,
-        categoryService = categoryService,
+        defaultCategoryProvisioner = defaultCategoryProvisioner,
         passwordEncoder = passwordEncoder,
         jwtTokenProvider = jwtTokenProvider,
         refreshSessionService = refreshSessionService,
         authenticationManager = authenticationManager,
+        credentialsValidator = CredentialsValidator(),
     )
 
     private companion object {
@@ -82,7 +84,7 @@ class AuthServiceImplTest {
         assertThat(registeredUser).isEqualTo(user)
         verify(passwordEncoder).encode(PASSWORD)
         verify(userService).save(EMAIL, ENCODED_PASSWORD)
-        verify(categoryService).createDefaults(user.id)
+        verify(defaultCategoryProvisioner).createDefaults(user.id)
     }
 
     @Test
@@ -98,7 +100,7 @@ class AuthServiceImplTest {
 
         verifyNoInteractions(passwordEncoder)
         verifyNoInteractions(userService)
-        verifyNoInteractions(categoryService)
+        verifyNoInteractions(defaultCategoryProvisioner)
     }
 
     @Test
@@ -133,7 +135,7 @@ class AuthServiceImplTest {
         )
 
         verify(userService).updateLastLogin(user.id)
-        verify(userService, never()).getUserByEmail(EMAIL)
+        verify(userService, never()).getUserById(user.id)
         verify(refreshSessionService).create(user.id)
     }
 

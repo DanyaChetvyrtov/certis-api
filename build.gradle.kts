@@ -108,6 +108,7 @@ dependencies {
     testImplementation(libs.spring.security.test)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.archunit)
     testImplementation(libs.zonky.embedded.postgres)
     testImplementation(libs.zonky.embedded.database.spring.test)
     testRuntimeOnly(libs.junit.platform.launcher)

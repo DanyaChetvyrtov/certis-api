@@ -11,16 +11,16 @@ import org.mockito.Mockito.`when`
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.model.security.JwtDetails
-import ru.digitalhustle.certis.service.domain.UserService
-import ru.digitalhustle.certis.service.security.impl.JwtUserDetailsService
+import ru.digitalhustle.certis.features.security.model.JwtDetails
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.security.query.service.UserQueryService
+import ru.digitalhustle.certis.features.security.query.service.impl.JwtUserDetailsService
 import java.time.OffsetDateTime
 import java.util.UUID
 
 class JwtUserDetailsServiceTest {
 
-    private val userService = mock(UserService::class.java)
+    private val userService = mock(UserQueryService::class.java)
     private val jwtUserDetailsService = JwtUserDetailsService(userService)
 
     private companion object {

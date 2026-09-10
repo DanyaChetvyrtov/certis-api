@@ -14,21 +14,22 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.CreateTransactionRq
+import ru.digitalhustle.certis.api.dto.request.TransactionFilterRq
+import ru.digitalhustle.certis.api.dto.request.UpdateTransactionRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.CreateTransactionRq
-import ru.digitalhustle.certis.dto.request.TransactionFilterRq
-import ru.digitalhustle.certis.dto.request.UpdateTransactionRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -77,7 +78,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
             objectMapper.readTree(result.response.contentAsByteArray)["id"].asText(),
         )
 
-        assertThat(transactionRepository.findByIdAndUserId(transactionId, user.id)).isNotNull()
+        assertThat(transactionQueryRepository.findByIdAndUserId(transactionId, user.id)).isNotNull()
     }
 
     @Test
@@ -142,7 +143,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_ACCOUNT_CLOSED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_ACCOUNT_CLOSED))
     }
 
     @Test
@@ -161,7 +162,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_CATEGORY_TYPE_MISMATCH))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_CATEGORY_TYPE_MISMATCH))
     }
 
     @Test
@@ -184,7 +185,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
     }
 
     @Test
@@ -280,7 +281,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         assertOccurredAt(result, request.occurredAt)
 
         val updatedTransaction = checkNotNull(
-            transactionRepository.findByIdAndUserId(transaction.id, user.id),
+            transactionQueryRepository.findByIdAndUserId(transaction.id, user.id),
         )
 
         assertThat(updatedTransaction.createdAt).isEqualTo(createdAt)
@@ -349,7 +350,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Transaction not found"))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, owner.id))
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, owner.id))
             .isEqualTo(transaction)
     }
 
@@ -380,9 +381,9 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_ACCOUNT_CLOSED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_ACCOUNT_CLOSED))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.accountId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.accountId)
             .isEqualTo(activeAccount.id)
     }
 
@@ -447,7 +448,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
     }
 
     @Test
@@ -518,7 +519,7 @@ class TransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Transaction not found"))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, owner.id))
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, owner.id))
             .isEqualTo(transaction)
     }
 

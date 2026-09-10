@@ -17,15 +17,15 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.LoginRq
+import ru.digitalhustle.certis.api.dto.request.RegisterRq
+import ru.digitalhustle.certis.api.dto.response.ExceptionRs
+import ru.digitalhustle.certis.api.dto.response.SessionsRs
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.LoginRq
-import ru.digitalhustle.certis.dto.request.RegisterRq
-import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.dto.response.SessionsRs
-import ru.digitalhustle.certis.enums.CategoryType
+import ru.digitalhustle.certis.features.category.enums.CategoryType
 import ru.digitalhustle.certis.provider.SecurityRequestProvider
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -62,8 +62,8 @@ class AuthControllerTest : AbstractIntegrationTest() {
         // then
         response.andExpect(status().isCreated)
 
-        val user = requireNotNull(userRepository.findByEmail(SecurityRequestProvider.NORMALIZED_EMAIL))
-        val categories = categoryRepository.findAllByUserId(user.id)
+        val user = requireNotNull(userQueryRepository.findByEmail(SecurityRequestProvider.NORMALIZED_EMAIL))
+        val categories = categoryQueryRepository.findAllByUserId(user.id)
 
         assertThat(user.email).isEqualTo(SecurityRequestProvider.NORMALIZED_EMAIL)
         assertAll(
@@ -129,7 +129,7 @@ class AuthControllerTest : AbstractIntegrationTest() {
                         HttpStatus.CONFLICT.value(),
                     )
                 },
-                { assertThat(userRepository.findByEmail(SecurityRequestProvider.NORMALIZED_EMAIL)).isNotNull() },
+                { assertThat(userQueryRepository.findByEmail(SecurityRequestProvider.NORMALIZED_EMAIL)).isNotNull() },
             )
         } finally {
             executor.shutdownNow()

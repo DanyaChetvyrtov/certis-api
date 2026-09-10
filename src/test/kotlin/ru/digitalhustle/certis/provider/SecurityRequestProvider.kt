@@ -1,7 +1,7 @@
 package ru.digitalhustle.certis.provider
 
 import org.springframework.stereotype.Component
-import ru.digitalhustle.certis.dto.request.RegisterRq
+import ru.digitalhustle.certis.api.dto.request.RegisterRq
 
 @Component
 class SecurityRequestProvider {

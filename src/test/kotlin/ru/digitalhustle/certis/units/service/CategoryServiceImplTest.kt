@@ -12,16 +12,18 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.CategoryType
-import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.NewCategory
-import ru.digitalhustle.certis.model.UpdateCategoryData
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.provider.DefaultCategoryProvider
-import ru.digitalhustle.certis.repository.CategoryRepository
-import ru.digitalhustle.certis.service.domain.impl.CategoryServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.category.command.model.NewCategory
+import ru.digitalhustle.certis.features.category.command.model.UpdateCategoryData
+import ru.digitalhustle.certis.features.category.command.repository.CategoryRepository
+import ru.digitalhustle.certis.features.category.command.service.impl.CategoryServiceImpl
+import ru.digitalhustle.certis.features.category.command.util.DefaultCategoryProvider
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.exceptions.CategoryArchivedException
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.category.query.repository.CategoryQueryRepository
+import ru.digitalhustle.certis.features.category.query.service.impl.CategoryQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -29,6 +31,9 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class CategoryServiceImplTest {
+
+    private val categoryQueryRepository = mock(CategoryQueryRepository::class.java)
+    private val categoryQueryService = CategoryQueryServiceImpl(categoryQueryRepository)
 
     private val categoryRepository = mock(CategoryRepository::class.java)
     private val defaultCategoryProvider = DefaultCategoryProvider()
@@ -54,11 +59,11 @@ class CategoryServiceImplTest {
         // given
         val category = createCategory()
 
-        `when`(categoryRepository.findByIdAndUserId(category.id, category.userId))
+        `when`(categoryQueryRepository.findByIdAndUserId(category.id, category.userId))
             .thenReturn(category)
 
         // when
-        val result = categoryService.getById(category.id, category.userId)
+        val result = categoryQueryService.getById(category.id, category.userId)
 
         // then
         assertAll(
@@ -77,12 +82,12 @@ class CategoryServiceImplTest {
         val categoryId = UUID.randomUUID()
         val userId = UUID.randomUUID()
 
-        `when`(categoryRepository.findByIdAndUserId(categoryId, userId))
+        `when`(categoryQueryRepository.findByIdAndUserId(categoryId, userId))
             .thenReturn(null)
 
         // when, then
         assertThatThrownBy {
-            categoryService.getById(categoryId, userId)
+            categoryQueryService.getById(categoryId, userId)
         }.isInstanceOf(NotFoundException::class.java)
     }
 
@@ -161,11 +166,11 @@ class CategoryServiceImplTest {
             createCategory(userId = userId, archivedAt = OffsetDateTime.now(clock)),
         )
 
-        `when`(categoryRepository.findAllByUserId(userId))
+        `when`(categoryQueryRepository.findAllByUserId(userId))
             .thenReturn(categories)
 
         // when
-        val result = categoryService.getAllByUserId(userId)
+        val result = categoryQueryService.getAllByUserId(userId)
 
         // then
         assertThat(result.map { it.id }).containsExactlyElementsOf(categories.map { it.id })

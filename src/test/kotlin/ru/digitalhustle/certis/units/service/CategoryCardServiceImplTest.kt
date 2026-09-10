@@ -4,13 +4,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.CategoryCardSort
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.model.category.CategoryCardFilter
-import ru.digitalhustle.certis.model.category.CategoryCards
-import ru.digitalhustle.certis.repository.CategoryCardRepository
-import ru.digitalhustle.certis.service.domain.impl.CategoryCardServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.category.enums.CategoryCardSort
+import ru.digitalhustle.certis.features.category.query.model.CategoryCardFilter
+import ru.digitalhustle.certis.features.category.query.model.CategoryCards
+import ru.digitalhustle.certis.features.category.query.repository.CategoryCardQueryRepository
+import ru.digitalhustle.certis.features.category.query.service.impl.CategoryCardServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -20,7 +20,7 @@ import java.util.UUID
 
 class CategoryCardServiceImplTest {
 
-    private val categoryCardRepository = mock(CategoryCardRepository::class.java)
+    private val categoryCardRepository = mock(CategoryCardQueryRepository::class.java)
     private val clock = Clock.fixed(
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),

@@ -2,8 +2,8 @@ package ru.digitalhustle.certis.units.provider
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.provider.RecurringTransactionScheduleProvider
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.scheduler.RecurringTransactionScheduleProvider
 import java.time.LocalDate
 
 class RecurringTransactionScheduleProviderTest {

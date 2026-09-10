@@ -14,26 +14,26 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.CreateCategoryRq
+import ru.digitalhustle.certis.api.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.dto.request.CreateCategoryRq
-import ru.digitalhustle.certis.dto.request.UpdateCategoryRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.BudgetExpenseType
-import ru.digitalhustle.certis.enums.CategoryCardSort
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Budget
-import ru.digitalhustle.certis.model.entity.BudgetCategory
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.budget.enums.BudgetExpenseType
+import ru.digitalhustle.certis.features.budget.model.Budget
+import ru.digitalhustle.certis.features.budget.model.BudgetCategory
+import ru.digitalhustle.certis.features.category.enums.CategoryCardSort
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.features.transaction.model.Transaction
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.LocalDate
@@ -96,7 +96,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         val categoryId = UUID.fromString(
             objectMapper.readTree(result.response.contentAsByteArray)["id"].asText(),
         )
-        val category = categoryRepository.findByIdAndUserId(categoryId, user.id)
+        val category = categoryQueryRepository.findByIdAndUserId(categoryId, user.id)
 
         assertThat(category).isNotNull()
         assertThat(category?.userId).isEqualTo(user.id)
@@ -119,7 +119,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(CATEGORY_NAME_CONFLICT))
 
-        assertThat(categoryRepository.findAllByUserId(user.id)).hasSize(1)
+        assertThat(categoryQueryRepository.findAllByUserId(user.id)).hasSize(1)
     }
 
     @Test
@@ -275,7 +275,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
                 .cookie(accessTokenCookie(anotherUser)),
         ).andExpect(status().isNotFound)
 
-        val unchangedCategory = categoryRepository.findByIdAndUserId(category.id, owner.id)
+        val unchangedCategory = categoryQueryRepository.findByIdAndUserId(category.id, owner.id)
 
         assertThat(unchangedCategory?.name).isEqualTo(category.name)
         assertThat(unchangedCategory?.archivedAt).isNull()
@@ -343,14 +343,14 @@ class CategoryControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].id").value(food.id.toString()))
-            .andExpect(jsonPath("$[0].name").value(food.name))
-            .andExpect(jsonPath("$[0].icon").value(food.icon))
-            .andExpect(jsonPath("$[0].color").value(food.color))
-            .andExpect(jsonPath("$[0].type").doesNotExist())
-            .andExpect(jsonPath("$[0].archivedAt").doesNotExist())
-            .andExpect(jsonPath("$[1].id").value(transport.id.toString()))
+            .andExpect(jsonPath("$.categoryOptions.length()").value(2))
+            .andExpect(jsonPath("$.categoryOptions[0].id").value(food.id.toString()))
+            .andExpect(jsonPath("$.categoryOptions[0].name").value(food.name))
+            .andExpect(jsonPath("$.categoryOptions[0].icon").value(food.icon))
+            .andExpect(jsonPath("$.categoryOptions[0].color").value(food.color))
+            .andExpect(jsonPath("$.categoryOptions[0].type").doesNotExist())
+            .andExpect(jsonPath("$.categoryOptions[0].archivedAt").doesNotExist())
+            .andExpect(jsonPath("$.categoryOptions[1].id").value(transport.id.toString()))
     }
 
     @Test
@@ -562,7 +562,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.color").value(UPDATED_COLOR))
             .andExpect(jsonPath("$.archivedAt").doesNotExist())
 
-        val updatedCategory = categoryRepository.findByIdAndUserId(category.id, user.id)
+        val updatedCategory = categoryQueryRepository.findByIdAndUserId(category.id, user.id)
 
         assertThat(updatedCategory?.type).isEqualTo(category.type)
     }
@@ -586,7 +586,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(CATEGORY_NAME_CONFLICT))
 
-        assertThat(categoryRepository.findByIdAndUserId(categoryToUpdate.id, user.id)?.name)
+        assertThat(categoryQueryRepository.findByIdAndUserId(categoryToUpdate.id, user.id)?.name)
             .isEqualTo(categoryToUpdate.name)
     }
 
@@ -622,7 +622,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isNull()
     }
 
@@ -645,7 +645,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(CATEGORY_NAME_CONFLICT))
 
-        assertThat(categoryRepository.findByIdAndUserId(archivedCategory.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(archivedCategory.id, user.id)?.archivedAt)
             .isNotNull()
     }
 
@@ -663,7 +663,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isNull()
     }
 
@@ -681,7 +681,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        val archivedCategory = categoryRepository.findByIdAndUserId(category.id, user.id)
+        val archivedCategory = categoryQueryRepository.findByIdAndUserId(category.id, user.id)
 
         assertThat(archivedCategory).isNotNull()
         assertThat(archivedCategory?.archivedAt).isNotNull()
@@ -704,7 +704,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(ErrorMessages.CATEGORY_IN_USE))
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isNull()
     }
 
@@ -724,7 +724,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(ErrorMessages.CATEGORY_IN_USE))
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isNull()
     }
 
@@ -748,7 +748,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isNotNull()
     }
 
@@ -763,7 +763,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
                 .cookie(accessTokenCookie(user)),
         ).andExpect(status().isNoContent)
 
-        val firstArchivedAt = categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt
+        val firstArchivedAt = categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt
 
         // when
         mvc.perform(
@@ -773,7 +773,7 @@ class CategoryControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(categoryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
+        assertThat(categoryQueryRepository.findByIdAndUserId(category.id, user.id)?.archivedAt)
             .isEqualTo(firstArchivedAt)
     }
 
