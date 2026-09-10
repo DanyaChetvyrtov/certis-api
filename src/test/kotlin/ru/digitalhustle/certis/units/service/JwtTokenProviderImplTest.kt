@@ -14,11 +14,11 @@ import org.mockito.Mockito.`when`
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import ru.digitalhustle.certis.config.properties.JwtProperties
-import ru.digitalhustle.certis.enums.JwtTokenType
-import ru.digitalhustle.certis.exception.custom.InvalidTokenException
-import ru.digitalhustle.certis.service.security.JwtTokenProvider
-import ru.digitalhustle.certis.service.security.impl.JwtTokenProviderImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.security.enums.JwtTokenType
+import ru.digitalhustle.certis.features.security.exceptions.InvalidTokenException
+import ru.digitalhustle.certis.features.security.infrastructure.service.JwtTokenProvider
+import ru.digitalhustle.certis.features.security.infrastructure.service.impl.JwtTokenProviderImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant

@@ -2,7 +2,7 @@ package ru.digitalhustle.certis.exception
 
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.method.annotation.HandlerMethodValidationException
-import ru.digitalhustle.certis.constants.ErrorMessages
+import ru.digitalhustle.certis.api.constants.ApiErrorMessages
 
 fun MethodArgumentNotValidException.extractFieldErrors(): Map<String, String> =
     bindingResult.fieldErrors
@@ -11,7 +11,7 @@ fun MethodArgumentNotValidException.extractFieldErrors(): Map<String, String> =
         }
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, messages) ->
-            messages.joinToString(ErrorMessages.ERROR_MESSAGES_SEPARATOR)
+            messages.joinToString(ApiErrorMessages.ERROR_MESSAGES_SEPARATOR)
         }
 
 fun HandlerMethodValidationException.extractFieldErrors(): Map<String, String> =
@@ -22,7 +22,7 @@ fun HandlerMethodValidationException.extractFieldErrors(): Map<String, String> =
             val message = result.resolvableErrors
                 .mapNotNull { it.defaultMessage }
                 .filter { it.isNotBlank() }
-                .joinToString(ErrorMessages.ERROR_MESSAGES_SEPARATOR)
+                .joinToString(ApiErrorMessages.ERROR_MESSAGES_SEPARATOR)
 
             parameterName to message
         }

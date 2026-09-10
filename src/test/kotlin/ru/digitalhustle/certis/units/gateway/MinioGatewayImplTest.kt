@@ -16,10 +16,10 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.web.multipart.MultipartFile
 import ru.digitalhustle.certis.config.properties.AppMinioProperties
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.gateway.impl.MinioGatewayImpl
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
+import ru.digitalhustle.certis.features.profile.gateway.impl.MinioGatewayImpl
 import java.io.ByteArrayInputStream
+import ru.digitalhustle.certis.features.profile.constants.ProfileErrorMessages as ErrorMessages
 
 class MinioGatewayImplTest {
 

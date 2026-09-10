@@ -9,22 +9,20 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.transaction.AssignTransactionsCategory
-import ru.digitalhustle.certis.model.transaction.NewTransaction
-import ru.digitalhustle.certis.model.transaction.TransactionCategoryAssignment
-import ru.digitalhustle.certis.model.transaction.TransactionFilter
-import ru.digitalhustle.certis.model.transaction.TransactionPage
-import ru.digitalhustle.certis.model.transaction.UpdateTransactionData
-import ru.digitalhustle.certis.repository.TransactionRepository
-import ru.digitalhustle.certis.service.domain.impl.TransactionServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.transaction.command.model.AssignTransactionsCategory
+import ru.digitalhustle.certis.features.transaction.command.model.NewTransaction
+import ru.digitalhustle.certis.features.transaction.command.model.TransactionCategoryAssignment
+import ru.digitalhustle.certis.features.transaction.command.model.UpdateTransactionData
+import ru.digitalhustle.certis.features.transaction.command.repository.TransactionRepository
+import ru.digitalhustle.certis.features.transaction.command.service.impl.TransactionServiceImpl
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.features.transaction.model.Transaction
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -42,36 +40,6 @@ class TransactionServiceImplTest {
     private companion object {
         private val AMOUNT = BigDecimal("42.50")
         private val TRANSACTION_DATE = OffsetDateTime.parse("2026-08-07T12:30:00Z")
-    }
-
-    @Test
-    fun `should get transaction owned by user`() {
-        // given
-        val transaction = createTransaction()
-
-        `when`(transactionRepository.findByIdAndUserId(transaction.id, transaction.userId))
-            .thenReturn(transaction)
-
-        // when
-        val result = transactionService.getById(transaction.id, transaction.userId)
-
-        // then
-        assertThat(result).isEqualTo(transaction)
-    }
-
-    @Test
-    fun `should throw not found for transaction owned by another user`() {
-        // given
-        val transactionId = UUID.randomUUID()
-        val userId = UUID.randomUUID()
-
-        `when`(transactionRepository.findByIdAndUserId(transactionId, userId))
-            .thenReturn(null)
-
-        // when, then
-        assertThatThrownBy {
-            transactionService.getById(transactionId, userId)
-        }.isInstanceOf(NotFoundException::class.java)
     }
 
     @Test
@@ -117,28 +85,6 @@ class TransactionServiceImplTest {
 
         // then
         assertThat(result).isNull()
-    }
-
-    @Test
-    fun `should get filtered transaction page`() {
-        // given
-        val userId = UUID.randomUUID()
-        val filter = createFilter()
-        val page = TransactionPage(
-            items = listOf(createTransaction(userId = userId)),
-            page = filter.page,
-            size = filter.size,
-            totalElements = 1,
-        )
-
-        `when`(transactionRepository.findAllByUserId(userId, filter))
-            .thenReturn(page)
-
-        // when
-        val result = transactionService.getAllByUserId(userId, filter)
-
-        // then
-        assertThat(result).isEqualTo(page)
     }
 
     @Test
@@ -339,7 +285,7 @@ class TransactionServiceImplTest {
             transactionService.assignCategories(assignment)
         }
             .isInstanceOf(IllegalStateException::class.java)
-            .hasMessage(ErrorMessages.TRANSACTION_CATEGORY_ASSIGNMENT_FAILED)
+            .hasMessage(TransactionErrorMessages.TRANSACTION_CATEGORY_ASSIGNMENT_FAILED)
     }
 
     @Test
@@ -391,17 +337,6 @@ class TransactionServiceImplTest {
             transactionService.delete(transactionId, userId)
         }.isInstanceOf(NotFoundException::class.java)
     }
-
-    private fun createFilter(): TransactionFilter =
-        TransactionFilter(
-            accountId = null,
-            categoryId = null,
-            type = null,
-            from = null,
-            to = null,
-            page = 0,
-            size = 20,
-        )
 
     private fun createNewTransaction(
         userId: UUID = UUID.randomUUID(),
