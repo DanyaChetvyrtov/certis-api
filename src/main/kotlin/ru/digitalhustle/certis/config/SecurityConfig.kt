@@ -15,11 +15,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import ru.digitalhustle.certis.config.filter.JwtTokenFilter
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.filter.JwtTokenFilter
-import ru.digitalhustle.certis.service.security.JwtCookieManager
-import ru.digitalhustle.certis.service.security.JwtTokenProvider
-import ru.digitalhustle.certis.util.security.RestSecurityErrorHandler
+import ru.digitalhustle.certis.features.security.infrastructure.service.JwtCookieManager
+import ru.digitalhustle.certis.features.security.infrastructure.service.JwtTokenProvider
+import ru.digitalhustle.certis.features.security.util.RestSecurityErrorHandler
 
 @Configuration
 @EnableMethodSecurity

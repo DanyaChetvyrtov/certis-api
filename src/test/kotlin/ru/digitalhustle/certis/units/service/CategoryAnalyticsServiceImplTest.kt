@@ -4,13 +4,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.model.category.CategoryAnalytics
-import ru.digitalhustle.certis.model.category.CategoryAnalyticsFilter
-import ru.digitalhustle.certis.repository.CategoryAnalyticsRepository
-import ru.digitalhustle.certis.service.domain.impl.CategoryAnalyticsServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.query.model.CategoryAnalytics
+import ru.digitalhustle.certis.features.category.query.model.CategoryAnalyticsFilter
+import ru.digitalhustle.certis.features.category.query.repository.CategoryAnalyticsQueryRepository
+import ru.digitalhustle.certis.features.category.query.service.impl.CategoryAnalyticsServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -21,7 +21,7 @@ import java.util.UUID
 
 class CategoryAnalyticsServiceImplTest {
 
-    private val categoryAnalyticsRepository = mock(CategoryAnalyticsRepository::class.java)
+    private val categoryAnalyticsRepository = mock(CategoryAnalyticsQueryRepository::class.java)
     private val clock = Clock.fixed(
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),

@@ -11,22 +11,23 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.CreateRecurringTransactionRq
+import ru.digitalhustle.certis.api.dto.request.UpdateRecurringTransactionRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.CreateRecurringTransactionRq
-import ru.digitalhustle.certis.dto.request.UpdateRecurringTransactionRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.LocalDate
@@ -70,7 +71,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             objectMapper.readTree(result.response.contentAsByteArray)["id"].asText(),
         )
 
-        assertThat(recurringTransactionTemplateRepository.findByIdAndUserId(templateId, user.id))
+        assertThat(recurringTransactionTemplateQueryRepository.findByIdAndUserId(templateId, user.id))
             .isNotNull()
     }
 
@@ -92,7 +93,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.RECURRING_TRANSACTION_DATE_RANGE))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.RECURRING_TRANSACTION_DATE_RANGE))
     }
 
     @Test
@@ -134,8 +135,8 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].id").value(templateId.toString()))
+            .andExpect(jsonPath("$.recurringTransactions.length()").value(1))
+            .andExpect(jsonPath("$.recurringTransactions[0].id").value(templateId.toString()))
     }
 
     @Test
@@ -186,7 +187,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        val cancelled = recurringTransactionTemplateRepository.findByIdAndUserId(templateId, user.id)
+        val cancelled = recurringTransactionTemplateQueryRepository.findByIdAndUserId(templateId, user.id)
 
         assertThat(cancelled?.status).isEqualTo(RecurringTransactionTemplateStatus.CANCELLED)
         assertThat(cancelled?.nextRunDate).isNull()
@@ -208,7 +209,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value(ErrorMessages.ACCOUNT_IN_USE))
 
-        assertThat(accountRepository.findByIdAndUserId(account.id, user.id)?.closedAt).isNull()
+        assertThat(accountQueryRepository.findByIdAndUserId(account.id, user.id)?.closedAt).isNull()
     }
 
     @Test
@@ -231,7 +232,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(accountRepository.findByIdAndUserId(account.id, user.id)?.closedAt).isNotNull()
+        assertThat(accountQueryRepository.findByIdAndUserId(account.id, user.id)?.closedAt).isNotNull()
     }
 
     @Test
@@ -252,7 +253,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
         recurringTransactionExecutionService.execute(templateId, currentDate)
 
         // then
-        val template = recurringTransactionTemplateRepository.findByIdAndUserId(templateId, user.id)
+        val template = recurringTransactionTemplateQueryRepository.findByIdAndUserId(templateId, user.id)
         val generatedTransactions = dsl.selectFrom(Tables.TRANSACTIONS)
             .where(Tables.TRANSACTIONS.RECURRING_TRANSACTION_TEMPLATE_ID.eq(templateId))
             .fetch()
@@ -352,7 +353,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             user,
             createRequest(account.id).copy(startDate = currentDate),
         )
-        val template = checkNotNull(recurringTransactionTemplateRepository.findByIdAndUserId(templateId, user.id))
+        val template = checkNotNull(recurringTransactionTemplateQueryRepository.findByIdAndUserId(templateId, user.id))
         val now = OffsetDateTime.now(Clock.systemUTC())
         transactionRepository.insert(
             Transaction(
@@ -383,7 +384,7 @@ class RecurringTransactionControllerTest : AbstractIntegrationTest() {
             Tables.TRANSACTIONS.RECURRING_TRANSACTION_TEMPLATE_ID.eq(templateId)
                 .and(Tables.TRANSACTIONS.SCHEDULED_FOR.eq(currentDate)),
         )
-        val updatedTemplate = recurringTransactionTemplateRepository.findByIdAndUserId(templateId, user.id)
+        val updatedTemplate = recurringTransactionTemplateQueryRepository.findByIdAndUserId(templateId, user.id)
 
         assertThat(occurrenceCount).isEqualTo(1)
         assertThat(updatedTemplate?.lastRunDate).isEqualTo(currentDate)

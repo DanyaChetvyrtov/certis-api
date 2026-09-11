@@ -9,22 +9,23 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.SaveBudgetAllocationRq
+import ru.digitalhustle.certis.api.dto.request.SaveBudgetRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.dto.request.SaveBudgetAllocationRq
-import ru.digitalhustle.certis.dto.request.SaveBudgetRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.BudgetAllocationStatus
-import ru.digitalhustle.certis.enums.BudgetExpenseType
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.budget.enums.BudgetAllocationStatus
+import ru.digitalhustle.certis.features.budget.enums.BudgetExpenseType
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -73,7 +74,7 @@ class BudgetControllerTest : AbstractIntegrationTest() {
             .andReturn()
 
         val budgetId = UUID.fromString(objectMapper.readTree(result.response.contentAsByteArray)["id"].asText())
-        val budget = budgetRepository.findByUserIdAndMonth(user.id, java.time.LocalDate.parse("2026-08-01"))
+        val budget = budgetQueryRepository.findByUserIdAndMonth(user.id, java.time.LocalDate.parse("2026-08-01"))
 
         assertThat(budget?.id).isEqualTo(budgetId)
         assertThat(
@@ -114,7 +115,7 @@ class BudgetControllerTest : AbstractIntegrationTest() {
 
         assertThat(
             requireNotNull(
-                budgetRepository.findByUserIdAndMonth(
+                budgetQueryRepository.findByUserIdAndMonth(
                     user.id,
                     java.time.LocalDate.parse("2026-08-01"),
                 ),

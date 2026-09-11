@@ -2,8 +2,8 @@ package ru.digitalhustle.certis.fixture
 
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.repository.UserRepository
+import ru.digitalhustle.certis.features.security.command.repository.UserRepository
+import ru.digitalhustle.certis.features.security.model.User
 import java.time.OffsetDateTime
 import java.util.UUID
 

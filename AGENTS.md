@@ -26,51 +26,95 @@ main stack is:
 - JUnit 5, MockMvc, Mockito, and AssertJ for tests;
 - ktlint, detekt, and JaCoCo for quality checks.
 
-Keep implementation choices consistent with the existing package structure
-under `ru.digitalhustle.certis`.
+Keep implementation choices consistent with the feature-oriented package
+structure under `ru.digitalhustle.certis.features` and the shared HTTP boundary
+under `ru.digitalhustle.certis.api`.
 
 ## Architecture
 
-Use this dependency direction:
+Organize business code by feature first. Current top-level features include
+`account`, `budget`, `category`, `goal`, `profile`, `security`, and
+`transaction`. Do not restore global business-layer packages or place new
+feature code into the legacy `features.<feature>.service` or
+`features.<feature>.repository` packages.
 
-`controller -> application entry point -> domain service -> repository`
+Use this dependency direction for HTTP use cases:
 
-An application entry point may be either a single domain service or a
-facade/orchestration service. Facades may also coordinate gateways, processors,
-providers, and other lower-level services.
+`controller -> application service or command/query service -> repository`
 
-API DTOs and mappers belong at the application boundary. Persistence entities,
-jOOQ records, security principals, and external API models must not leak into
-controller contracts.
+The application layer owns use-case orchestration. Command and query services
+own focused write and read operations respectively. A controller may invoke a
+command or query service directly when no orchestration is required.
+
+API DTOs and mappers belong at the HTTP boundary. Feature models, jOOQ records,
+security principals, and external API models must not leak into controller
+contracts.
 
 ### Package responsibilities
 
 Use the existing package structure according to these responsibilities:
 
-- `controller` and `controller.impl`: HTTP endpoint contracts and their thin
-  implementations;
-- `dto.request`: validated transport input models ending in `Rq`;
-- `dto.response`: endpoint response models ending in `Rs`;
-- `mapper`: transport/domain/entity mapping;
-- `model`: internal application and workflow models;
-- `model.entity`: persistence-facing domain entities;
-- `model.security`: authentication and authorization models;
-- `service.domain`: entity-focused services;
-- `service.aggregation`: facades coordinating multiple lower-level services;
-- `service.security`: authentication, token, cookie, and session workflows;
-- `service.photo`: photo processing, photo-related helpers, and photo workflows;
-- `repository`: jOOQ persistence access;
-- `gateway`: adapters for external systems and APIs;
-- `provider`: focused data or object providers that do not own a complete
-  business workflow;
-- `filter`: servlet and security filters;
-- `time`: the application clock and reusable calendar/time operations;
+- `api.controller` and `api.controller.impl`: HTTP endpoint contracts and their
+  thin implementations;
+- `api.dto.request`: validated transport input models ending in `Rq`;
+- `api.dto.response`: endpoint response models ending in `Rs`;
+- `api.mapper`: transport-to-feature and feature-to-transport mapping;
+- `features.<feature>.application.service`: use-case coordinators that combine
+  several operations or resources;
+- `features.<feature>.application.validator`: validation that belongs to an
+  orchestrated use case rather than one command;
+- `features.<feature>.command.model`: input and result models for state-changing
+  operations;
+- `features.<feature>.command.service`: state-changing business operations;
+- `features.<feature>.command.repository`: persistence used to change state;
+- `features.<feature>.command.validator`: reusable business preconditions for
+  commands;
+- `features.<feature>.query.model`: read projections, filters, pages, and
+  analytics models;
+- `features.<feature>.query.service`: read-only operations;
+- `features.<feature>.query.repository`: read-oriented persistence, including
+  projections and analytics queries;
+- `features.<feature>.api`: the narrow public API exposed to other features;
+- `features.<feature>.model`: models owned by the feature and shared between its
+  internal command, query, and application layers;
+- `features.<feature>.gateway`: adapters for external systems owned by the
+  feature;
 - `config` and `config.properties`: Spring configuration and typed properties;
-- `exception`: exception hierarchy and centralized boundary handlers;
-- `util`: small reusable utilities without business orchestration.
+- `exception`: shared exception hierarchy and centralized boundary handlers;
+- `util`: small truly cross-feature utilities without business knowledge.
 
-The package name alone does not define a component's architectural level. Judge
-it by responsibility and dependencies.
+Do not move feature-specific models, validators, constants, or helpers into a
+shared package merely because another feature needs similar behavior. Keep
+ownership explicit and expose the minimum required capability through the
+owning feature's `api` package.
+
+### Feature boundaries
+
+- A feature owns its models, persistence access, business rules, and internal
+  services.
+- Code outside a feature must not depend on its `command`, `query`,
+  `application`, `repository`, validator, or internal model packages.
+- Cross-feature calls must go through small interfaces and purpose-built data
+  projections in the provider feature's `api` package.
+- Name cross-feature APIs after the capability they expose, such as
+  `AccountCommandAccess`, `UserPreferencesQuery`, or
+  `RecurringTransactionUsage`; do not publish a feature's broad internal
+  service interface.
+- Keep cross-feature return models minimal. Do not expose an entire entity when
+  the consumer needs only an ID, status, balance, currency, or another small
+  snapshot.
+- Implement cross-feature API interfaces inside the provider feature. The
+  consumer must depend only on the interface and its public API models.
+- Cyclic feature dependencies are forbidden. If two features need each other,
+  move orchestration to the feature that owns the use case or introduce a
+  deliberately shared abstraction with clear ownership.
+- Direct access to another feature's tables is allowed only for read-oriented
+  projections and analytics when a database JOIN is the natural implementation.
+  Keep such SQL in a purpose-built query repository owned by the feature that
+  owns the use case; do not reuse another feature's repository or persistence
+  entity.
+- State changes to another feature must always go through that feature's public
+  API. Do not update another feature's tables directly.
 
 ### Controllers
 
@@ -84,87 +128,91 @@ it by responsibility and dependencies.
 - Obtain the current user from `@AuthenticationPrincipal JwtDetails`. Do not
   trust a user or owner ID supplied in a request when it can be derived from the
   authenticated principal.
-- Keep HTTP-specific behavior at the controller boundary. Domain and facade
-  services must not depend on servlet response types or HTTP headers.
+- Keep HTTP-specific behavior at the controller boundary. Application,
+  command, and query services must not depend on servlet response types or HTTP
+  headers.
 
-### Domain/entity services
+### Command and query services
 
-- Put entity-focused services in `service.domain` and their implementations in
-  `service.domain.impl`.
-- A domain service owns the business operations for one entity or one tightly
-  bound persistence aggregate.
-- A domain service normally depends on exactly one repository belonging to the
-  entity or aggregate it owns.
-- Do not inject repositories belonging to unrelated entities into one domain
-  service.
-- If a genuine persistence aggregate requires multiple repositories, do not
-  introduce that exception automatically. The task must explicitly require it,
-  and the reason must be documented in the implementation or handoff.
-- Keep direct jOOQ access inside repositories.
-- A domain service may use focused helpers such as a mapper, validator, or
-  injected `ApplicationClock`, but it must not become an orchestrator for
-  unrelated entities.
-- If a use case needs data or mutations from multiple entities or lower-level
-  services, coordinate them in a facade/orchestration service.
+- Commands create, update, archive, restore, delete, execute, or otherwise
+  change state. Put their models, services, repositories, and validators under
+  `command`.
+- Queries read state without changing it. Put detail lookups, lists, filters,
+  pages, projections, and analytics under `query`.
+- Query services must not invoke command services or perform hidden writes.
+- Command services may read the minimum state needed to enforce a write
+  invariant, preferably through a command repository or the owning feature's
+  narrow public API. Do not depend on broad query views only to obtain one
+  field.
+- Do not force command and query persistence into one repository. Use separate
+  repositories when their models, joins, or reasons for change differ.
+- Name services by responsibility. Split template management, execution,
+  analytics, lifecycle, and transfer workflows instead of accumulating them in
+  one large feature service.
 
-### Facade and orchestration services
+### Application and orchestration services
 
-A facade service is defined by its responsibility, not by an `Aggregator`
-suffix or by living only in `service.aggregation`.
-
-- Use a facade when a workflow coordinates multiple lower-level services,
-  gateways, processors, providers, or persistence aggregates.
-- A facade may be named `...Aggregator`, `...Service`, `...Manager`, or another
-  domain-appropriate name.
-- Place a general cross-entity facade in `service.aggregation` when that package
-  best describes it.
-- Cohesive workflows may instead live in logical subpackages such as
-  `service.security`, `service.photo`, or another domain-specific service
-  package. Do not move them into `service.aggregation` merely to satisfy a
-  naming convention.
-- Facades must not inject repositories directly. They work through domain
-  services so persistence rules and entity-level behavior have one owner.
-- Place multi-resource transaction boundaries on the facade workflow when
-  atomicity is required.
+- Use an application service when a use case coordinates several command/query
+  services, gateways, or cross-feature APIs.
+- Split large orchestrators by use case. For example, goal management and goal
+  contribution workflows belong to separate application services rather than a
+  single `GoalApplicationServiceImpl` with unrelated responsibilities.
+- Application services must not access jOOQ or repositories directly. They
+  coordinate through command/query services and public feature APIs.
+- Place transaction boundaries on the highest application or command workflow
+  that must complete atomically.
 - Explicitly handle non-transactional side effects such as MinIO writes and
   cleanup on commit or rollback.
-- Do not introduce a facade when a use case concerns only one entity and can be
-  handled cleanly by its domain service.
+- Do not introduce an application service for a simple one-service operation.
+  Controllers may call a focused command or query service directly.
 
-Examples:
+### Validators
 
-- Allowed: `AccountService -> AccountRepository`.
-- Allowed: `TransferService -> AccountService + TransactionService`.
-- Allowed: `AuthService -> UserService + RefreshSessionService + JwtTokenProvider`.
-- Allowed: `ProfileAggregator -> ProfileService + ProfilePhotoMetaService + MinioGateway`.
-- Not allowed: `AccountService -> AccountRepository + TransactionRepository`.
-- Not allowed: `TransferService -> AccountRepository + TransactionRepository`.
+- Extract reusable business preconditions and state checks into focused
+  `...Validator` classes in the owning feature.
+- Keep Jakarta transport validation on request DTOs. Validators must not
+  duplicate `@Valid` constraints.
+- A validator may compare command data with already loaded domain state and may
+  use a narrow cross-feature API when the validation itself requires external
+  feature state.
+- Validators should not persist data, orchestrate workflows, translate database
+  write results, or hide not-found lookup behavior that belongs to a service or
+  repository.
+- Keep validation names explicit, for example `validateActive`,
+  `validateCurrencyMatches`, or `validateCanArchive`; avoid generic methods such
+  as `validate` when a class checks several independent rules.
+- Do not keep duplicated private validation methods in application or command
+  services after a focused validator owns the rule.
 
 ### Repositories
 
 - Keep repositories focused on persistence queries and mapping database results.
+- Put write persistence in `command.repository` and read persistence in
+  `query.repository`.
 - Use jOOQ and generated table and record classes consistently with existing
   code.
 - Do not place HTTP concerns or workflow orchestration in repositories.
 - Scope resource queries by owner where access control depends on ownership.
 - Avoid N+1 query patterns. Add purpose-built batch or aggregate queries when
   needed.
-- Return project domain/entity models rather than leaking generated jOOQ records
-  to higher layers.
-- Try to use declarative mapping for jooq queries with `Records.mapping`, `fetchOneInto`, e.t.c
-- If request require a joins, create specific repository<br>
-    Examples:
-    * Allowed: `AccountRepository` works only with `Account` table
-    * Allowed: `AccountTransactionRepository` works only with request with `Account` and `Transaction`
-    * Not Allowed: `AccountRepository` contains queries with `Account` table only as well as queries with `Account` and `Transaction`
+- Return feature-owned domain models or query projections rather than leaking
+  generated jOOQ records to higher layers.
+- Prefer declarative jOOQ mapping with `Records.mapping`, `fetchOneInto`, and
+  equivalent APIs.
+- Give JOIN-heavy read repositories a use-case-oriented name. For example, a
+  transaction analytics repository may join transactions and categories, while
+  `AccountCommandRepository` must remain focused on account state changes.
+- A repository may read tables owned by other features for one cohesive query,
+  but it must not become a general back door into those features or mutate their
+  state.
 
 ### Gateways and external APIs
 
 - Access every external API, remote service, cloud SDK, or infrastructure client
   through a dedicated `...Gateway` abstraction in the `gateway` package.
 - Follow the existing `MinioGateway` pattern.
-- Controllers and domain services must not call an external SDK or HTTP client
-  directly.
+- Controllers, application services, and command/query services must not call an
+  external SDK or HTTP client directly.
 - Keep provider-specific request, response, and exception types inside the
   gateway implementation.
 - Translate external failures into meaningful project exceptions at the gateway
@@ -245,6 +293,25 @@ Examples:
 Response DTOs must contain only API-facing data. Do not return database entities,
 jOOQ records, internal command models, external API models, or security
 principals from endpoints.
+
+Do not return a bare collection from an endpoint. Wrap it in an endpoint-owned
+response object with a meaningful field such as `accounts`, `transfers`,
+`categoryOptions`, or `recurringTransactions`. This keeps the JSON contract
+extensible without changing its root shape when metadata is added later.
+
+### Uploaded files
+
+- Treat client-provided filenames and `Content-Type` headers as untrusted
+  metadata.
+- Detect the actual media type from file bytes with the feature's format
+  detector before processing or storing the file.
+- Validate support using the detected media type. Do not require the filename
+  extension to match it and do not duplicate the same media-type check in a
+  separate extension validator.
+- Derive the stored object extension and persisted media type from the detected
+  format, using one canonical extension per supported media type.
+- Keep filename, size, and decoded-content constraints in a focused validator;
+  keep format detection and canonical format mapping in a focused detector.
 
 ### Mapping and errors
 
@@ -351,10 +418,10 @@ asks for it.
   database tests under `src/test/kotlin/.../integrations`, matching the existing
   structure.
 - Use the existing `given / when / then` layout and descriptive Kotlin test names.
-- Unit-test domain services in isolation with mocked repositories.
-- Unit-test facade/orchestration services with mocked domain services, gateways,
-  processors, and providers, especially transaction and external-system failure
-  paths.
+- Unit-test command and query services in isolation with mocked repositories.
+- Unit-test application/orchestration services with mocked command/query
+  services, public feature APIs, gateways, processors, and providers, especially
+  transaction and external-system failure paths.
 - Integration-test endpoint status, JSON contract, validation, authentication,
   ownership isolation, persistence effects, and rollback behavior where
   relevant.
@@ -392,8 +459,8 @@ them.
 
 - Follow the repository's ktlint and detekt configuration.
 - Prefer constructor injection and immutable `val` properties.
-- Keep classes and functions focused. Extract orchestration instead of growing
-  entity services across boundaries.
+- Keep classes and functions focused. Split application services by use case
+  instead of growing one feature-wide orchestrator.
 - Avoid wildcard imports, unchecked casts, `!!`, magic strings, and duplicated
   path or error constants when an existing project constant applies.
 - Do not add `TODO` or `FIXME` comments; detekt forbids them. Use the issue tracker
@@ -413,9 +480,19 @@ Before considering a task complete, confirm that:
   genuinely requires it;
 - every request DTO ends in `Rq`;
 - every response model follows the `Rs` versus shared `Dto` decision rules;
-- each domain service owns only its entity or aggregate persistence concerns;
-- multi-service workflows are placed in an appropriate facade/orchestration
-  service and use domain services rather than repositories;
+- feature internals are not imported directly by other features;
+- cross-feature calls use narrow interfaces and minimal projections from the
+  provider feature's `api` package;
+- commands and queries remain separated and query paths do not perform hidden
+  writes;
+- multi-service workflows are placed in focused application services and do not
+  access repositories directly;
+- reusable business checks live in focused validators without persistence or
+  orchestration side effects;
+- JOIN-heavy cross-feature reads live in purpose-built query repositories and do
+  not mutate another feature's tables;
+- collection endpoints return named response wrappers rather than bare lists;
+- uploaded-file type and canonical extension are derived from file content;
 - every external API or infrastructure integration is accessed through a
   `...Gateway` abstraction;
 - interface and implementation method ordering remains consistent;

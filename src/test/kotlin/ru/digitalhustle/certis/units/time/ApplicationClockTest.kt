@@ -3,7 +3,7 @@ package ru.digitalhustle.certis.units.time
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate

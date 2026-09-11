@@ -9,22 +9,23 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.CategoryCardSort
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.custom.CategoryInUseException
-import ru.digitalhustle.certis.model.category.CategoryAnalytics
-import ru.digitalhustle.certis.model.category.CategoryAnalyticsFilter
-import ru.digitalhustle.certis.model.category.CategoryCardFilter
-import ru.digitalhustle.certis.model.category.CategoryCards
-import ru.digitalhustle.certis.model.category.CategoryOption
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.service.domain.CategoryAnalyticsService
-import ru.digitalhustle.certis.service.domain.CategoryCardService
-import ru.digitalhustle.certis.service.domain.CategoryOptionService
-import ru.digitalhustle.certis.service.domain.CategoryService
-import ru.digitalhustle.certis.service.transaction.impl.CategoryAggregatorImpl
-import ru.digitalhustle.certis.util.validation.CategoryValidator
+import ru.digitalhustle.certis.features.category.application.service.impl.CategoryApplicationServiceImpl
+import ru.digitalhustle.certis.features.category.command.service.CategoryService
+import ru.digitalhustle.certis.features.category.enums.CategoryCardSort
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.exceptions.CategoryInUseException
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.category.query.model.CategoryAnalytics
+import ru.digitalhustle.certis.features.category.query.model.CategoryAnalyticsFilter
+import ru.digitalhustle.certis.features.category.query.model.CategoryCardFilter
+import ru.digitalhustle.certis.features.category.query.model.CategoryCards
+import ru.digitalhustle.certis.features.category.query.model.CategoryOption
+import ru.digitalhustle.certis.features.category.query.service.CategoryAnalyticsService
+import ru.digitalhustle.certis.features.category.query.service.CategoryCardService
+import ru.digitalhustle.certis.features.category.query.service.CategoryOptionService
+import ru.digitalhustle.certis.features.category.query.service.CategoryUsageQueryService
+import ru.digitalhustle.certis.features.category.validator.CategoryArchiveValidator
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.time.YearMonth
@@ -36,13 +37,11 @@ class CategoryAggregatorImplTest {
     private val categoryCardService = mock(CategoryCardService::class.java)
     private val categoryAnalyticsService = mock(CategoryAnalyticsService::class.java)
     private val categoryOptionService = mock(CategoryOptionService::class.java)
-    private val categoryValidator = mock(CategoryValidator::class.java)
-    private val categoryAggregator = CategoryAggregatorImpl(
+    private val categoryUsageQueryService = mock(CategoryUsageQueryService::class.java)
+    private val categoryApplicationService = CategoryApplicationServiceImpl(
         categoryService,
-        categoryCardService,
-        categoryAnalyticsService,
-        categoryOptionService,
-        categoryValidator,
+        categoryUsageQueryService,
+        CategoryArchiveValidator(),
     )
 
     @Test
@@ -56,7 +55,7 @@ class CategoryAggregatorImplTest {
         `when`(categoryCardService.getCards(userId, filter)).thenReturn(cards)
 
         // when
-        val result = categoryAggregator.getCards(userId, filter)
+        val result = categoryCardService.getCards(userId, filter)
 
         // then
         assertThat(result).isEqualTo(cards)
@@ -85,7 +84,7 @@ class CategoryAggregatorImplTest {
         `when`(categoryAnalyticsService.getAnalytics(userId, filter)).thenReturn(analytics)
 
         // when
-        val result = categoryAggregator.getAnalytics(userId, filter)
+        val result = categoryAnalyticsService.getAnalytics(userId, filter)
 
         // then
         assertThat(result).isEqualTo(analytics)
@@ -102,7 +101,7 @@ class CategoryAggregatorImplTest {
         `when`(categoryOptionService.getOptions(userId, CategoryType.EXPENSE)).thenReturn(options)
 
         // when
-        val result = categoryAggregator.getOptions(userId, CategoryType.EXPENSE)
+        val result = categoryOptionService.getOptions(userId, CategoryType.EXPENSE)
 
         // then
         assertThat(result).isEqualTo(options)
@@ -115,15 +114,15 @@ class CategoryAggregatorImplTest {
 
         `when`(categoryService.getByIdForUpdate(category.id, category.userId))
             .thenReturn(category)
-        `when`(categoryValidator.isRequired(category.id, category.userId))
+        `when`(categoryUsageQueryService.isRequired(category.id, category.userId))
             .thenReturn(false)
 
         // when
-        categoryAggregator.archive(category.id, category.userId)
+        categoryApplicationService.archive(category.id, category.userId)
 
         // then
         verify(categoryService).getByIdForUpdate(category.id, category.userId)
-        verify(categoryValidator).isRequired(category.id, category.userId)
+        verify(categoryUsageQueryService).isRequired(category.id, category.userId)
         verify(categoryService).archive(category.id, category.userId)
     }
 
@@ -134,12 +133,12 @@ class CategoryAggregatorImplTest {
 
         `when`(categoryService.getByIdForUpdate(category.id, category.userId))
             .thenReturn(category)
-        `when`(categoryValidator.isRequired(category.id, category.userId))
+        `when`(categoryUsageQueryService.isRequired(category.id, category.userId))
             .thenReturn(true)
 
         // when, then
         assertThatThrownBy {
-            categoryAggregator.archive(category.id, category.userId)
+            categoryApplicationService.archive(category.id, category.userId)
         }
             .isInstanceOf(CategoryInUseException::class.java)
             .hasMessage(ErrorMessages.CATEGORY_IN_USE)
@@ -156,10 +155,10 @@ class CategoryAggregatorImplTest {
             .thenReturn(category)
 
         // when
-        categoryAggregator.archive(category.id, category.userId)
+        categoryApplicationService.archive(category.id, category.userId)
 
         // then
-        verifyNoInteractions(categoryValidator)
+        verifyNoInteractions(categoryUsageQueryService)
         verify(categoryService, never()).archive(category.id, category.userId)
     }
 

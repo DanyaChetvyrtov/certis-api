@@ -13,10 +13,12 @@ import org.springframework.web.multipart.MultipartFile
 import ru.digitalhustle.certis.config.properties.AppApiProperties
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PhotoConstants
-import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
-import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
-import ru.digitalhustle.certis.service.profile.ProfilePhotoProcessor
-import ru.digitalhustle.certis.service.profile.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.features.profile.command.util.ProfilePhotoFormatDetector
+import ru.digitalhustle.certis.features.profile.command.util.ProfilePhotoProcessor
+import ru.digitalhustle.certis.features.profile.exceptions.InvalidPhotoException
+import ru.digitalhustle.certis.features.profile.exceptions.UnsupportedPhotoMediaTypeException
+import ru.digitalhustle.certis.features.profile.util.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.features.profile.validator.PhotoValidator
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.UUID
@@ -31,7 +33,8 @@ class ProfilePhotoProcessorTest {
 
     private val profilePhotoProcessor = ProfilePhotoProcessor(
         profilePhotoUrlProvider = profilePhotoUrlProvider,
-        tika = tika,
+        photoValidator = PhotoValidator(),
+        photoFormatDetector = ProfilePhotoFormatDetector(tika),
     )
 
     private companion object {
@@ -123,17 +126,23 @@ class ProfilePhotoProcessorTest {
     }
 
     @Test
-    fun `should throw unsupported media type exception when extension is invalid`() {
+    fun `should derive format from content when extension is unsupported`() {
         // given
-        val photo = createPhoto(originalFileName = "profile-photo.gif")
+        val photoBytes = createPngBytes()
+        val photo = createPhoto(
+            originalFileName = "profile-photo.gif",
+            photoBytes = photoBytes,
+        )
 
-        // when, then
-        assertThatThrownBy {
-            profilePhotoProcessor.process(UUID.randomUUID(), photo)
-        }.isInstanceOf(UnsupportedPhotoMediaTypeException::class.java)
-            .hasMessage(ErrorMessages.INVALID_FILE_EXTENSION)
+        `when`(tika.detect(photoBytes))
+            .thenReturn(MediaType.IMAGE_PNG_VALUE)
 
-        verifyNoInteractions(tika)
+        // when
+        val processedPhoto = profilePhotoProcessor.process(UUID.randomUUID(), photo)
+
+        // then
+        assertThat(processedPhoto.meta.extension).isEqualTo(EXTENSION)
+        assertThat(processedPhoto.objectName).endsWith(".$EXTENSION")
     }
 
     @Test
@@ -153,7 +162,7 @@ class ProfilePhotoProcessorTest {
     }
 
     @Test
-    fun `should throw unsupported media type exception when extension does not match content`() {
+    fun `should derive format from content when extension does not match`() {
         // given
         val photoBytes = createPngBytes()
         val photo = createPhoto(
@@ -164,11 +173,13 @@ class ProfilePhotoProcessorTest {
         `when`(tika.detect(photoBytes))
             .thenReturn(MediaType.IMAGE_PNG_VALUE)
 
-        // when, then
-        assertThatThrownBy {
-            profilePhotoProcessor.process(UUID.randomUUID(), photo)
-        }.isInstanceOf(UnsupportedPhotoMediaTypeException::class.java)
-            .hasMessage(ErrorMessages.FILE_EXTENSION_CONTENT_TYPE_MISMATCH)
+        // when
+        val processedPhoto = profilePhotoProcessor.process(UUID.randomUUID(), photo)
+
+        // then
+        assertThat(processedPhoto.meta.extension).isEqualTo(EXTENSION)
+        assertThat(processedPhoto.meta.contentType).isEqualTo(MediaType.IMAGE_PNG_VALUE)
+        assertThat(processedPhoto.objectName).endsWith(".$EXTENSION")
     }
 
     @Test

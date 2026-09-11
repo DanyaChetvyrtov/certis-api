@@ -12,18 +12,19 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.CreateTransferRq
+import ru.digitalhustle.certis.api.dto.request.ReverseTransferRq
+import ru.digitalhustle.certis.api.dto.request.UpdateTransactionRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.CreateTransferRq
-import ru.digitalhustle.certis.dto.request.ReverseTransferRq
-import ru.digitalhustle.certis.dto.request.UpdateTransactionRq
-import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -118,8 +119,8 @@ class TransferControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].id").value(transferId.toString()))
+            .andExpect(jsonPath("$.transfers.length()").value(1))
+            .andExpect(jsonPath("$.transfers[0].id").value(transferId.toString()))
 
         mvc.perform(
             get("${PathConstants.TRANSFERS}/$transferId")
@@ -165,7 +166,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_SAME_ACCOUNT))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_SAME_ACCOUNT))
     }
 
     @Test
@@ -193,7 +194,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Account not found"))
 
-        assertThat(transferRepository.findAllByUserId(user.id)).isEmpty()
+        assertThat(transferQueryRepository.findAllByUserId(user.id)).isEmpty()
     }
 
     @Test
@@ -216,7 +217,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_CURRENCY_MISMATCH))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_CURRENCY_MISMATCH))
     }
 
     @Test
@@ -243,7 +244,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_ACCOUNT_CLOSED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_ACCOUNT_CLOSED))
     }
 
     @Test
@@ -321,7 +322,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").value(reversalId.toString()))
 
-        assertThat(transferRepository.findAllByUserId(user.id)).hasSize(2)
+        assertThat(transferQueryRepository.findAllByUserId(user.id)).hasSize(2)
         assertThat(
             dsl.fetchCount(
                 Tables.TRANSACTIONS,
@@ -361,7 +362,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_REVERSAL_OF_REVERSAL))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_REVERSAL_OF_REVERSAL))
     }
 
     @Test
@@ -386,8 +387,8 @@ class TransferControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Transfer not found"))
 
-        assertThat(transferRepository.findAllByUserId(user.id)).hasSize(1)
-        assertThat(transferRepository.findAllByUserId(anotherUser.id)).isEmpty()
+        assertThat(transferQueryRepository.findAllByUserId(user.id)).hasSize(1)
+        assertThat(transferQueryRepository.findAllByUserId(anotherUser.id)).isEmpty()
     }
 
     @Test
@@ -418,14 +419,14 @@ class TransferControllerTest : AbstractIntegrationTest() {
                 .content(objectMapper.writeValueAsBytes(updateRequest)),
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
 
         mvc.perform(
             delete("${PathConstants.TRANSACTIONS}/${posting.id}")
                 .cookie(accessTokenCookie(user)),
         )
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
     }
 
     @Test
@@ -472,7 +473,7 @@ class TransferControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isInternalServerError)
 
-        assertThat(transferRepository.findAllByUserId(user.id)).isEmpty()
+        assertThat(transferQueryRepository.findAllByUserId(user.id)).isEmpty()
         assertThat(
             dsl.fetchCount(
                 Tables.TRANSACTIONS,

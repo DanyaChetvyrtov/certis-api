@@ -9,21 +9,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.AssignTransactionsCategoryRq
+import ru.digitalhustle.certis.api.dto.request.TransactionCategoryAssignmentRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
-import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.constants.PathConstants
 import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.AssignTransactionsCategoryRq
-import ru.digitalhustle.certis.dto.request.TransactionCategoryAssignmentRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.CategoryType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Category
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.Transfer
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.category.enums.CategoryType
+import ru.digitalhustle.certis.features.category.model.Category
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.constants.TransactionErrorMessages
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
+import ru.digitalhustle.certis.features.transaction.model.Transfer
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -221,7 +221,7 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNoContent)
 
         transactions.zip(categories).forEach { (transaction, category) ->
-            assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
+            assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
                 .isEqualTo(category.id)
         }
     }
@@ -252,9 +252,9 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Transaction not found"))
 
-        assertThat(transactionRepository.findByIdAndUserId(ownedTransaction.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(ownedTransaction.id, user.id)?.categoryId)
             .isNull()
-        assertThat(transactionRepository.findByIdAndUserId(anotherTransaction.id, anotherUser.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(anotherTransaction.id, anotherUser.id)?.categoryId)
             .isNull()
     }
 
@@ -279,7 +279,7 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Category not found"))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
             .isNull()
     }
 
@@ -305,9 +305,9 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_CATEGORY_ARCHIVED))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
             .isNull()
     }
 
@@ -329,9 +329,9 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_CATEGORY_TYPE_MISMATCH))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_CATEGORY_TYPE_MISMATCH))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
             .isNull()
     }
 
@@ -355,11 +355,11 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_ALREADY_CATEGORIZED))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_ALREADY_CATEGORIZED))
 
-        assertThat(transactionRepository.findByIdAndUserId(uncategorized.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(uncategorized.id, user.id)?.categoryId)
             .isNull()
-        assertThat(transactionRepository.findByIdAndUserId(categorized.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(categorized.id, user.id)?.categoryId)
             .isEqualTo(anotherCategory.id)
     }
 
@@ -383,9 +383,9 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSFER_TRANSACTION_IMMUTABLE))
 
-        assertThat(transactionRepository.findByIdAndUserId(posting.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(posting.id, user.id)?.categoryId)
             .isNull()
     }
 
@@ -431,9 +431,9 @@ class UncategorizedTransactionControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.TRANSACTION_DUPLICATE_CATEGORY_ASSIGNMENTS))
+            .andExpect(jsonPath("$.message").value(TransactionErrorMessages.TRANSACTION_DUPLICATE_CATEGORY_ASSIGNMENTS))
 
-        assertThat(transactionRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
+        assertThat(transactionQueryRepository.findByIdAndUserId(transaction.id, user.id)?.categoryId)
             .isNull()
     }
 

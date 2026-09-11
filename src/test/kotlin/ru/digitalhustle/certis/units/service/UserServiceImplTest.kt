@@ -9,10 +9,12 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.enums.Currency
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.repository.UserRepository
-import ru.digitalhustle.certis.service.domain.impl.UserServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.security.command.repository.UserRepository
+import ru.digitalhustle.certis.features.security.command.service.impl.UserServiceImpl
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.security.query.repository.UserQueryRepository
+import ru.digitalhustle.certis.features.security.query.service.impl.UserQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -20,6 +22,9 @@ import java.time.ZoneOffset
 import java.util.UUID
 
 class UserServiceImplTest {
+
+    private val userQueryRepository = mock(UserQueryRepository::class.java)
+    private val userQueryService = UserQueryServiceImpl(userQueryRepository)
 
     private val repository = mock(UserRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
@@ -29,28 +34,28 @@ class UserServiceImplTest {
     fun `should read user by id`() {
         // given
         val user = createUser()
-        `when`(repository.findById(user.id)).thenReturn(user)
+        `when`(userQueryRepository.findById(user.id)).thenReturn(user)
 
         // when
-        val result = service.getUserById(user.id)
+        val result = userQueryService.getUserById(user.id)
 
         // then
         assertThat(result).isEqualTo(user)
-        verify(repository).findById(user.id)
+        verify(userQueryRepository).findById(user.id)
     }
 
     @Test
     fun `should normalize email when reading user`() {
         // given
         val user = createUser()
-        `when`(repository.findByEmail(EMAIL)).thenReturn(user)
+        `when`(userQueryRepository.findByEmail(EMAIL)).thenReturn(user)
 
         // when
-        val result = service.getUserByEmail("  USER@TEST.COM ")
+        val result = userQueryService.getUserByEmail("  USER@TEST.COM ")
 
         // then
         assertThat(result).isEqualTo(user)
-        verify(repository).findByEmail(EMAIL)
+        verify(userQueryRepository).findByEmail(EMAIL)
     }
 
     @Test

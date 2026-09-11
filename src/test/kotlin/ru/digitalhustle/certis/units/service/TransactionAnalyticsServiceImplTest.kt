@@ -4,17 +4,17 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.CashFlowGranularity
-import ru.digitalhustle.certis.enums.CashFlowRange
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.model.transaction.CashFlowAnalyticsFilter
-import ru.digitalhustle.certis.model.transaction.CashFlowPoint
-import ru.digitalhustle.certis.model.transaction.MonthlyTransactionAnalytics
-import ru.digitalhustle.certis.model.transaction.MonthlyTransactionAnalyticsFilter
-import ru.digitalhustle.certis.model.transaction.MonthlyTransactionTotal
-import ru.digitalhustle.certis.repository.TransactionAnalyticsRepository
-import ru.digitalhustle.certis.service.domain.impl.TransactionAnalyticsServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.transaction.enums.CashFlowGranularity
+import ru.digitalhustle.certis.features.transaction.enums.CashFlowRange
+import ru.digitalhustle.certis.features.transaction.query.model.CashFlowAnalyticsFilter
+import ru.digitalhustle.certis.features.transaction.query.model.CashFlowPoint
+import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionAnalytics
+import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionAnalyticsFilter
+import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionTotal
+import ru.digitalhustle.certis.features.transaction.query.repository.TransactionAnalyticsQueryRepository
+import ru.digitalhustle.certis.features.transaction.query.service.impl.TransactionAnalyticsServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -26,7 +26,7 @@ import java.util.UUID
 
 class TransactionAnalyticsServiceImplTest {
 
-    private val transactionAnalyticsRepository = mock(TransactionAnalyticsRepository::class.java)
+    private val transactionAnalyticsRepository = mock(TransactionAnalyticsQueryRepository::class.java)
     private val clock = Clock.fixed(
         Instant.parse("2026-09-15T10:15:30Z"),
         ZoneId.of("Europe/Riga"),

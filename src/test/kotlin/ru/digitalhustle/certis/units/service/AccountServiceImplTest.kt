@@ -10,18 +10,19 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.custom.AccountClosedException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.account.AccountBalanceDelta
-import ru.digitalhustle.certis.model.account.NewAccount
-import ru.digitalhustle.certis.model.account.UpdateAccountData
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.repository.AccountBalanceRepository
-import ru.digitalhustle.certis.repository.AccountRepository
-import ru.digitalhustle.certis.service.domain.impl.AccountServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.account.command.model.NewAccount
+import ru.digitalhustle.certis.features.account.command.model.UpdateAccountData
+import ru.digitalhustle.certis.features.account.command.repository.AccountRepository
+import ru.digitalhustle.certis.features.account.command.service.impl.AccountServiceImpl
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.exceptions.AccountClosedException
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.account.query.model.AccountBalanceDelta
+import ru.digitalhustle.certis.features.account.query.repository.AccountQueryRepository
+import ru.digitalhustle.certis.features.account.query.service.impl.AccountQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -31,12 +32,13 @@ import java.util.UUID
 
 class AccountServiceImplTest {
 
+    private val accountQueryRepository = mock(AccountQueryRepository::class.java)
+    private val accountQueryService = AccountQueryServiceImpl(accountQueryRepository)
+
     private val accountRepository = mock(AccountRepository::class.java)
-    private val accountBalanceRepository = mock(AccountBalanceRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-07-31T10:15:30Z"), ZoneOffset.UTC)
     private val accountService = AccountServiceImpl(
         accountRepository,
-        accountBalanceRepository,
         ApplicationClock(clock),
     )
 
@@ -53,13 +55,13 @@ class AccountServiceImplTest {
         // given
         val account = createAccount()
 
-        `when`(accountRepository.findByIdAndUserId(account.id, account.userId))
+        `when`(accountQueryRepository.findByIdAndUserId(account.id, account.userId))
             .thenReturn(account)
-        `when`(accountBalanceRepository.findBalanceDeltas(account.userId, listOf(account.id)))
+        `when`(accountQueryRepository.findBalanceDeltas(account.userId, listOf(account.id)))
             .thenReturn(listOf(AccountBalanceDelta(account.id, TRANSACTION_DELTA)))
 
         // when
-        val result = accountService.getById(account.id, account.userId)
+        val result = accountQueryService.getById(account.id, account.userId)
 
         // then
         assertThat(result.id).isEqualTo(account.id)
@@ -72,12 +74,12 @@ class AccountServiceImplTest {
         val accountId = UUID.randomUUID()
         val userId = UUID.randomUUID()
 
-        `when`(accountRepository.findByIdAndUserId(accountId, userId))
+        `when`(accountQueryRepository.findByIdAndUserId(accountId, userId))
             .thenReturn(null)
 
         // when, then
         assertThatThrownBy {
-            accountService.getById(accountId, userId)
+            accountQueryService.getById(accountId, userId)
         }.isInstanceOf(NotFoundException::class.java)
     }
 
@@ -101,15 +103,15 @@ class AccountServiceImplTest {
         // given
         val userId = UUID.randomUUID()
 
-        `when`(accountRepository.findAllByUserId(userId))
+        `when`(accountQueryRepository.findAllByUserId(userId))
             .thenReturn(emptyList())
 
         // when
-        val result = accountService.getAllByUserId(userId)
+        val result = accountQueryService.getAllByUserId(userId)
 
         // then
         assertThat(result).isEmpty()
-        verify(accountBalanceRepository, never())
+        verify(accountQueryRepository, never())
             .findBalanceDeltas(userId, emptyList())
     }
 
@@ -151,8 +153,6 @@ class AccountServiceImplTest {
 
         `when`(accountRepository.updateActive(updateData))
             .thenReturn(updatedAccount)
-        `when`(accountBalanceRepository.findBalanceDeltas(savedAccount.userId, listOf(savedAccount.id)))
-            .thenReturn(emptyList())
 
         // when
         val result = accountService.update(updateData)
@@ -190,7 +190,7 @@ class AccountServiceImplTest {
             .isInstanceOf(AccountClosedException::class.java)
             .hasMessage(ErrorMessages.ACCOUNT_CLOSED)
 
-        verify(accountBalanceRepository, never())
+        verify(accountQueryRepository, never())
             .findBalanceDeltas(account.userId, listOf(account.id))
     }
 

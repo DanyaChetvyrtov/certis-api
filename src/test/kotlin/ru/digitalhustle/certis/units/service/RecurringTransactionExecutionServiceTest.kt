@@ -7,17 +7,18 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.exception.custom.RecurringTransactionExecutionException
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.provider.RecurringTransactionScheduleProvider
-import ru.digitalhustle.certis.service.domain.RecurringTransactionExecutionStateService
-import ru.digitalhustle.certis.service.domain.TransactionService
-import ru.digitalhustle.certis.service.transaction.impl.RecurringTransactionExecutionServiceImpl
-import ru.digitalhustle.certis.util.validation.AccountValidator
-import ru.digitalhustle.certis.util.validation.CategoryValidator
+import ru.digitalhustle.certis.features.transaction.command.service.RecurringTransactionExecutionStateService
+import ru.digitalhustle.certis.features.transaction.command.service.TransactionService
+import ru.digitalhustle.certis.features.transaction.command.service.impl.RecurringTransactionExecutionServiceImpl
+import ru.digitalhustle.certis.features.transaction.command.validator.AccountValidator
+import ru.digitalhustle.certis.features.transaction.command.validator.CategoryValidator
+import ru.digitalhustle.certis.features.transaction.command.validator.RecurringTransactionValidator
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.exceptions.RecurringTransactionExecutionException
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.scheduler.RecurringTransactionScheduleProvider
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -29,12 +30,14 @@ class RecurringTransactionExecutionServiceTest {
     private val transactionService = mock(TransactionService::class.java)
     private val accountValidator = mock(AccountValidator::class.java)
     private val categoryValidator = mock(CategoryValidator::class.java)
+    private val recurringTransactionValidator = mock(RecurringTransactionValidator::class.java)
     private val executionService = RecurringTransactionExecutionServiceImpl(
         executionStateService = executionStateService,
         transactionService = transactionService,
         scheduleProvider = RecurringTransactionScheduleProvider(),
         accountValidator = accountValidator,
         categoryValidator = categoryValidator,
+        recurringTransactionValidator = recurringTransactionValidator,
     )
 
     @Test
@@ -51,7 +54,7 @@ class RecurringTransactionExecutionServiceTest {
 
         // then
         verify(accountValidator).validateActiveAccount(template.accountId, template.userId)
-        verify(categoryValidator).validateActiveCategory(template.categoryId, template.userId, template.type)
+        verify(categoryValidator).validateCategory(template.categoryId, template.userId, false)
         verify(transactionService).saveScheduled(template, template.startDate)
         verify(executionStateService).recordExecution(template, template.startDate, nextRunDate)
     }

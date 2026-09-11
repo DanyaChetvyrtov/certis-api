@@ -11,21 +11,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.dto.request.CreateGoalContributionRq
+import ru.digitalhustle.certis.api.dto.request.CreateGoalRq
+import ru.digitalhustle.certis.api.dto.request.GoalContributionPlanRq
+import ru.digitalhustle.certis.api.dto.request.GoalPlanPreviewRq
+import ru.digitalhustle.certis.api.dto.request.InitialGoalContributionRq
+import ru.digitalhustle.certis.api.dto.request.UpdateGoalRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.dto.request.CreateGoalContributionRq
-import ru.digitalhustle.certis.dto.request.CreateGoalRq
-import ru.digitalhustle.certis.dto.request.GoalContributionPlanRq
-import ru.digitalhustle.certis.dto.request.GoalPlanPreviewRq
-import ru.digitalhustle.certis.dto.request.InitialGoalContributionRq
-import ru.digitalhustle.certis.dto.request.UpdateGoalRq
-import ru.digitalhustle.certis.enums.AccountType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.GoalContributionPlanType
-import ru.digitalhustle.certis.enums.GoalStatus
-import ru.digitalhustle.certis.enums.GoalTransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.goal.enums.GoalContributionPlanType
+import ru.digitalhustle.certis.features.goal.enums.GoalStatus
+import ru.digitalhustle.certis.features.goal.enums.GoalTransactionType
+import ru.digitalhustle.certis.features.security.model.User
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.OffsetDateTime
@@ -251,6 +251,25 @@ class GoalControllerTest : AbstractIntegrationTest() {
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("Goal and account currencies must match"))
+    }
+
+    @Test
+    fun `should scope command balance reads by goal and owner`() {
+        // given
+        val user = userFixture.createInDb()
+        val goalId = createGoal(user, createAccount(user.id))
+        val otherUser = userFixture.createInDb { copy(email = "other-goal-owner@test.com") }
+        val otherGoalId = createGoal(otherUser, createAccount(otherUser.id))
+
+        // when, then
+        assertThat(goalTransactionRepository.findSavedAmount(goalId, user.id))
+            .isEqualByComparingTo(BigDecimal("50.00"))
+        assertThat(goalTransactionRepository.findSavedAmount(otherGoalId, otherUser.id))
+            .isEqualByComparingTo(BigDecimal("50.00"))
+        assertThat(goalTransactionRepository.findSavedAmount(goalId, otherUser.id))
+            .isEqualByComparingTo(BigDecimal.ZERO)
+        assertThat(goalTransactionRepository.findSavedAmount(UUID.randomUUID(), user.id))
+            .isEqualByComparingTo(BigDecimal.ZERO)
     }
 
     private fun createGoal(

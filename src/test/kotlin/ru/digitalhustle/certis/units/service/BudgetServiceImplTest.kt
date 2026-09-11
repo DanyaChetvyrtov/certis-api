@@ -11,23 +11,30 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.enums.BudgetAllocationStatus
-import ru.digitalhustle.certis.enums.BudgetExpenseType
 import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.custom.BudgetOptimizationConflictException
-import ru.digitalhustle.certis.exception.custom.InvalidBudgetException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.budget.ApplyBudgetOptimizationData
-import ru.digitalhustle.certis.model.budget.BudgetAllocationDetails
-import ru.digitalhustle.certis.model.budget.BudgetDetails
-import ru.digitalhustle.certis.model.budget.BudgetOptimizationInputAllocation
-import ru.digitalhustle.certis.model.budget.BudgetOptimizationInputSnapshot
-import ru.digitalhustle.certis.model.budget.SaveBudgetAllocationData
-import ru.digitalhustle.certis.model.budget.SaveBudgetData
-import ru.digitalhustle.certis.model.entity.Budget
-import ru.digitalhustle.certis.repository.BudgetRepository
-import ru.digitalhustle.certis.service.domain.impl.BudgetServiceImpl
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.budget.application.service.impl.BudgetApplicationServiceImpl
+import ru.digitalhustle.certis.features.budget.application.validator.BudgetValidator
+import ru.digitalhustle.certis.features.budget.command.model.ApplyBudgetOptimizationData
+import ru.digitalhustle.certis.features.budget.command.model.SaveBudgetAllocationData
+import ru.digitalhustle.certis.features.budget.command.model.SaveBudgetData
+import ru.digitalhustle.certis.features.budget.command.service.BudgetAllocationService
+import ru.digitalhustle.certis.features.budget.command.service.BudgetCommandStore
+import ru.digitalhustle.certis.features.budget.enums.BudgetAllocationStatus
+import ru.digitalhustle.certis.features.budget.enums.BudgetExpenseType
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetOptimizationConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.InvalidBudgetException
+import ru.digitalhustle.certis.features.budget.model.Budget
+import ru.digitalhustle.certis.features.budget.model.BudgetAllocationDetails
+import ru.digitalhustle.certis.features.budget.model.BudgetDetails
+import ru.digitalhustle.certis.features.budget.model.BudgetOptimizationInputAllocation
+import ru.digitalhustle.certis.features.budget.model.BudgetOptimizationInputSnapshot
+import ru.digitalhustle.certis.features.budget.query.repository.BudgetQueryRepository
+import ru.digitalhustle.certis.features.budget.query.service.BudgetQueryService
+import ru.digitalhustle.certis.features.budget.query.service.impl.BudgetQueryServiceImpl
+import ru.digitalhustle.certis.features.category.api.ExpenseCategoryEligibility
+import ru.digitalhustle.certis.features.security.api.UserPreferencesCommand
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
@@ -38,9 +45,23 @@ import java.util.UUID
 
 class BudgetServiceImplTest {
 
-    private val budgetRepository = mock(BudgetRepository::class.java)
+    private val budgetAllocationService = mock(BudgetAllocationService::class.java)
+    private val budgetQueryService = mock(BudgetQueryService::class.java)
+    private val userPreferencesCommand = mock(UserPreferencesCommand::class.java)
+    private val expenseCategoryEligibility = mock(ExpenseCategoryEligibility::class.java)
+    private val budgetQueryRepository = mock(BudgetQueryRepository::class.java)
+
+    private val budgetRepository = mock(BudgetCommandStore::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-15T10:15:30Z"), ZoneOffset.UTC)
-    private val budgetService = BudgetServiceImpl(budgetRepository, ApplicationClock(clock))
+    private val budgetService = BudgetApplicationServiceImpl(
+        budgetRepository,
+        budgetAllocationService,
+        budgetQueryService,
+        userPreferencesCommand,
+        BudgetValidator(expenseCategoryEligibility),
+        ApplicationClock(clock),
+    )
+    private val budgetReader = BudgetQueryServiceImpl(budgetQueryRepository, ApplicationClock(clock))
 
     private companion object {
         private val BUDGET_MONTH = LocalDate.parse("2026-08-01")
@@ -55,7 +76,7 @@ class BudgetServiceImplTest {
         val userId = UUID.randomUUID()
 
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
+            budgetQueryRepository.findDetailsByUserIdAndMonth(
                 userId,
                 BUDGET_MONTH,
                 MONTH_START,
@@ -64,7 +85,7 @@ class BudgetServiceImplTest {
         ).thenReturn(details)
 
         // when
-        val result = budgetService.getByMonth(userId, BUDGET_MONTH)
+        val result = budgetReader.getByMonth(userId, BUDGET_MONTH)
 
         // then
         assertThat(result).isEqualTo(details)
@@ -76,7 +97,7 @@ class BudgetServiceImplTest {
         val userId = UUID.randomUUID()
 
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
+            budgetQueryRepository.findDetailsByUserIdAndMonth(
                 userId,
                 BUDGET_MONTH,
                 MONTH_START,
@@ -86,7 +107,7 @@ class BudgetServiceImplTest {
 
         // when, then
         assertThatThrownBy {
-            budgetService.getByMonth(userId, BUDGET_MONTH)
+            budgetReader.getByMonth(userId, BUDGET_MONTH)
         }.isInstanceOf(NotFoundException::class.java)
     }
 
@@ -97,25 +118,20 @@ class BudgetServiceImplTest {
         val details = createBudgetDetails()
         val budgetCaptor = ArgumentCaptor.forClass(Budget::class.java)
 
-        `when`(budgetRepository.findPreferredCurrencyByUserIdForUpdate(budget.userId))
+        `when`(userPreferencesCommand.findPreferredCurrencyForUpdate(budget.userId))
             .thenReturn(Currency.RUB)
         `when`(
-            budgetRepository.countActiveExpenseCategories(
+            expenseCategoryEligibility.areAllActive(
                 budget.userId,
                 budget.allocations.map { allocation -> allocation.categoryId },
             ),
-        ).thenReturn(1)
+        ).thenReturn(true)
         `when`(budgetRepository.findByUserIdAndMonthForUpdate(budget.userId, budget.budgetMonth))
             .thenReturn(null)
         `when`(budgetRepository.insert(captureBudget(budgetCaptor)))
             .thenAnswer { budgetCaptor.value }
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
-                budget.userId,
-                BUDGET_MONTH,
-                MONTH_START,
-                NEXT_MONTH_START,
-            ),
+            budgetQueryService.getByMonth(budget.userId, BUDGET_MONTH),
         ).thenReturn(details)
 
         // when
@@ -126,8 +142,8 @@ class BudgetServiceImplTest {
         assertThat(budgetCaptor.value.userId).isEqualTo(budget.userId)
         assertThat(budgetCaptor.value.currency).isEqualTo(Currency.RUB)
         assertThat(budgetCaptor.value.createdAt).isEqualTo(OffsetDateTime.now(clock))
-        verify(budgetRepository).insertAllocations(anyCollection())
-        verify(budgetRepository, never()).deleteAllocations(details.id)
+        verify(budgetAllocationService).insertAllocations(anyCollection())
+        verify(budgetAllocationService, never()).deleteAllocations(details.id)
     }
 
     @Test
@@ -144,25 +160,20 @@ class BudgetServiceImplTest {
         )
         val budgetCaptor = ArgumentCaptor.forClass(Budget::class.java)
 
-        `when`(budgetRepository.findPreferredCurrencyByUserIdForUpdate(budget.userId))
+        `when`(userPreferencesCommand.findPreferredCurrencyForUpdate(budget.userId))
             .thenReturn(Currency.RUB)
         `when`(
-            budgetRepository.countActiveExpenseCategories(
+            expenseCategoryEligibility.areAllActive(
                 budget.userId,
                 budget.allocations.map { allocation -> allocation.categoryId },
             ),
-        ).thenReturn(1)
+        ).thenReturn(true)
         `when`(budgetRepository.findByUserIdAndMonthForUpdate(budget.userId, budget.budgetMonth))
             .thenReturn(currentBudget)
         `when`(budgetRepository.update(captureBudget(budgetCaptor)))
             .thenAnswer { budgetCaptor.value }
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
-                budget.userId,
-                BUDGET_MONTH,
-                MONTH_START,
-                NEXT_MONTH_START,
-            ),
+            budgetQueryService.getByMonth(budget.userId, BUDGET_MONTH),
         ).thenReturn(details)
 
         // when
@@ -171,7 +182,7 @@ class BudgetServiceImplTest {
         // then
         assertThat(result.currency).isEqualTo(Currency.EUR)
         assertThat(budgetCaptor.value.currency).isEqualTo(Currency.EUR)
-        verify(budgetRepository).deleteAllocations(currentBudget.id)
+        verify(budgetAllocationService).deleteAllocations(currentBudget.id)
     }
 
     @Test
@@ -204,19 +215,14 @@ class BudgetServiceImplTest {
         `when`(budgetRepository.findByUserIdAndMonthForUpdate(userId, BUDGET_MONTH))
             .thenReturn(currentBudget)
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
-                userId,
-                BUDGET_MONTH,
-                MONTH_START,
-                NEXT_MONTH_START,
-            ),
+            budgetQueryService.getByMonth(userId, BUDGET_MONTH),
         ).thenReturn(currentDetails, optimizedDetails)
         `when`(
-            budgetRepository.countActiveExpenseCategories(
+            expenseCategoryEligibility.areAllActive(
                 userId,
                 listOf(currentDetails.allocations.single().categoryId),
             ),
-        ).thenReturn(1)
+        ).thenReturn(true)
         `when`(budgetRepository.update(captureBudget(budgetCaptor)))
             .thenReturn(currentBudget)
 
@@ -225,8 +231,8 @@ class BudgetServiceImplTest {
 
         // then
         assertThat(result).isEqualTo(optimizedDetails)
-        verify(budgetRepository).deleteAllocations(currentBudget.id)
-        verify(budgetRepository).insertAllocations(anyCollection())
+        verify(budgetAllocationService).deleteAllocations(currentBudget.id)
+        verify(budgetAllocationService).insertAllocations(anyCollection())
     }
 
     @Test
@@ -248,12 +254,7 @@ class BudgetServiceImplTest {
         `when`(budgetRepository.findByUserIdAndMonthForUpdate(userId, BUDGET_MONTH))
             .thenReturn(currentBudget)
         `when`(
-            budgetRepository.findDetailsByUserIdAndMonth(
-                userId,
-                BUDGET_MONTH,
-                MONTH_START,
-                NEXT_MONTH_START,
-            ),
+            budgetQueryService.getByMonth(userId, BUDGET_MONTH),
         ).thenReturn(changedDetails)
 
         // when, then
@@ -263,8 +264,8 @@ class BudgetServiceImplTest {
             .isInstanceOf(BudgetOptimizationConflictException::class.java)
             .hasMessage(ErrorMessages.BUDGET_OPTIMIZATION_STALE)
 
-        verify(budgetRepository, never()).deleteAllocations(currentBudget.id)
-        verify(budgetRepository, never()).insertAllocations(anyCollection())
+        verify(budgetAllocationService, never()).deleteAllocations(currentBudget.id)
+        verify(budgetAllocationService, never()).insertAllocations(anyCollection())
     }
 
     @Test
@@ -305,14 +306,14 @@ class BudgetServiceImplTest {
         // given
         val budget = createSaveBudgetData()
 
-        `when`(budgetRepository.findPreferredCurrencyByUserIdForUpdate(budget.userId))
+        `when`(userPreferencesCommand.findPreferredCurrencyForUpdate(budget.userId))
             .thenReturn(Currency.RUB)
         `when`(
-            budgetRepository.countActiveExpenseCategories(
+            expenseCategoryEligibility.areAllActive(
                 budget.userId,
                 budget.allocations.map { allocation -> allocation.categoryId },
             ),
-        ).thenReturn(0)
+        ).thenReturn(false)
 
         // when, then
         assertThatThrownBy {
