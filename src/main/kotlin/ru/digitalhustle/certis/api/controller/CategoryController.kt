@@ -18,10 +18,12 @@ import ru.digitalhustle.certis.api.dto.CategoryDto
 import ru.digitalhustle.certis.api.dto.request.CategoryAnalyticsRq
 import ru.digitalhustle.certis.api.dto.request.CategoryCardPageRq
 import ru.digitalhustle.certis.api.dto.request.CreateCategoryRq
+import ru.digitalhustle.certis.api.dto.request.SpendingOverTimeRq
 import ru.digitalhustle.certis.api.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.api.dto.response.CategoryAnalyticsRs
 import ru.digitalhustle.certis.api.dto.response.CategoryCardsRs
 import ru.digitalhustle.certis.api.dto.response.CategoryOptionsRs
+import ru.digitalhustle.certis.api.dto.response.SpendingOverTimeRs
 import ru.digitalhustle.certis.features.category.enums.CategoryType
 import ru.digitalhustle.certis.features.security.model.JwtDetails
 import java.util.UUID
@@ -40,6 +42,12 @@ interface CategoryController {
         @Valid @ModelAttribute analyticsRq: CategoryAnalyticsRq,
         @AuthenticationPrincipal jwtDetails: JwtDetails,
     ): CategoryAnalyticsRs
+
+    @GetMapping(PathConstants.CATEGORY_SPENDING_OVER_TIME)
+    fun getSpendingOverTime(
+        @Valid @ModelAttribute spendingOverTimeRq: SpendingOverTimeRq,
+        @AuthenticationPrincipal jwtDetails: JwtDetails,
+    ): SpendingOverTimeRs
 
     @GetMapping(PathConstants.CATEGORY_OPTIONS)
     fun getCategoryOptions(

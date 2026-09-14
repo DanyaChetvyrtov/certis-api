@@ -6,18 +6,22 @@ import ru.digitalhustle.certis.api.dto.CategoryDto
 import ru.digitalhustle.certis.api.dto.request.CategoryAnalyticsRq
 import ru.digitalhustle.certis.api.dto.request.CategoryCardPageRq
 import ru.digitalhustle.certis.api.dto.request.CreateCategoryRq
+import ru.digitalhustle.certis.api.dto.request.SpendingOverTimeRq
 import ru.digitalhustle.certis.api.dto.request.UpdateCategoryRq
 import ru.digitalhustle.certis.api.dto.response.CategoryAnalyticsRs
 import ru.digitalhustle.certis.api.dto.response.CategoryCardsRs
 import ru.digitalhustle.certis.api.dto.response.CategoryOptionsRs
+import ru.digitalhustle.certis.api.dto.response.SpendingOverTimeRs
 import ru.digitalhustle.certis.api.mapper.CategoryAnalyticsMapper
 import ru.digitalhustle.certis.api.mapper.CategoryMapper
+import ru.digitalhustle.certis.api.mapper.CategorySpendingOverTimeMapper
 import ru.digitalhustle.certis.features.category.application.service.CategoryApplicationService
 import ru.digitalhustle.certis.features.category.enums.CategoryType
 import ru.digitalhustle.certis.features.category.query.service.CategoryAnalyticsService
 import ru.digitalhustle.certis.features.category.query.service.CategoryCardService
 import ru.digitalhustle.certis.features.category.query.service.CategoryOptionService
 import ru.digitalhustle.certis.features.category.query.service.CategoryQueryService
+import ru.digitalhustle.certis.features.category.query.service.CategorySpendingOverTimeService
 import ru.digitalhustle.certis.features.security.model.JwtDetails
 import java.util.UUID
 
@@ -26,9 +30,11 @@ class CategoryControllerImpl(
     private val categoryQueryService: CategoryQueryService,
     private val categoryCardService: CategoryCardService,
     private val categoryAnalyticsService: CategoryAnalyticsService,
+    private val categorySpendingOverTimeService: CategorySpendingOverTimeService,
     private val categoryOptionService: CategoryOptionService,
     private val categoryMapper: CategoryMapper,
     private val categoryAnalyticsMapper: CategoryAnalyticsMapper,
+    private val categorySpendingOverTimeMapper: CategorySpendingOverTimeMapper,
     private val categoryApplicationService: CategoryApplicationService,
 ) : CategoryController {
 
@@ -51,6 +57,17 @@ class CategoryControllerImpl(
             categoryAnalyticsService.getAnalytics(
                 jwtDetails.id,
                 categoryAnalyticsMapper.convert(analyticsRq),
+            ),
+        )
+
+    override fun getSpendingOverTime(
+        spendingOverTimeRq: SpendingOverTimeRq,
+        jwtDetails: JwtDetails,
+    ): SpendingOverTimeRs =
+        categorySpendingOverTimeMapper.convert(
+            categorySpendingOverTimeService.getSpendingOverTime(
+                jwtDetails.id,
+                categorySpendingOverTimeMapper.convert(spendingOverTimeRq),
             ),
         )
 
