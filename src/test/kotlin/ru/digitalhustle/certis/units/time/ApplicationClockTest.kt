@@ -28,6 +28,7 @@ class ApplicationClockTest {
             { assertThat(applicationClock.instant()).isEqualTo(clock.instant()) },
             { assertThat(applicationClock.today()).isEqualTo(LocalDate.of(2026, 3, 29)) },
             { assertThat(applicationClock.currentMonth()).isEqualTo(YearMonth.of(2026, 3)) },
+            { assertThat(applicationClock.zoneId()).isEqualTo(zone) },
         )
     }
 

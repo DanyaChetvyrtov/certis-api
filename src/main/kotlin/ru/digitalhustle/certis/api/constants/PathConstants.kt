@@ -32,6 +32,7 @@ object PathConstants {
 
     const val CATEGORIES = "$API_V1/categories"
     const val CATEGORY_ANALYTICS = "/analytics"
+    const val CATEGORY_SPENDING_OVER_TIME = "$CATEGORY_ANALYTICS/spending-over-time"
     const val CATEGORY_OPTIONS = "/options"
     const val CATEGORY_ID = "/{categoryId}"
     const val CATEGORY_RESTORE = "$CATEGORY_ID/restore"

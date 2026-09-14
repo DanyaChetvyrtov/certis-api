@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.YearMonth
+import java.time.ZoneId
 
 @Component
 class ApplicationClock(
@@ -19,6 +20,8 @@ class ApplicationClock(
     fun today(): LocalDate = LocalDate.now(clock)
 
     fun currentMonth(): YearMonth = YearMonth.now(clock)
+
+    fun zoneId(): ZoneId = clock.zone
 
     fun startOfDay(date: LocalDate): OffsetDateTime =
         date.atStartOfDay(clock.zone).toOffsetDateTime()
