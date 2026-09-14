@@ -6,7 +6,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
-import ru.digitalhustle.certis.constants.SecurityConstants
+import ru.digitalhustle.certis.features.security.constants.SecurityConstants
 
 class SecurityEndpointsTest : AbstractIntegrationTest() {
 

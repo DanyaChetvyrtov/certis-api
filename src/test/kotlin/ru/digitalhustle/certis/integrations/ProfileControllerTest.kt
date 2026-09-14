@@ -24,16 +24,17 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.web.multipart.MultipartFile
+import ru.digitalhustle.certis.api.constants.ApiErrorMessages
+import ru.digitalhustle.certis.api.constants.PathConstants
+import ru.digitalhustle.certis.api.dto.request.CreateProfileRq
+import ru.digitalhustle.certis.api.dto.request.UpdateProfileRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.constants.SecurityConstants
-import ru.digitalhustle.certis.dto.request.CreateProfileRq
-import ru.digitalhustle.certis.dto.request.UpdateProfileRq
-import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.exception.custom.PhotoProcessingException
-import ru.digitalhustle.certis.model.entity.User
-import ru.digitalhustle.certis.model.profile.objectName
+import ru.digitalhustle.certis.features.profile.constants.ProfileErrorMessages
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
+import ru.digitalhustle.certis.features.profile.model.objectName
+import ru.digitalhustle.certis.features.security.constants.SecurityConstants
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.shared.enums.Currency
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
@@ -80,12 +81,12 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.preferredCurrency").value(PREFERRED_CURRENCY.name))
             .andExpect(jsonPath("$.photoUrl").doesNotExist())
 
-        val profile = requireNotNull(profileRepository.findById(user.id))
+        val profile = requireNotNull(profileQueryRepository.findById(user.id))
 
         assertThat(profile.name).isEqualTo(NAME)
         assertThat(profile.surname).isEqualTo(SURNAME)
         assertThat(profile.dateOfBirth).isEqualTo(DATE_OF_BIRTH)
-        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+        assertThat(requireNotNull(userQueryRepository.findById(user.id)).preferredCurrency)
             .isEqualTo(PREFERRED_CURRENCY)
     }
 
@@ -113,7 +114,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.preferredCurrency").value(Currency.RUB.name))
 
-        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+        assertThat(requireNotNull(userQueryRepository.findById(user.id)).preferredCurrency)
             .isEqualTo(Currency.RUB)
     }
 
@@ -189,12 +190,12 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.dateOfBirth").value(UPDATED_DATE_OF_BIRTH.toString()))
             .andExpect(jsonPath("$.preferredCurrency").value(UPDATED_PREFERRED_CURRENCY.name))
 
-        val profile = requireNotNull(profileRepository.findById(user.id))
+        val profile = requireNotNull(profileQueryRepository.findById(user.id))
 
         assertThat(profile.name).isEqualTo(UPDATED_NAME)
         assertThat(profile.surname).isEqualTo(UPDATED_SURNAME)
         assertThat(profile.dateOfBirth).isEqualTo(UPDATED_DATE_OF_BIRTH)
-        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+        assertThat(requireNotNull(userQueryRepository.findById(user.id)).preferredCurrency)
             .isEqualTo(UPDATED_PREFERRED_CURRENCY)
     }
 
@@ -224,7 +225,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.preferredCurrency").value(PREFERRED_CURRENCY.name))
 
-        assertThat(requireNotNull(userRepository.findById(user.id)).preferredCurrency)
+        assertThat(requireNotNull(userQueryRepository.findById(user.id)).preferredCurrency)
             .isEqualTo(PREFERRED_CURRENCY)
     }
 
@@ -251,7 +252,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-            .andExpect(jsonPath("$.message").value(ErrorMessages.VALIDATION_FAILED))
+            .andExpect(jsonPath("$.message").value(ApiErrorMessages.VALIDATION_FAILED))
             .andExpect(jsonPath("$.errors.name").exists())
             .andExpect(jsonPath("$.errors.dateOfBirth").exists())
     }
@@ -285,7 +286,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             )
 
         val photoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
 
         verify(minioGateway).savePhoto(
@@ -326,7 +327,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         uploadPhoto(user, photoBytes)
 
         val photoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
 
         `when`(minioGateway.getPhoto(photoMeta.objectName))
@@ -347,7 +348,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
     }
 
     @Test
-    fun `should return 415 when photo extension is unsupported`() {
+    fun `should derive photo format from content when extension is unsupported`() {
         // given
         val user = userFixture.createInDb()
         createProfile(user)
@@ -360,15 +361,13 @@ class ProfileControllerTest : AbstractIntegrationTest() {
                 .cookie(accessTokenCookie(user)),
         )
             // then
-            .andExpect(status().isUnsupportedMediaType)
-            .andExpect(
-                jsonPath("$.status")
-                    .value(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value()),
-            )
-            .andExpect(jsonPath("$.message").value(ErrorMessages.INVALID_FILE_EXTENSION))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.extension").value("png"))
+            .andExpect(jsonPath("$.contentType").value(MediaType.IMAGE_PNG_VALUE))
 
-        assertThat(profilePhotoMetaRepository.findByProfileId(user.id))
-            .isNull()
+        val photoMeta = requireNotNull(profilePhotoMetaQueryRepository.findByProfileId(user.id))
+        assertThat(photoMeta.extension).isEqualTo("png")
+        assertThat(photoMeta.objectName).endsWith(".png")
     }
 
     @Test
@@ -379,7 +378,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         uploadPhoto(user)
 
         val oldPhotoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
         clearInvocations(minioGateway)
 
@@ -400,7 +399,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.originalFileName").value("updated-profile-photo"))
 
         val updatedPhotoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
 
         assertThat(updatedPhotoMeta.id).isNotEqualTo(oldPhotoMeta.id)
@@ -420,7 +419,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         uploadPhoto(user)
 
         val photoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
         clearInvocations(minioGateway)
 
@@ -432,7 +431,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(profilePhotoMetaRepository.findByProfileId(user.id))
+        assertThat(profilePhotoMetaQueryRepository.findByProfileId(user.id))
             .isNull()
 
         verify(minioGateway)
@@ -445,7 +444,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         val user = userFixture.createInDb()
         createProfile(user)
 
-        doThrow(PhotoProcessingException(ErrorMessages.PHOTO_UPLOAD_FAILED))
+        doThrow(PhotoProcessingException(ProfileErrorMessages.PHOTO_UPLOAD_FAILED))
             .`when`(minioGateway)
             .savePhoto(
                 anyString(),
@@ -465,9 +464,9 @@ class ProfileControllerTest : AbstractIntegrationTest() {
                 jsonPath("$.status")
                     .value(HttpStatus.SERVICE_UNAVAILABLE.value()),
             )
-            .andExpect(jsonPath("$.message").value(ErrorMessages.PHOTO_STORAGE_UNAVAILABLE))
+            .andExpect(jsonPath("$.message").value(ProfileErrorMessages.PHOTO_STORAGE_UNAVAILABLE))
 
-        assertThat(profilePhotoMetaRepository.findByProfileId(user.id))
+        assertThat(profilePhotoMetaQueryRepository.findByProfileId(user.id))
             .isNull()
 
         val objectNameCaptor = ArgumentCaptor.forClass(String::class.java)
@@ -488,7 +487,7 @@ class ProfileControllerTest : AbstractIntegrationTest() {
         uploadPhoto(user)
 
         val photoMeta = requireNotNull(
-            profilePhotoMetaRepository.findByProfileId(user.id),
+            profilePhotoMetaQueryRepository.findByProfileId(user.id),
         )
         clearInvocations(minioGateway)
 
@@ -500,9 +499,9 @@ class ProfileControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(profileRepository.findById(user.id)).isNull()
-        assertThat(profilePhotoMetaRepository.findByProfileId(user.id)).isNull()
-        assertThat(userRepository.findById(user.id)).isNotNull()
+        assertThat(profileQueryRepository.findById(user.id)).isNull()
+        assertThat(profilePhotoMetaQueryRepository.findByProfileId(user.id)).isNull()
+        assertThat(userQueryRepository.findById(user.id)).isNotNull()
 
         verify(minioGateway)
             .deletePhoto(photoMeta.objectName)

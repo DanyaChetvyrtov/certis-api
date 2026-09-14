@@ -5,10 +5,6 @@ on:
     branches:
       - dev
       - master
-  pull_request:
-    branches:
-      - dev
-      - master
   workflow_dispatch:
     inputs:
       deploy:
@@ -24,8 +20,25 @@ env:
   IMAGE_NAME: danilchet/certis-api
 
 jobs:
+  quality-gate:
+    name: CI quality gate
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      checks: write
+
   build-image:
     name: Build Docker image
+    needs: quality-gate
+    if: >-
+      ${{
+        always() &&
+        (
+          (github.event_name == 'workflow_dispatch' && !inputs.deploy) ||
+          needs.quality-gate.result == 'success'
+        )
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -57,8 +70,18 @@ jobs:
 
   deploy:
     name: Deploy API container
-    needs: build-image
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
+    needs:
+      - quality-gate
+      - build-image
+    if: >-
+      ${{
+        needs.quality-gate.result == 'success' &&
+        needs.build-image.result == 'success' &&
+        (
+          github.event_name == 'push' ||
+          (github.event_name == 'workflow_dispatch' && inputs.deploy)
+        )
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production

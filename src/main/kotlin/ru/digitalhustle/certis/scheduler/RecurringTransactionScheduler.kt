@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import ru.digitalhustle.certis.config.properties.RecurringTransactionProperties
-import ru.digitalhustle.certis.exception.custom.RecurringTransactionExecutionException
-import ru.digitalhustle.certis.service.domain.RecurringTransactionExecutionStateService
-import ru.digitalhustle.certis.service.transaction.RecurringTransactionExecutionService
-import ru.digitalhustle.certis.time.ApplicationClock
+import ru.digitalhustle.certis.features.transaction.command.service.RecurringTransactionExecutionService
+import ru.digitalhustle.certis.features.transaction.command.service.RecurringTransactionExecutionStateService
+import ru.digitalhustle.certis.features.transaction.exceptions.RecurringTransactionExecutionException
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.LocalDate
 import java.util.UUID
 

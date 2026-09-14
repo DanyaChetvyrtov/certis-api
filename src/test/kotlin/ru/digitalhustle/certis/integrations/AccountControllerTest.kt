@@ -13,22 +13,23 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import ru.digitalhustle.certis.api.constants.ApiErrorMessages
+import ru.digitalhustle.certis.api.constants.PathConstants
+import ru.digitalhustle.certis.api.dto.request.CreateAccountRq
+import ru.digitalhustle.certis.api.dto.request.UpdateAccountRq
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.dto.request.CreateAccountRq
-import ru.digitalhustle.certis.dto.request.UpdateAccountRq
-import ru.digitalhustle.certis.enums.AccountType
-import ru.digitalhustle.certis.enums.Currency
-import ru.digitalhustle.certis.enums.GoalContributionPlanType
-import ru.digitalhustle.certis.enums.GoalStatus
-import ru.digitalhustle.certis.enums.GoalTransactionType
-import ru.digitalhustle.certis.enums.TransactionType
-import ru.digitalhustle.certis.model.entity.Account
-import ru.digitalhustle.certis.model.entity.Goal
-import ru.digitalhustle.certis.model.entity.GoalTransaction
-import ru.digitalhustle.certis.model.entity.Transaction
-import ru.digitalhustle.certis.model.entity.User
+import ru.digitalhustle.certis.features.account.constants.AccountErrorMessages
+import ru.digitalhustle.certis.features.account.enums.AccountType
+import ru.digitalhustle.certis.features.account.model.Account
+import ru.digitalhustle.certis.features.goal.enums.GoalContributionPlanType
+import ru.digitalhustle.certis.features.goal.enums.GoalStatus
+import ru.digitalhustle.certis.features.goal.enums.GoalTransactionType
+import ru.digitalhustle.certis.features.goal.model.Goal
+import ru.digitalhustle.certis.features.goal.model.GoalTransaction
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.Transaction
+import ru.digitalhustle.certis.shared.enums.Currency
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -70,7 +71,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
         val accountId = UUID.fromString(
             objectMapper.readTree(result.response.contentAsByteArray)["id"].asText(),
         )
-        val account = accountRepository.findByIdAndUserId(accountId, user.id)
+        val account = accountQueryRepository.findByIdAndUserId(accountId, user.id)
 
         assertThat(account).isNotNull()
         assertThat(account?.userId).isEqualTo(user.id)
@@ -95,7 +96,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-            .andExpect(jsonPath("$.message").value(ErrorMessages.VALIDATION_FAILED))
+            .andExpect(jsonPath("$.message").value(ApiErrorMessages.VALIDATION_FAILED))
             .andExpect(jsonPath("$.errors.name").exists())
             .andExpect(jsonPath("$.errors.openingBalance").exists())
     }
@@ -160,9 +161,9 @@ class AccountControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.accounts.length()").value(2))
             .andExpect(
-                jsonPath("$[*].id").value(
+                jsonPath("$.accounts[*].id").value(
                     containsInAnyOrder(
                         firstAccount.id.toString(),
                         secondAccount.id.toString(),
@@ -197,7 +198,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.balance").value(UPDATED_OPENING_BALANCE.toDouble()))
             .andExpect(jsonPath("$.currency").value(Currency.EUR.name))
 
-        val updatedAccount = accountRepository.findByIdAndUserId(account.id, user.id)
+        val updatedAccount = accountQueryRepository.findByIdAndUserId(account.id, user.id)
 
         assertThat(updatedAccount?.createdAt).isEqualTo(account.createdAt)
         assertThat(updatedAccount?.closedAt).isNull()
@@ -219,7 +220,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
                 .cookie(accessTokenCookie(user)),
         ).andExpect(status().isNoContent)
 
-        val closedAt = accountRepository.findByIdAndUserId(account.id, user.id)?.closedAt
+        val closedAt = accountQueryRepository.findByIdAndUserId(account.id, user.id)?.closedAt
 
         // when
         mvc.perform(
@@ -230,9 +231,9 @@ class AccountControllerTest : AbstractIntegrationTest() {
         )
             // then
             .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.message").value(ErrorMessages.ACCOUNT_CLOSED))
+            .andExpect(jsonPath("$.message").value(AccountErrorMessages.ACCOUNT_CLOSED))
 
-        val unchangedAccount = accountRepository.findByIdAndUserId(account.id, user.id)
+        val unchangedAccount = accountQueryRepository.findByIdAndUserId(account.id, user.id)
 
         assertThat(unchangedAccount?.name).isEqualTo(account.name)
         assertThat(unchangedAccount?.type).isEqualTo(account.type)
@@ -254,7 +255,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        val closedAccount = accountRepository.findByIdAndUserId(account.id, user.id)
+        val closedAccount = accountQueryRepository.findByIdAndUserId(account.id, user.id)
 
         assertThat(closedAccount).isNotNull()
         assertThat(closedAccount?.closedAt).isNotNull()
@@ -271,7 +272,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
                 .cookie(accessTokenCookie(user)),
         ).andExpect(status().isNoContent)
 
-        val firstClosedAt = accountRepository.findByIdAndUserId(account.id, user.id)?.closedAt
+        val firstClosedAt = accountQueryRepository.findByIdAndUserId(account.id, user.id)?.closedAt
 
         // when
         mvc.perform(
@@ -281,7 +282,7 @@ class AccountControllerTest : AbstractIntegrationTest() {
             // then
             .andExpect(status().isNoContent)
 
-        assertThat(accountRepository.findByIdAndUserId(account.id, user.id)?.closedAt)
+        assertThat(accountQueryRepository.findByIdAndUserId(account.id, user.id)?.closedAt)
             .isEqualTo(firstClosedAt)
     }
 

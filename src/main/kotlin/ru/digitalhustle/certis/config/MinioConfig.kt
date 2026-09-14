@@ -9,8 +9,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import ru.digitalhustle.certis.config.properties.AppMinioProperties
-import ru.digitalhustle.certis.constants.ErrorMessages
 import ru.digitalhustle.certis.exception.custom.BucketCreationException
+import ru.digitalhustle.certis.features.profile.constants.ProfileErrorMessages as ErrorMessages
 
 @Configuration
 class MinioConfig(
