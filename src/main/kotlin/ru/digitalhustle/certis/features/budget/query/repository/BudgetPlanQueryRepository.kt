@@ -89,7 +89,7 @@ class BudgetPlanQueryRepository(
 
     private fun findLatestForecasts(planIds: Collection<UUID>): Map<UUID, BudgetPlanForecastSnapshot> {
         val forecast = Tables.BUDGET_FORECAST_REVISIONS
-        val newerForecast = Tables.BUDGET_FORECAST_REVISIONS.as("newer_forecast")
+        val newerForecast = Tables.BUDGET_FORECAST_REVISIONS.`as`("newer_forecast")
         val item = Tables.BUDGET_FORECAST_ITEMS
         val includedItemCount = DSL.count().filterWhere(item.INCLUDED.eq(true)).`as`("included_item_count")
         val excludedItemCount = DSL.count().filterWhere(item.INCLUDED.eq(false)).`as`("excluded_item_count")
@@ -132,7 +132,7 @@ class BudgetPlanQueryRepository(
 
     private fun findLatestConstraints(planIds: Collection<UUID>): Map<UUID, BudgetPlanConstraintSnapshot> {
         val constraints = Tables.BUDGET_CONSTRAINT_REVISIONS
-        val newerConstraints = Tables.BUDGET_CONSTRAINT_REVISIONS.as("newer_constraints")
+        val newerConstraints = Tables.BUDGET_CONSTRAINT_REVISIONS.`as`("newer_constraints")
 
         return dsl.selectFrom(constraints)
             .where(
@@ -170,7 +170,7 @@ class BudgetPlanQueryRepository(
 
     private fun findLatestOptimizations(planIds: Collection<UUID>): Map<UUID, BudgetPlanOptimizationSnapshot> {
         val optimization = Tables.BUDGET_OPTIMIZATION_RUNS
-        val newerOptimization = Tables.BUDGET_OPTIMIZATION_RUNS.as("newer_optimization")
+        val newerOptimization = Tables.BUDGET_OPTIMIZATION_RUNS.`as`("newer_optimization")
 
         return dsl.selectFrom(optimization)
             .where(
