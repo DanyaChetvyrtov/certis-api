@@ -3,9 +3,9 @@ package ru.digitalhustle.certis.integrations
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jooq.JSONB
-import org.jooq.exception.DataAccessException
 import org.jooq.generated.Tables
 import org.junit.jupiter.api.Test
+import org.springframework.dao.DataAccessException
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.shared.enums.Currency
 import java.math.BigDecimal
