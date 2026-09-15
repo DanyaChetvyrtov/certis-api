@@ -24,13 +24,27 @@ import kotlin.reflect.KClass
 class BudgetPlanningContractTest {
 
     @Test
+    fun `should use noun resources for planning state transitions`() {
+        assertThat(PathConstants.BUDGET_PLAN_CANCELLATION)
+            .isEqualTo("/{planId}/cancellation")
+        assertThat(PathConstants.BUDGET_PLAN_OPTIMIZATION_DISMISSAL)
+            .isEqualTo("/{planId}/optimizations/{optimizationId}/dismissal")
+        assertThat(PathConstants.BUDGET_PLAN_OPTIMIZATION_BUDGET_APPLICATION)
+            .isEqualTo("/{planId}/optimizations/{optimizationId}/budget-application")
+    }
+
+    @Test
     fun `should expose planning session endpoint contract`() {
         assertBasePath(BudgetPlanningController::class)
         assertGet(BudgetPlanningController::class, "getCurrentPlan", PathConstants.BUDGET_PLAN_CURRENT)
         assertGet(BudgetPlanningController::class, "getPlan", PathConstants.BUDGET_PLAN_ID)
         assertGet(BudgetPlanningController::class, "getPlanRevisions", null)
         assertPost(BudgetPlanningController::class, "createPlan", null)
-        assertPost(BudgetPlanningController::class, "cancelPlan", PathConstants.BUDGET_PLAN_CANCEL)
+        assertPut(
+            BudgetPlanningController::class,
+            "cancelPlan",
+            PathConstants.BUDGET_PLAN_CANCELLATION,
+        )
         assertCreated(BudgetPlanningController::class, "createPlan")
     }
 
@@ -68,15 +82,15 @@ class BudgetPlanningContractTest {
             "generateOptimization",
             PathConstants.BUDGET_PLAN_OPTIMIZATIONS,
         )
-        assertPost(
+        assertPut(
             BudgetPlanningOptimizationController::class,
             "dismissOptimization",
-            PathConstants.BUDGET_PLAN_OPTIMIZATION_DISMISS,
+            PathConstants.BUDGET_PLAN_OPTIMIZATION_DISMISSAL,
         )
-        assertPost(
+        assertPut(
             BudgetPlanningOptimizationController::class,
             "applyOptimization",
-            PathConstants.BUDGET_PLAN_OPTIMIZATION_APPLY,
+            PathConstants.BUDGET_PLAN_OPTIMIZATION_BUDGET_APPLICATION,
         )
         assertCreated(BudgetPlanningOptimizationController::class, "generateOptimization")
     }
