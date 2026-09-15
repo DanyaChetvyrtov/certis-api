@@ -2,7 +2,9 @@ package ru.digitalhustle.certis.integrations
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.jooq.JSONB
 import org.jooq.exception.DataAccessException
+import org.jooq.generated.Tables
 import org.junit.jupiter.api.Test
 import ru.digitalhustle.certis.config.AbstractIntegrationTest
 import ru.digitalhustle.certis.shared.enums.Currency
@@ -51,16 +53,12 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         insertBudget(user.id, Currency.USD, now)
 
         assertThat(
-            dsl.fetchOne(
-                """
-                SELECT count(*) AS count
-                FROM keeper.budgets
-                WHERE user_id = ? AND budget_month = ?
-                """.trimIndent(),
-                user.id,
-                BUDGET_MONTH,
-            )?.get("count", Long::class.java),
-        ).isEqualTo(2L)
+            dsl.fetchCount(
+                Tables.BUDGETS,
+                Tables.BUDGETS.USER_ID.eq(user.id)
+                    .and(Tables.BUDGETS.BUDGET_MONTH.eq(BUDGET_MONTH)),
+            ),
+        ).isEqualTo(2)
 
         val firstPlanId = UUID.randomUUID()
         insertDraftPlan(firstPlanId, user.id, Currency.RUB, 1, "create-plan-1", now)
@@ -69,20 +67,16 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
             insertDraftPlan(UUID.randomUUID(), user.id, Currency.RUB, 2, "create-plan-2", now)
         }.isInstanceOf(DataAccessException::class.java)
 
-        dsl.execute(
-            """
-            UPDATE keeper.budget_plans
-            SET status = 'CANCELLED',
-                cancelled_at = ?,
-                updated_at = ?,
-                version = version + 1
-            WHERE id = ? AND user_id = ?
-            """.trimIndent(),
-            now,
-            now,
-            firstPlanId,
-            user.id,
-        )
+        dsl.update(Tables.BUDGET_PLANS)
+            .set(Tables.BUDGET_PLANS.STATUS, "CANCELLED")
+            .set(Tables.BUDGET_PLANS.CANCELLED_AT, now)
+            .set(Tables.BUDGET_PLANS.UPDATED_AT, now)
+            .set(Tables.BUDGET_PLANS.VERSION, Tables.BUDGET_PLANS.VERSION.plus(1))
+            .where(
+                Tables.BUDGET_PLANS.ID.eq(firstPlanId)
+                    .and(Tables.BUDGET_PLANS.USER_ID.eq(user.id)),
+            )
+            .execute()
 
         insertDraftPlan(UUID.randomUUID(), user.id, Currency.RUB, 2, "create-plan-2", now)
         insertDraftPlan(UUID.randomUUID(), user.id, Currency.USD, 1, "create-plan-usd", now)
@@ -104,42 +98,8 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         insertConstraints(constraintRevisionId, forecastId, planId, user.id, now)
         insertCategoryConstraint(categoryConstraintId, constraintRevisionId, categoryId, user.id)
 
-        assertThatThrownBy {
-            insertFundingLevel(
-                UUID.randomUUID(),
-                categoryConstraintId,
-                user.id,
-                "MINIMUM",
-                "15000.00",
-                "0.700000",
-            )
-        }.isInstanceOf(DataAccessException::class.java)
-
-        insertFundingLevel(
-            UUID.randomUUID(),
-            categoryConstraintId,
-            user.id,
-            "MINIMUM",
-            "15000.00",
-            "0.600000",
-        )
-        val selectedFundingLevelId = UUID.randomUUID()
-        insertFundingLevel(
-            selectedFundingLevelId,
-            categoryConstraintId,
-            user.id,
-            "BALANCED",
-            "54700.00",
-            "0.850000",
-        )
-        insertFundingLevel(
-            UUID.randomUUID(),
-            categoryConstraintId,
-            user.id,
-            "COMFORTABLE",
-            "75000.00",
-            "1.000000",
-        )
+        assertNonCanonicalCoverageRejected(categoryConstraintId, user.id)
+        val selectedFundingLevelId = insertCanonicalFundingLevels(categoryConstraintId, user.id)
 
         val optimizationRunId = UUID.randomUUID()
         insertOptimizationRun(
@@ -159,13 +119,71 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
             user.id,
         )
 
+        assertSecondGeneratedRunRejected(planId, forecastId, constraintRevisionId, user.id, now)
+    }
+
+    private fun assertNonCanonicalCoverageRejected(
+        categoryConstraintId: UUID,
+        userId: UUID,
+    ) {
+        assertThatThrownBy {
+            insertFundingLevel(
+                UUID.randomUUID(),
+                categoryConstraintId,
+                userId,
+                "MINIMUM",
+                "15000.00",
+                "0.700000",
+            )
+        }.isInstanceOf(DataAccessException::class.java)
+    }
+
+    private fun insertCanonicalFundingLevels(
+        categoryConstraintId: UUID,
+        userId: UUID,
+    ): UUID {
+        insertFundingLevel(
+            UUID.randomUUID(),
+            categoryConstraintId,
+            userId,
+            "MINIMUM",
+            "15000.00",
+            "0.600000",
+        )
+        val selectedFundingLevelId = UUID.randomUUID()
+        insertFundingLevel(
+            selectedFundingLevelId,
+            categoryConstraintId,
+            userId,
+            "BALANCED",
+            "54700.00",
+            "0.850000",
+        )
+        insertFundingLevel(
+            UUID.randomUUID(),
+            categoryConstraintId,
+            userId,
+            "COMFORTABLE",
+            "75000.00",
+            "1.000000",
+        )
+        return selectedFundingLevelId
+    }
+
+    private fun assertSecondGeneratedRunRejected(
+        planId: UUID,
+        forecastId: UUID,
+        constraintRevisionId: UUID,
+        userId: UUID,
+        now: OffsetDateTime,
+    ) {
         assertThatThrownBy {
             insertOptimizationRun(
                 UUID.randomUUID(),
                 planId,
                 forecastId,
                 constraintRevisionId,
-                user.id,
+                userId,
                 now,
             )
         }.isInstanceOf(DataAccessException::class.java)
@@ -176,21 +194,16 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         currency: Currency,
         now: OffsetDateTime,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budgets (
-                id, user_id, budget_month, planned_income, savings_target,
-                currency, created_at, updated_at
-            )
-            VALUES (?, ?, ?, 185000.00, 30000.00, ?, ?, ?)
-            """.trimIndent(),
-            UUID.randomUUID(),
-            userId,
-            BUDGET_MONTH,
-            currency.name,
-            now,
-            now,
-        )
+        dsl.insertInto(Tables.BUDGETS)
+            .set(Tables.BUDGETS.ID, UUID.randomUUID())
+            .set(Tables.BUDGETS.USER_ID, userId)
+            .set(Tables.BUDGETS.BUDGET_MONTH, BUDGET_MONTH)
+            .set(Tables.BUDGETS.PLANNED_INCOME, BigDecimal("185000.00"))
+            .set(Tables.BUDGETS.SAVINGS_TARGET, BigDecimal("30000.00"))
+            .set(Tables.BUDGETS.CURRENCY, currency.name)
+            .set(Tables.BUDGETS.CREATED_AT, now)
+            .set(Tables.BUDGETS.UPDATED_AT, now)
+            .execute()
     }
 
     private fun insertDraftPlan(
@@ -201,37 +214,32 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         idempotencyKey: String,
         now: OffsetDateTime,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_plans (
-                id, user_id, budget_month, currency, revision, version,
-                status, idempotency_key, created_at, updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, 0, 'DRAFT', ?, ?, ?)
-            """.trimIndent(),
-            id,
-            userId,
-            BUDGET_MONTH,
-            currency.name,
-            revision,
-            idempotencyKey,
-            now,
-            now,
-        )
+        dsl.insertInto(Tables.BUDGET_PLANS)
+            .set(Tables.BUDGET_PLANS.ID, id)
+            .set(Tables.BUDGET_PLANS.USER_ID, userId)
+            .set(Tables.BUDGET_PLANS.BUDGET_MONTH, BUDGET_MONTH)
+            .set(Tables.BUDGET_PLANS.CURRENCY, currency.name)
+            .set(Tables.BUDGET_PLANS.REVISION, revision)
+            .set(Tables.BUDGET_PLANS.VERSION, 0L)
+            .set(Tables.BUDGET_PLANS.STATUS, "DRAFT")
+            .set(Tables.BUDGET_PLANS.IDEMPOTENCY_KEY, idempotencyKey)
+            .set(Tables.BUDGET_PLANS.CREATED_AT, now)
+            .set(Tables.BUDGET_PLANS.UPDATED_AT, now)
+            .execute()
     }
 
     private fun insertExpenseCategory(
         id: UUID,
         userId: UUID,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.categories (id, user_id, name, type, icon, color)
-            VALUES (?, ?, 'Groceries', 'EXPENSE', 'cart', '#10B981')
-            """.trimIndent(),
-            id,
-            userId,
-        )
+        dsl.insertInto(Tables.CATEGORIES)
+            .set(Tables.CATEGORIES.ID, id)
+            .set(Tables.CATEGORIES.USER_ID, userId)
+            .set(Tables.CATEGORIES.NAME, "Groceries")
+            .set(Tables.CATEGORIES.TYPE, "EXPENSE")
+            .set(Tables.CATEGORIES.ICON, "cart")
+            .set(Tables.CATEGORIES.COLOR, "#10B981")
+            .execute()
     }
 
     private fun insertForecast(
@@ -240,29 +248,24 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         userId: UUID,
         now: OffsetDateTime,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_forecast_revisions (
-                id, user_id, plan_id, revision, source_fingerprint,
-                forecast_fingerprint, history_months_used, history_method,
-                forecast_income, recurring_income, recurring_expenses,
-                flexible_estimate, forecast_expenses, forecast_savings,
-                source_snapshot, confirmed_at
-            )
-            VALUES (
-                ?, ?, ?, 1, ?, ?, 6, 'MEDIAN_6M',
-                185000.00, 185000.00, 82000.00,
-                56200.00, 138200.00, 46800.00,
-                '{}'::jsonb, ?
-            )
-            """.trimIndent(),
-            id,
-            userId,
-            planId,
-            SHA_256,
-            SHA_256,
-            now,
-        )
+        dsl.insertInto(Tables.BUDGET_FORECAST_REVISIONS)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.ID, id)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.USER_ID, userId)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.PLAN_ID, planId)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.REVISION, 1)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.SOURCE_FINGERPRINT, SHA_256)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.FORECAST_FINGERPRINT, SHA_256)
+            .set(Tables.BUDGET_FORECAST_REVISIONS.HISTORY_MONTHS_USED, 6.toShort())
+            .set(Tables.BUDGET_FORECAST_REVISIONS.HISTORY_METHOD, "MEDIAN_6M")
+            .set(Tables.BUDGET_FORECAST_REVISIONS.FORECAST_INCOME, BigDecimal("185000.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.RECURRING_INCOME, BigDecimal("185000.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.RECURRING_EXPENSES, BigDecimal("82000.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.FLEXIBLE_ESTIMATE, BigDecimal("56200.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.FORECAST_EXPENSES, BigDecimal("138200.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.FORECAST_SAVINGS, BigDecimal("46800.00"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.SOURCE_SNAPSHOT, JSONB.jsonb("{}"))
+            .set(Tables.BUDGET_FORECAST_REVISIONS.CONFIRMED_AT, now)
+            .execute()
     }
 
     private fun insertConstraints(
@@ -272,28 +275,22 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         userId: UUID,
         now: OffsetDateTime,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_constraint_revisions (
-                id, user_id, plan_id, forecast_revision_id, revision,
-                constraint_fingerprint, target_savings_amount,
-                fixed_required_amount, variable_minimum_amount,
-                maximum_savings_amount, feasibility_status,
-                shortfall_amount, violations, created_at
-            )
-            VALUES (
-                ?, ?, ?, ?, 1, ?, 30500.00,
-                82000.00, 15000.00, 88000.00,
-                'FEASIBLE', 0, '[]'::jsonb, ?
-            )
-            """.trimIndent(),
-            id,
-            userId,
-            planId,
-            forecastId,
-            SHA_256,
-            now,
-        )
+        dsl.insertInto(Tables.BUDGET_CONSTRAINT_REVISIONS)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.ID, id)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.USER_ID, userId)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.PLAN_ID, planId)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.FORECAST_REVISION_ID, forecastId)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.REVISION, 1)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.CONSTRAINT_FINGERPRINT, SHA_256)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.TARGET_SAVINGS_AMOUNT, BigDecimal("30500.00"))
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.FIXED_REQUIRED_AMOUNT, BigDecimal("82000.00"))
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.VARIABLE_MINIMUM_AMOUNT, BigDecimal("15000.00"))
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.MAXIMUM_SAVINGS_AMOUNT, BigDecimal("88000.00"))
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.FEASIBILITY_STATUS, "FEASIBLE")
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.SHORTFALL_AMOUNT, BigDecimal.ZERO)
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.VIOLATIONS, JSONB.jsonb("[]"))
+            .set(Tables.BUDGET_CONSTRAINT_REVISIONS.CREATED_AT, now)
+            .execute()
     }
 
     private fun insertCategoryConstraint(
@@ -302,23 +299,18 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         categoryId: UUID,
         userId: UUID,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_category_constraints (
-                id, user_id, constraint_revision_id, category_id,
-                allocation_type, constraint_role, priority,
-                current_limit_amount, minimum_amount, source_keys
-            )
-            VALUES (
-                ?, ?, ?, ?, 'VARIABLE', 'FLEXIBLE', 'HIGH',
-                56200.00, 15000.00, '[]'::jsonb
-            )
-            """.trimIndent(),
-            id,
-            userId,
-            constraintRevisionId,
-            categoryId,
-        )
+        dsl.insertInto(Tables.BUDGET_CATEGORY_CONSTRAINTS)
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.ID, id)
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.USER_ID, userId)
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.CONSTRAINT_REVISION_ID, constraintRevisionId)
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.CATEGORY_ID, categoryId)
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.ALLOCATION_TYPE, "VARIABLE")
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.CONSTRAINT_ROLE, "FLEXIBLE")
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.PRIORITY, "HIGH")
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.CURRENT_LIMIT_AMOUNT, BigDecimal("56200.00"))
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.MINIMUM_AMOUNT, BigDecimal("15000.00"))
+            .set(Tables.BUDGET_CATEGORY_CONSTRAINTS.SOURCE_KEYS, JSONB.jsonb("[]"))
+            .execute()
     }
 
     private fun insertFundingLevel(
@@ -329,20 +321,14 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         amount: String,
         coverage: String,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_constraint_funding_levels (
-                id, user_id, category_constraint_id, level, amount, coverage
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-            """.trimIndent(),
-            id,
-            userId,
-            categoryConstraintId,
-            level,
-            BigDecimal(amount),
-            BigDecimal(coverage),
-        )
+        dsl.insertInto(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS)
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.ID, id)
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.USER_ID, userId)
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.CATEGORY_CONSTRAINT_ID, categoryConstraintId)
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.LEVEL, level)
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.AMOUNT, BigDecimal(amount))
+            .set(Tables.BUDGET_CONSTRAINT_FUNDING_LEVELS.COVERAGE, BigDecimal(coverage))
+            .execute()
     }
 
     private fun insertOptimizationRun(
@@ -353,40 +339,36 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         userId: UUID,
         now: OffsetDateTime,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_optimization_runs (
-                id, user_id, plan_id, forecast_revision_id,
-                constraint_revision_id, algorithm_version, objective_code,
-                status, generation_idempotency_key, input_fingerprint,
-                forecast_income_amount, target_savings_amount,
-                fixed_required_amount, variable_minimum_amount,
-                variable_capacity_amount, maximum_savings_amount,
-                baseline_savings_amount, selected_variable_amount,
-                total_allocation_amount, actual_savings_amount,
-                additional_savings_amount, unused_capacity_amount,
-                weighted_coverage_score, objective_value,
-                input_snapshot, result_snapshot, violations, created_at
-            )
-            VALUES (
-                ?, ?, ?, ?, ?, 'mckp-v1', 'MAXIMIZE_WEIGHTED_COVERAGE',
-                'GENERATED', ?, ?,
-                185000.00, 30500.00, 82000.00, 15000.00,
-                72500.00, 88000.00, 43000.00, 54700.00,
-                136700.00, 48300.00, 5300.00, 17800.00,
-                0.85000000, 2.55000000,
-                '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, ?
-            )
-            """.trimIndent(),
-            id,
-            userId,
-            planId,
-            forecastId,
-            constraintRevisionId,
-            "generate-$id",
-            SHA_256,
-            now,
-        )
+        dsl.insertInto(Tables.BUDGET_OPTIMIZATION_RUNS)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.ID, id)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.USER_ID, userId)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.PLAN_ID, planId)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.FORECAST_REVISION_ID, forecastId)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.CONSTRAINT_REVISION_ID, constraintRevisionId)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.ALGORITHM_VERSION, "mckp-v1")
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.OBJECTIVE_CODE, "MAXIMIZE_WEIGHTED_COVERAGE")
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.STATUS, "GENERATED")
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.GENERATION_IDEMPOTENCY_KEY, "generate-$id")
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.INPUT_FINGERPRINT, SHA_256)
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.FORECAST_INCOME_AMOUNT, BigDecimal("185000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.TARGET_SAVINGS_AMOUNT, BigDecimal("30500.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.FIXED_REQUIRED_AMOUNT, BigDecimal("82000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.VARIABLE_MINIMUM_AMOUNT, BigDecimal("15000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.VARIABLE_CAPACITY_AMOUNT, BigDecimal("72500.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.MAXIMUM_SAVINGS_AMOUNT, BigDecimal("88000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.BASELINE_SAVINGS_AMOUNT, BigDecimal("43000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.SELECTED_VARIABLE_AMOUNT, BigDecimal("54700.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.TOTAL_ALLOCATION_AMOUNT, BigDecimal("136700.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.ACTUAL_SAVINGS_AMOUNT, BigDecimal("48300.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.ADDITIONAL_SAVINGS_AMOUNT, BigDecimal("5300.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.UNUSED_CAPACITY_AMOUNT, BigDecimal("17800.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.WEIGHTED_COVERAGE_SCORE, BigDecimal("0.85000000"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.OBJECTIVE_VALUE, BigDecimal("2.55000000"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.INPUT_SNAPSHOT, JSONB.jsonb("{}"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.RESULT_SNAPSHOT, JSONB.jsonb("{}"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.VIOLATIONS, JSONB.jsonb("[]"))
+            .set(Tables.BUDGET_OPTIMIZATION_RUNS.CREATED_AT, now)
+            .execute()
     }
 
     private fun insertOptimizationDecision(
@@ -397,30 +379,29 @@ class BudgetPlanningSchemaTest : AbstractIntegrationTest() {
         fundingLevelId: UUID,
         userId: UUID,
     ) {
-        dsl.execute(
-            """
-            INSERT INTO keeper.budget_optimization_decisions (
-                id, user_id, optimization_run_id, constraint_revision_id,
-                category_constraint_id, category_id, funding_level_id,
-                allocation_type, constraint_role, priority, selected_level,
-                current_limit_amount, minimum_amount, recommended_limit_amount,
-                change_amount, coverage, option_value, reason_code, reason_parameters
+        dsl.insertInto(Tables.BUDGET_OPTIMIZATION_DECISIONS)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.ID, UUID.randomUUID())
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.USER_ID, userId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.OPTIMIZATION_RUN_ID, runId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CONSTRAINT_REVISION_ID, constraintRevisionId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CATEGORY_CONSTRAINT_ID, categoryConstraintId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CATEGORY_ID, categoryId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.FUNDING_LEVEL_ID, fundingLevelId)
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.ALLOCATION_TYPE, "VARIABLE")
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CONSTRAINT_ROLE, "FLEXIBLE")
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.PRIORITY, "HIGH")
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.SELECTED_LEVEL, "BALANCED")
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CURRENT_LIMIT_AMOUNT, BigDecimal("56200.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.MINIMUM_AMOUNT, BigDecimal("15000.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.RECOMMENDED_LIMIT_AMOUNT, BigDecimal("54700.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.CHANGE_AMOUNT, BigDecimal("-1500.00"))
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.COVERAGE, BigDecimal("0.850000"))
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.OPTION_VALUE, BigDecimal("2.55000000"))
+            .set(
+                Tables.BUDGET_OPTIMIZATION_DECISIONS.REASON_CODE,
+                "SELECTED_HIGHEST_VALUE_WITHIN_CAPACITY",
             )
-            VALUES (
-                ?, ?, ?, ?, ?, ?, ?,
-                'VARIABLE', 'FLEXIBLE', 'HIGH', 'BALANCED',
-                56200.00, 15000.00, 54700.00,
-                -1500.00, 0.850000, 2.55000000,
-                'SELECTED_HIGHEST_VALUE_WITHIN_CAPACITY', '{}'::jsonb
-            )
-            """.trimIndent(),
-            UUID.randomUUID(),
-            userId,
-            runId,
-            constraintRevisionId,
-            categoryConstraintId,
-            categoryId,
-            fundingLevelId,
-        )
+            .set(Tables.BUDGET_OPTIMIZATION_DECISIONS.REASON_PARAMETERS, JSONB.jsonb("{}"))
+            .execute()
     }
 }
