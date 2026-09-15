@@ -16,6 +16,8 @@ import ru.digitalhustle.certis.exception.custom.NotFoundException
 import ru.digitalhustle.certis.features.account.exceptions.AccountClosedException
 import ru.digitalhustle.certis.features.account.exceptions.AccountInUseException
 import ru.digitalhustle.certis.features.budget.exceptions.BudgetOptimizationConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanNotFoundException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningConflictException
 import ru.digitalhustle.certis.features.budget.exceptions.InvalidBudgetException
 import ru.digitalhustle.certis.features.category.exceptions.CategoryArchivedException
 import ru.digitalhustle.certis.features.category.exceptions.CategoryInUseException
@@ -118,12 +120,36 @@ class DomainExceptionHandler(
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(BudgetPlanNotFoundException::class)
+    fun handleBudgetPlanNotFoundException(exception: BudgetPlanNotFoundException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createNotFound(
+            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
+            code = exception.code.name,
+            details = exception.details,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(NotFoundException::class)
     fun handleNotFoundException(exception: NotFoundException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createNotFound(
             message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(BudgetPlanningConflictException::class)
+    fun handleBudgetPlanningConflictException(exception: BudgetPlanningConflictException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createConflict(
+            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
+            code = exception.code.name,
+            details = exception.details,
         )
     }
 
