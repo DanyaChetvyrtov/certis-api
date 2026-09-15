@@ -19,7 +19,7 @@ CREATE TABLE keeper.budget_optimization_runs
 
     forecast_income_amount      NUMERIC(19, 4) NOT NULL,
     target_savings_amount       NUMERIC(19, 4) NOT NULL,
-    fixed_required_amount       NUMERIC(19, 4) NOT NULL,
+    required_amount             NUMERIC(19, 4) NOT NULL,
     variable_minimum_amount     NUMERIC(19, 4) NOT NULL,
     variable_capacity_amount    NUMERIC(19, 4) NOT NULL,
     maximum_savings_amount      NUMERIC(19, 4) NOT NULL,
@@ -78,15 +78,15 @@ CREATE TABLE keeper.budget_optimization_runs
         CHECK (
             forecast_income_amount >= 0
                 AND target_savings_amount >= 0
-                AND fixed_required_amount >= 0
+                AND required_amount >= 0
                 AND variable_minimum_amount >= 0
         ),
     CONSTRAINT chk_budget_optimization_runs_capacity
         CHECK (
             variable_capacity_amount =
-                forecast_income_amount - fixed_required_amount - target_savings_amount
+                forecast_income_amount - required_amount - target_savings_amount
                 AND maximum_savings_amount =
-                forecast_income_amount - fixed_required_amount - variable_minimum_amount
+                forecast_income_amount - required_amount - variable_minimum_amount
         ),
     CONSTRAINT chk_budget_optimization_runs_snapshots
         CHECK (
@@ -117,7 +117,7 @@ CREATE TABLE keeper.budget_optimization_runs
                 AND weighted_coverage_score IS NOT NULL
                 AND objective_value IS NOT NULL
                 AND selected_variable_amount >= variable_minimum_amount
-                AND total_allocation_amount = fixed_required_amount + selected_variable_amount
+                AND total_allocation_amount = required_amount + selected_variable_amount
                 AND actual_savings_amount = forecast_income_amount - total_allocation_amount
                 AND actual_savings_amount >= target_savings_amount
                 AND additional_savings_amount = actual_savings_amount - baseline_savings_amount
@@ -190,13 +190,13 @@ CREATE TABLE keeper.budget_optimization_decisions
     allocation_type             VARCHAR(20)    NOT NULL,
     constraint_role             VARCHAR(20)    NOT NULL,
     priority                    VARCHAR(20),
-    selected_level              VARCHAR(20)    NOT NULL,
+    selected_level              VARCHAR(20),
     current_limit_amount        NUMERIC(19, 4) NOT NULL,
-    minimum_amount              NUMERIC(19, 4) NOT NULL,
+    required_amount             NUMERIC(19, 4) NOT NULL,
     recommended_limit_amount    NUMERIC(19, 4) NOT NULL,
     change_amount               NUMERIC(19, 4) NOT NULL,
     coverage                    NUMERIC(7, 6)  NOT NULL,
-    option_value                NUMERIC(19, 8) NOT NULL,
+    option_value                NUMERIC(19, 8),
     reason_code                 VARCHAR(50)    NOT NULL,
     reason_parameters           JSONB          NOT NULL DEFAULT '{}'::jsonb,
 
@@ -234,27 +234,32 @@ CREATE TABLE keeper.budget_optimization_decisions
     CONSTRAINT chk_budget_optimization_decisions_amounts
         CHECK (
             current_limit_amount >= 0
-                AND minimum_amount >= 0
-                AND recommended_limit_amount >= minimum_amount
+                AND required_amount >= 0
+                AND recommended_limit_amount >= required_amount
                 AND change_amount = recommended_limit_amount - current_limit_amount
         ),
     CONSTRAINT chk_budget_optimization_decisions_score
-        CHECK (coverage >= 0 AND coverage <= 1 AND option_value >= 0),
+        CHECK (
+            coverage >= 0
+                AND coverage <= 1
+                AND (option_value IS NULL OR option_value >= 0)
+        ),
     CONSTRAINT chk_budget_optimization_decisions_mckp_shape
         CHECK (
             (allocation_type = 'FIXED'
                 AND constraint_role = 'REQUIRED'
                 AND priority IS NULL
-                AND selected_level = 'FIXED'
+                AND selected_level IS NULL
                 AND funding_level_id IS NULL
-                AND recommended_limit_amount = minimum_amount
+                AND recommended_limit_amount = required_amount
                 AND coverage = 1
-                AND option_value = 0)
+                AND option_value IS NULL)
                 OR
             (allocation_type = 'VARIABLE'
                 AND priority IS NOT NULL
                 AND selected_level IN ('MINIMUM', 'BALANCED', 'COMFORTABLE')
-                AND funding_level_id IS NOT NULL)
+                AND funding_level_id IS NOT NULL
+                AND option_value IS NOT NULL)
         ),
     CONSTRAINT chk_budget_optimization_decisions_reason
         CHECK (btrim(reason_code) <> ''),

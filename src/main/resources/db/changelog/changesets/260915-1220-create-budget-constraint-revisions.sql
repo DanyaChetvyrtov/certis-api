@@ -10,8 +10,8 @@ CREATE TABLE keeper.budget_constraint_revisions
     revision                 INTEGER        NOT NULL,
 
     constraint_fingerprint   VARCHAR(71)    NOT NULL,
-    target_savings_amount    NUMERIC(19, 4) NOT NULL,
-    fixed_required_amount    NUMERIC(19, 4) NOT NULL,
+    savings_floor_amount     NUMERIC(19, 4) NOT NULL,
+    required_amount          NUMERIC(19, 4) NOT NULL,
     variable_minimum_amount  NUMERIC(19, 4) NOT NULL,
     maximum_savings_amount   NUMERIC(19, 4) NOT NULL,
     feasibility_status       VARCHAR(20)    NOT NULL,
@@ -43,8 +43,8 @@ CREATE TABLE keeper.budget_constraint_revisions
         CHECK (constraint_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
     CONSTRAINT chk_budget_constraints_non_negative
         CHECK (
-            target_savings_amount >= 0
-                AND fixed_required_amount >= 0
+            savings_floor_amount >= 0
+                AND required_amount >= 0
                 AND variable_minimum_amount >= 0
                 AND shortfall_amount >= 0
         ),
@@ -55,13 +55,13 @@ CREATE TABLE keeper.budget_constraint_revisions
     CONSTRAINT chk_budget_constraints_feasibility_result
         CHECK (
             (feasibility_status = 'FEASIBLE'
-                AND maximum_savings_amount >= target_savings_amount
+                AND maximum_savings_amount >= savings_floor_amount
                 AND shortfall_amount = 0
                 AND jsonb_array_length(violations) = 0)
                 OR
             (feasibility_status = 'INFEASIBLE'
-                AND maximum_savings_amount < target_savings_amount
-                AND shortfall_amount = target_savings_amount - maximum_savings_amount
+                AND maximum_savings_amount < savings_floor_amount
+                AND shortfall_amount = savings_floor_amount - maximum_savings_amount
                 AND jsonb_array_length(violations) > 0)
         )
 );
@@ -70,7 +70,7 @@ CREATE INDEX ix_budget_constraints_plan_latest
     ON keeper.budget_constraint_revisions (plan_id, revision DESC);
 
 COMMENT ON TABLE keeper.budget_constraint_revisions IS
-    'Immutable savings target and category-constraint snapshots for one confirmed forecast revision.';
+    'Immutable savings floor and category-constraint snapshots for one confirmed forecast revision.';
 
 --rollback DROP TABLE keeper.budget_constraint_revisions;
 
@@ -87,7 +87,7 @@ CREATE TABLE keeper.budget_category_constraints
     constraint_role          VARCHAR(20)    NOT NULL,
     priority                 VARCHAR(20),
     current_limit_amount     NUMERIC(19, 4) NOT NULL,
-    minimum_amount           NUMERIC(19, 4) NOT NULL,
+    required_amount          NUMERIC(19, 4) NOT NULL,
     source_keys              JSONB          NOT NULL DEFAULT '[]'::jsonb,
 
     CONSTRAINT uq_budget_category_constraints_id_user
@@ -113,7 +113,7 @@ CREATE TABLE keeper.budget_category_constraints
     CONSTRAINT chk_budget_category_constraints_priority
         CHECK (priority IS NULL OR priority IN ('LOW', 'MEDIUM', 'HIGH')),
     CONSTRAINT chk_budget_category_constraints_amounts
-        CHECK (current_limit_amount >= 0 AND minimum_amount >= 0),
+        CHECK (current_limit_amount >= 0 AND required_amount >= 0),
     CONSTRAINT chk_budget_category_constraints_mckp_shape
         CHECK (
             (allocation_type = 'FIXED'
