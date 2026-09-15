@@ -10,6 +10,7 @@ import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.features.budget.command.model.CreateBudgetPlanData
 import ru.digitalhustle.certis.features.budget.command.repository.BudgetPlanRepository
+import ru.digitalhustle.certis.features.budget.command.repository.BudgetRepository
 import ru.digitalhustle.certis.features.budget.command.service.impl.BudgetPlanCommandServiceImpl
 import ru.digitalhustle.certis.features.budget.enums.BudgetPlanStatus
 import ru.digitalhustle.certis.features.budget.enums.BudgetPlanningErrorCode
@@ -27,8 +28,9 @@ import java.util.UUID
 class BudgetPlanCommandServiceImplTest {
 
     private val repository = mock(BudgetPlanRepository::class.java)
+    private val budgetRepository = mock(BudgetRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-09-15T12:00:00Z"), ZoneOffset.UTC)
-    private val service = BudgetPlanCommandServiceImpl(repository, ApplicationClock(clock))
+    private val service = BudgetPlanCommandServiceImpl(repository, budgetRepository, ApplicationClock(clock))
 
     @Test
     fun `should create next plan revision with normalized idempotency key and baseline`() {
@@ -42,8 +44,9 @@ class BudgetPlanCommandServiceImplTest {
         `when`(repository.findActiveDraft(data.userId, data.budgetMonth, data.currency)).thenReturn(null)
         `when`(repository.findLatestByScopeForUpdate(data.userId, data.budgetMonth, data.currency))
             .thenReturn(previousPlan)
-        `when`(repository.findBaselineBudgetId(data.userId, data.budgetMonth, data.currency))
-            .thenReturn(baselineBudgetId)
+        `when`(
+            budgetRepository.findIdByUserIdAndMonthAndCurrency(data.userId, data.budgetMonth, data.currency),
+        ).thenReturn(baselineBudgetId)
         `when`(repository.insertOrFindByIdempotencyKey(capturePlan(captor)))
             .thenAnswer { captor.value }
 

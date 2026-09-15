@@ -178,6 +178,7 @@ class FeatureArchitectureTest {
             "AccountRepository" to "ACCOUNTS",
             "CategoryRepository" to "CATEGORIES",
             "BudgetRepository" to "BUDGETS",
+            "BudgetPlanRepository" to "BUDGET_PLANS",
             "BudgetAllocationRepository" to "BUDGET_CATEGORIES",
             "BudgetOptimizationRepository" to "BUDGET_OPTIMIZATIONS",
             "GoalRepository" to "GOALS",

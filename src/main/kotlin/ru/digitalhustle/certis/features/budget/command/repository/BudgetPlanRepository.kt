@@ -47,20 +47,6 @@ class BudgetPlanRepository(
             .forUpdate()
             .fetchOne(::toEntity)
 
-    fun findBaselineBudgetId(
-        userId: UUID,
-        budgetMonth: LocalDate,
-        currency: Currency,
-    ): UUID? =
-        dsl.select(Tables.BUDGETS.ID)
-            .from(Tables.BUDGETS)
-            .where(
-                Tables.BUDGETS.USER_ID.eq(userId)
-                    .and(Tables.BUDGETS.BUDGET_MONTH.eq(budgetMonth))
-                    .and(Tables.BUDGETS.CURRENCY.eq(currency.name)),
-            )
-            .fetchOne(Tables.BUDGETS.ID)
-
     fun insertOrFindByIdempotencyKey(plan: BudgetPlan): BudgetPlan =
         dsl.insertInto(Tables.BUDGET_PLANS)
             .set(Tables.BUDGET_PLANS.ID, plan.id)

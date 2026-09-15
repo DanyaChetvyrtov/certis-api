@@ -4,6 +4,7 @@ import org.springframework.dao.DuplicateKeyException
 import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.features.budget.command.model.CreateBudgetPlanData
 import ru.digitalhustle.certis.features.budget.command.repository.BudgetPlanRepository
+import ru.digitalhustle.certis.features.budget.command.repository.BudgetRepository
 import ru.digitalhustle.certis.features.budget.command.service.BudgetPlanCommandService
 import ru.digitalhustle.certis.features.budget.enums.BudgetPlanStatus
 import ru.digitalhustle.certis.features.budget.enums.BudgetPlanningErrorCode
@@ -16,6 +17,7 @@ import java.util.UUID
 @Service
 class BudgetPlanCommandServiceImpl(
     private val repository: BudgetPlanRepository,
+    private val budgetRepository: BudgetRepository,
     private val applicationClock: ApplicationClock,
 ) : BudgetPlanCommandService {
 
@@ -37,7 +39,7 @@ class BudgetPlanCommandServiceImpl(
             id = UUID.randomUUID(),
             userId = normalizedData.userId,
             previousPlanId = previousPlan?.id,
-            baselineBudgetId = repository.findBaselineBudgetId(
+            baselineBudgetId = budgetRepository.findIdByUserIdAndMonthAndCurrency(
                 normalizedData.userId,
                 normalizedData.budgetMonth,
                 normalizedData.currency,

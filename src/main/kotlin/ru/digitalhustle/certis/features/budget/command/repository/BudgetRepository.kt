@@ -4,6 +4,7 @@ import org.jooq.DSLContext
 import org.jooq.generated.Tables
 import org.springframework.stereotype.Repository
 import ru.digitalhustle.certis.features.budget.model.Budget
+import ru.digitalhustle.certis.shared.enums.Currency
 import java.time.LocalDate
 import java.util.UUID
 
@@ -23,6 +24,20 @@ class BudgetRepository(
             )
             .forUpdate()
             .fetchOneInto(Budget::class.java)
+
+    fun findIdByUserIdAndMonthAndCurrency(
+        userId: UUID,
+        budgetMonth: LocalDate,
+        currency: Currency,
+    ): UUID? =
+        dsl.select(Tables.BUDGETS.ID)
+            .from(Tables.BUDGETS)
+            .where(
+                Tables.BUDGETS.USER_ID.eq(userId)
+                    .and(Tables.BUDGETS.BUDGET_MONTH.eq(budgetMonth))
+                    .and(Tables.BUDGETS.CURRENCY.eq(currency.name)),
+            )
+            .fetchOne(Tables.BUDGETS.ID)
 
     fun insert(budget: Budget): Budget =
         dsl.insertInto(Tables.BUDGETS)
