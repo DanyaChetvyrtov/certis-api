@@ -37,6 +37,9 @@ class CategoryApiImpl(
         CategorySnapshot(
             id = id,
             type = type,
+            name = name,
+            icon = icon,
+            color = color,
             archivedAt = archivedAt,
         )
 }

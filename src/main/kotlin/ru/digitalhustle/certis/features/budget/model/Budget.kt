@@ -23,4 +23,6 @@ data class Budget(
     val createdAt: OffsetDateTime,
 
     val updatedAt: OffsetDateTime,
+
+    val sourceOptimizationId: UUID? = null,
 )

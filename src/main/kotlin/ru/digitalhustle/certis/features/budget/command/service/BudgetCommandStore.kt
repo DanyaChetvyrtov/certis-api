@@ -1,12 +1,19 @@
 package ru.digitalhustle.certis.features.budget.command.service
 
 import ru.digitalhustle.certis.features.budget.model.Budget
+import ru.digitalhustle.certis.shared.enums.Currency
 import java.time.LocalDate
 import java.util.UUID
 
 interface BudgetCommandStore {
 
     fun findByUserIdAndMonthForUpdate(userId: UUID, budgetMonth: LocalDate): Budget?
+
+    fun findByUserIdAndMonthAndCurrencyForUpdate(
+        userId: UUID,
+        budgetMonth: LocalDate,
+        currency: Currency,
+    ): Budget?
 
     fun insert(budget: Budget): Budget
 

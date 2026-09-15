@@ -10,4 +10,6 @@ data class ExceptionRs(
     val message: String,
     val timestamp: OffsetDateTime,
     val errors: Map<String, String>?,
+    val code: String? = null,
+    val details: Map<String, Any?>? = null,
 )
