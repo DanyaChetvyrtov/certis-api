@@ -1,8 +1,8 @@
 package ru.digitalhustle.certis.units.service
 
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
@@ -90,13 +90,11 @@ class BudgetPlanCommandServiceImplTest {
         `when`(repository.findByUserIdAndIdempotencyKey(data.userId, data.idempotencyKey))
             .thenReturn(existing)
 
-        // when, then
-        assertThatThrownBy { service.create(data) }
-            .isInstanceOf(BudgetPlanningConflictException::class.java)
-            .satisfies { exception ->
-                assertThat((exception as BudgetPlanningConflictException).code)
-                    .isEqualTo(BudgetPlanningErrorCode.IDEMPOTENCY_KEY_REUSED)
-            }
+        // when
+        val exception = assertThrows<BudgetPlanningConflictException> { service.create(data) }
+
+        // then
+        assertThat(exception.code).isEqualTo(BudgetPlanningErrorCode.IDEMPOTENCY_KEY_REUSED)
     }
 
     @Test
@@ -107,13 +105,11 @@ class BudgetPlanCommandServiceImplTest {
         `when`(repository.findByUserIdAndIdempotencyKey(data.userId, data.idempotencyKey)).thenReturn(null)
         `when`(repository.findActiveDraft(data.userId, data.budgetMonth, data.currency)).thenReturn(activePlan)
 
-        // when, then
-        assertThatThrownBy { service.create(data) }
-            .isInstanceOf(BudgetPlanningConflictException::class.java)
-            .satisfies { exception ->
-                assertThat((exception as BudgetPlanningConflictException).code)
-                    .isEqualTo(BudgetPlanningErrorCode.ACTIVE_BUDGET_PLAN_EXISTS)
-            }
+        // when
+        val exception = assertThrows<BudgetPlanningConflictException> { service.create(data) }
+
+        // then
+        assertThat(exception.code).isEqualTo(BudgetPlanningErrorCode.ACTIVE_BUDGET_PLAN_EXISTS)
     }
 
     private fun createData(idempotencyKey: String = "plan-key"): CreateBudgetPlanData =
