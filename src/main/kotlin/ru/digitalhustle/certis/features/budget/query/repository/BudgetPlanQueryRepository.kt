@@ -91,8 +91,8 @@ class BudgetPlanQueryRepository(
         val forecast = Tables.BUDGET_FORECAST_REVISIONS
         val newerForecast = Tables.BUDGET_FORECAST_REVISIONS.as("newer_forecast")
         val item = Tables.BUDGET_FORECAST_ITEMS
-        val includedItemCount = DSL.count().filterWhere(item.INCLUDED.isTrue).`as`("included_item_count")
-        val excludedItemCount = DSL.count().filterWhere(item.INCLUDED.isFalse).`as`("excluded_item_count")
+        val includedItemCount = DSL.count().filterWhere(item.INCLUDED.eq(true)).`as`("included_item_count")
+        val excludedItemCount = DSL.count().filterWhere(item.INCLUDED.eq(false)).`as`("excluded_item_count")
 
         return dsl.select(*forecast.fields(), includedItemCount, excludedItemCount)
             .from(forecast)

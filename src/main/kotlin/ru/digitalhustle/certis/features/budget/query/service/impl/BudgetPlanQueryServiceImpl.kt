@@ -11,6 +11,7 @@ import ru.digitalhustle.certis.features.budget.query.service.BudgetPlanQueryServ
 import ru.digitalhustle.certis.features.budget.util.BudgetPlanViewFactory
 import ru.digitalhustle.certis.shared.enums.Currency
 import java.time.LocalDate
+import java.time.YearMonth
 import java.util.UUID
 
 @Service
@@ -29,7 +30,7 @@ class BudgetPlanQueryServiceImpl(
             ?.let(::toView)
             ?: throw BudgetPlanNotFoundException(
                 details = mapOf(
-                    "month" to budgetMonth.toString().substring(0, 7),
+                    "month" to YearMonth.from(budgetMonth).toString(),
                     "currency" to currency.name,
                 ),
             )

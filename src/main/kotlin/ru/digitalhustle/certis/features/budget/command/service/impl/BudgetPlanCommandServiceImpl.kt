@@ -10,6 +10,7 @@ import ru.digitalhustle.certis.features.budget.enums.BudgetPlanningErrorCode
 import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningConflictException
 import ru.digitalhustle.certis.features.budget.model.BudgetPlan
 import ru.digitalhustle.certis.util.time.ApplicationClock
+import java.time.YearMonth
 import java.util.UUID
 
 @Service
@@ -91,7 +92,7 @@ class BudgetPlanCommandServiceImpl(
 
     private fun scopeDetails(data: CreateBudgetPlanData): Map<String, Any> =
         mapOf(
-            "month" to data.budgetMonth.toString().substring(0, 7),
+            "month" to YearMonth.from(data.budgetMonth).toString(),
             "currency" to data.currency.name,
         )
 }

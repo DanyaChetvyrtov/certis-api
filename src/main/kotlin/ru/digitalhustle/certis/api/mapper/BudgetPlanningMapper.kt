@@ -44,7 +44,8 @@ interface BudgetPlanningMapper {
     @Mapping(target = "month", expression = "java(YearMonth.from(source.getBudgetMonth()).toString())")
     fun convert(source: BudgetPlanView): BudgetPlanRs
 
-    fun convert(source: BudgetPlanRevisions): BudgetPlanRevisionsRs
+    fun convert(source: BudgetPlanRevisions): BudgetPlanRevisionsRs =
+        BudgetPlanRevisionsRs(source.items.map { convert(it) })
 
     fun convert(source: BudgetPlanRevision): BudgetPlanRevisionDto
 

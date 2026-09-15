@@ -79,12 +79,7 @@ class BudgetPlanningControllerTest : AbstractIntegrationTest() {
         )
         assertThat(replayed.id).isEqualTo(plan.id)
         assertThat(dsl.fetchCount(Tables.BUDGET_PLANS, Tables.BUDGET_PLANS.USER_ID.eq(user.id))).isEqualTo(1)
-        assertThat(
-            dsl.select(Tables.BUDGET_PLANS.BASELINE_BUDGET_ID)
-                .from(Tables.BUDGET_PLANS)
-                .where(Tables.BUDGET_PLANS.ID.eq(plan.id))
-                .fetchSingle(Tables.BUDGET_PLANS.BASELINE_BUDGET_ID),
-        ).isEqualTo(baselineBudget.id)
+        assertBaselineBudget(plan.id, baselineBudget.id)
 
         mvc.perform(
             get("${PathConstants.BUDGET_PLANS}${PathConstants.BUDGET_PLAN_CURRENT}")
@@ -133,8 +128,8 @@ class BudgetPlanningControllerTest : AbstractIntegrationTest() {
         )
         dsl.update(Tables.BUDGET_PLANS)
             .set(Tables.BUDGET_PLANS.STATUS, "CANCELLED")
-            .set(Tables.BUDGET_PLANS.CANCELLED_AT, NOW)
-            .set(Tables.BUDGET_PLANS.UPDATED_AT, NOW)
+            .set(Tables.BUDGET_PLANS.CANCELLED_AT, firstPlan.createdAt.plusSeconds(1))
+            .set(Tables.BUDGET_PLANS.UPDATED_AT, firstPlan.createdAt.plusSeconds(1))
             .where(Tables.BUDGET_PLANS.ID.eq(firstPlan.id))
             .execute()
         val secondPlan = getBody(
@@ -241,4 +236,16 @@ class BudgetPlanningControllerTest : AbstractIntegrationTest() {
             ACCESS_TOKEN_COOKIE,
             jwtTokenProvider.createAccessToken(user.id, user.email),
         )
+
+    private fun assertBaselineBudget(
+        planId: UUID,
+        baselineBudgetId: UUID,
+    ) {
+        val actualBaselineBudgetId = dsl.select(Tables.BUDGET_PLANS.BASELINE_BUDGET_ID)
+            .from(Tables.BUDGET_PLANS)
+            .where(Tables.BUDGET_PLANS.ID.eq(planId))
+            .fetchSingle(Tables.BUDGET_PLANS.BASELINE_BUDGET_ID)
+
+        assertThat(actualBaselineBudgetId).isEqualTo(baselineBudgetId)
+    }
 }
