@@ -21,6 +21,30 @@ enum class BudgetForecastStatus {
     STALE,
 }
 
+enum class BudgetForecastSourceType {
+    RECURRING,
+    HISTORICAL_CATEGORY,
+    CURRENT_LIMIT,
+    MANUAL,
+    ACTUAL,
+}
+
+enum class BudgetForecastOperationType {
+    INCOME,
+    EXPENSE,
+}
+
+enum class BudgetForecastConfidence {
+    HIGH,
+    MEDIUM,
+    LOW,
+}
+
+enum class BudgetConstraintRole {
+    REQUIRED,
+    FLEXIBLE,
+}
+
 enum class BudgetConstraintStatus {
     MISSING,
     SUGGESTED,
@@ -43,5 +67,9 @@ enum class BudgetOptimizationRunStatus {
 enum class BudgetPlanningErrorCode {
     BUDGET_PLAN_NOT_FOUND,
     ACTIVE_BUDGET_PLAN_EXISTS,
+    PLANNING_VERSION_CONFLICT,
+    INVALID_BUDGET_PLAN_STATE,
+    FORECAST_SOURCE_CHANGED,
+    FORECAST_REQUIRED,
     IDEMPOTENCY_KEY_REUSED,
 }

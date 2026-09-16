@@ -21,6 +21,10 @@ class BudgetPlanQueryServiceImpl(
     private val viewFactory: BudgetPlanViewFactory,
 ) : BudgetPlanQueryService {
 
+    override fun getEntityById(id: UUID, userId: UUID): BudgetPlan =
+        repository.findByIdAndUserId(id, userId)
+            ?: throw BudgetPlanNotFoundException(details = mapOf("planId" to id))
+
     override fun getCurrent(
         userId: UUID,
         budgetMonth: LocalDate,
@@ -39,9 +43,7 @@ class BudgetPlanQueryServiceImpl(
         id: UUID,
         userId: UUID,
     ): BudgetPlanView =
-        repository.findByIdAndUserId(id, userId)
-            ?.let(::toView)
-            ?: throw BudgetPlanNotFoundException(details = mapOf("planId" to id))
+        toView(getEntityById(id, userId))
 
     override fun getRevisions(
         userId: UUID,

@@ -15,6 +15,15 @@ class BudgetPlanRepository(
     private val dsl: DSLContext,
 ) {
 
+    fun findByIdAndUserIdForUpdate(id: UUID, userId: UUID): BudgetPlan? =
+        dsl.selectFrom(Tables.BUDGET_PLANS)
+            .where(
+                Tables.BUDGET_PLANS.ID.eq(id)
+                    .and(Tables.BUDGET_PLANS.USER_ID.eq(userId)),
+            )
+            .forUpdate()
+            .fetchOne(::toEntity)
+
     fun findByUserIdAndIdempotencyKey(
         userId: UUID,
         idempotencyKey: String,
@@ -70,6 +79,18 @@ class BudgetPlanRepository(
             .returning()
             .fetchOne(::toEntity)
             ?: requireNotNull(findByUserIdAndIdempotencyKey(plan.userId, plan.idempotencyKey))
+
+    fun updateVersion(plan: BudgetPlan): BudgetPlan? =
+        dsl.update(Tables.BUDGET_PLANS)
+            .set(Tables.BUDGET_PLANS.VERSION, plan.version + 1)
+            .set(Tables.BUDGET_PLANS.UPDATED_AT, plan.updatedAt)
+            .where(
+                Tables.BUDGET_PLANS.ID.eq(plan.id)
+                    .and(Tables.BUDGET_PLANS.USER_ID.eq(plan.userId))
+                    .and(Tables.BUDGET_PLANS.VERSION.eq(plan.version)),
+            )
+            .returning()
+            .fetchOne(::toEntity)
 
     private fun selectByScope(
         userId: UUID,

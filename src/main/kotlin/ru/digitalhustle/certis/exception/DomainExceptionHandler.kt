@@ -18,6 +18,7 @@ import ru.digitalhustle.certis.features.account.exceptions.AccountInUseException
 import ru.digitalhustle.certis.features.budget.exceptions.BudgetOptimizationConflictException
 import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanNotFoundException
 import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningValidationException
 import ru.digitalhustle.certis.features.budget.exceptions.InvalidBudgetException
 import ru.digitalhustle.certis.features.category.exceptions.CategoryArchivedException
 import ru.digitalhustle.certis.features.category.exceptions.CategoryInUseException
@@ -85,6 +86,19 @@ class DomainExceptionHandler(
         return exceptionResponseProvider.createResponse(
             status = HttpStatus.UNPROCESSABLE_ENTITY,
             message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ExceptionHandler(BudgetPlanningValidationException::class)
+    fun handleBudgetPlanningValidationException(exception: BudgetPlanningValidationException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createResponse(
+            status = HttpStatus.UNPROCESSABLE_ENTITY,
+            message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
+            code = exception.code.name,
+            details = exception.details,
         )
     }
 

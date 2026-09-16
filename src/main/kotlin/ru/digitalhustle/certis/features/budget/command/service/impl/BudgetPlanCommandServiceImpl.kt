@@ -21,6 +21,12 @@ class BudgetPlanCommandServiceImpl(
     private val applicationClock: ApplicationClock,
 ) : BudgetPlanCommandService {
 
+    override fun getByIdForUpdate(id: UUID, userId: UUID): BudgetPlan =
+        repository.findByIdAndUserIdForUpdate(id, userId)
+            ?: throw ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanNotFoundException(
+                details = mapOf("planId" to id),
+            )
+
     override fun create(data: CreateBudgetPlanData): BudgetPlan {
         val normalizedData = data.copy(idempotencyKey = data.idempotencyKey.trim())
         repository.findByUserIdAndIdempotencyKey(normalizedData.userId, normalizedData.idempotencyKey)
@@ -69,6 +75,14 @@ class BudgetPlanCommandServiceImpl(
             )
         }
     }
+
+    override fun incrementVersion(plan: BudgetPlan): BudgetPlan =
+        repository.updateVersion(plan.copy(updatedAt = applicationClock.now()))
+            ?: throw BudgetPlanningConflictException(
+                message = "Budget plan was changed by another request",
+                code = BudgetPlanningErrorCode.PLANNING_VERSION_CONFLICT,
+                details = mapOf("planId" to plan.id, "expectedVersion" to plan.version),
+            )
 
     private fun validateIdempotentReplay(
         existing: BudgetPlan,
