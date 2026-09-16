@@ -14,6 +14,8 @@ class ExceptionResponseProvider(
         status: HttpStatus,
         message: String,
         errors: Map<String, String>? = null,
+        code: String? = null,
+        details: Map<String, Any?>? = null,
     ): ExceptionRs =
         ExceptionRs(
             status = status.value(),
@@ -21,6 +23,8 @@ class ExceptionResponseProvider(
             message = message,
             timestamp = applicationClock.now(),
             errors = errors,
+            code = code,
+            details = details,
         )
 
     fun createBadRequest(message: String, errors: Map<String, String>? = null): ExceptionRs =
@@ -36,16 +40,28 @@ class ExceptionResponseProvider(
             message = message,
         )
 
-    fun createNotFound(message: String): ExceptionRs =
+    fun createNotFound(
+        message: String,
+        code: String? = null,
+        details: Map<String, Any?>? = null,
+    ): ExceptionRs =
         createResponse(
             status = HttpStatus.NOT_FOUND,
             message = message,
+            code = code,
+            details = details,
         )
 
-    fun createConflict(message: String): ExceptionRs =
+    fun createConflict(
+        message: String,
+        code: String? = null,
+        details: Map<String, Any?>? = null,
+    ): ExceptionRs =
         createResponse(
             status = HttpStatus.CONFLICT,
             message = message,
+            code = code,
+            details = details,
         )
 
     fun createInternalServerError(): ExceptionRs =
