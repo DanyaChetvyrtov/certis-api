@@ -10,5 +10,11 @@ data class CategorySnapshot(
 
     val type: CategoryType,
 
+    val name: String = "",
+
+    val icon: String = "",
+
+    val color: String = "",
+
     val archivedAt: OffsetDateTime?,
 )

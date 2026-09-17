@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service
 import ru.digitalhustle.certis.features.budget.command.repository.BudgetRepository
 import ru.digitalhustle.certis.features.budget.command.service.BudgetCommandStore
 import ru.digitalhustle.certis.features.budget.model.Budget
+import ru.digitalhustle.certis.shared.enums.Currency
 import java.time.LocalDate
 import java.util.UUID
 
@@ -14,6 +15,12 @@ class BudgetCommandStoreImpl(
 
     override fun findByUserIdAndMonthForUpdate(userId: UUID, budgetMonth: LocalDate): Budget? =
         repository.findByUserIdAndMonthForUpdate(userId, budgetMonth)
+
+    override fun findByUserIdAndMonthAndCurrencyForUpdate(
+        userId: UUID,
+        budgetMonth: LocalDate,
+        currency: Currency,
+    ): Budget? = repository.findByUserIdAndMonthAndCurrencyForUpdate(userId, budgetMonth, currency)
 
     override fun insert(budget: Budget): Budget = repository.insert(budget)
 
