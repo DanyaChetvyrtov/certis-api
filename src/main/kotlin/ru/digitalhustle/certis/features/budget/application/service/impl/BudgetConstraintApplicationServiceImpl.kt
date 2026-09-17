@@ -36,7 +36,6 @@ class BudgetConstraintApplicationServiceImpl(
         val forecast = forecastQueryService.getCurrent(plan.id, plan.userId)
         constraintValidator.validateCurrentForecast(forecast, data.forecastRevision)
         val suggestion = constraintQueryService.getSuggestion(plan, forecast)
-        constraintValidator.validateCategorySet(data, suggestion)
         val categories = categoryCommandAccess.getAllByIdsForShare(
             data.categories.map { category -> category.categoryId }.toSet(),
             data.userId,
@@ -49,6 +48,7 @@ class BudgetConstraintApplicationServiceImpl(
             suggestion = suggestion,
             forecast = forecast,
             data = data,
+            categorySnapshots = categories,
             revision = constraintCommandService.nextRevision(plan.id),
             planVersion = nextPlan.version,
             createdAt = now,

@@ -12,6 +12,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import ru.digitalhustle.certis.api.constants.PathConstants
 import ru.digitalhustle.certis.api.dto.BudgetAllocationType
+import ru.digitalhustle.certis.api.dto.BudgetConstraintRole
+import ru.digitalhustle.certis.api.dto.BudgetFundingLevel
 import ru.digitalhustle.certis.api.dto.BudgetPriority
 import ru.digitalhustle.certis.api.dto.request.ApplyBudgetOptimizationRq
 import ru.digitalhustle.certis.api.dto.request.BudgetCategoryConstraintRq
@@ -310,6 +312,58 @@ class BudgetConstraintControllerTest : AbstractIntegrationTest() {
             .andExpect(jsonPath("$.status").value("CONFIRMED"))
             .andExpect(jsonPath("$.revision").value(1))
             .andExpect(jsonPath("$.planVersion").value(2))
+    }
+
+    @Test
+    fun `should confirm an additional active expense category outside the forecast`() {
+        val user = userFixture.createInDb { copy(preferredCurrency = Currency.RUB) }
+        val account = createAccount(user)
+        val salaryCategory = createCategory(user, "Salary", CategoryType.INCOME)
+        val rentCategory = createCategory(user, "Rent", CategoryType.EXPENSE)
+        val groceriesCategory = createCategory(user, "Groceries", CategoryType.EXPENSE)
+        val travelCategory = createCategory(user, "Travel", CategoryType.EXPENSE)
+        createBaselineBudget(user, rentCategory, groceriesCategory)
+        createRecurring(user, account, salaryCategory, "Salary", "185000.00", 5)
+        createRecurring(user, account, rentCategory, "Rent", "55000.00", 1)
+        val plan = createPlan(user)
+        confirmForecast(user, plan)
+        val suggestedResult = mvc.perform(
+            get(constraintsPath(plan.id)).cookie(accessTokenCookie(user)),
+        ).andExpect(status().isOk)
+        val suggested = getBody(suggestedResult, BudgetConstraintSetRs::class.java)
+        val manualConstraint = BudgetCategoryConstraintRq(
+            categoryId = travelCategory.id,
+            allocationType = BudgetAllocationType.VARIABLE,
+            constraintRole = BudgetConstraintRole.FLEXIBLE,
+            requiredAmount = BigDecimal.ZERO,
+            priority = BudgetPriority.HIGH,
+            fundingLevels = listOf(
+                BudgetFundingLevelRq(BudgetFundingLevel.MINIMUM, BigDecimal("6000.00")),
+                BudgetFundingLevelRq(BudgetFundingLevel.BALANCED, BigDecimal("8500.00")),
+                BudgetFundingLevelRq(BudgetFundingLevel.COMFORTABLE, BigDecimal("10000.00")),
+            ),
+        )
+
+        val confirmedResult = mvc.perform(
+            put(constraintsPath(plan.id))
+                .cookie(accessTokenCookie(user))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsBytes(
+                        saveRequest(suggested).copy(
+                            categories = saveRequest(suggested).categories + manualConstraint,
+                        ),
+                    ),
+                ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.categories.length()").value(3))
+
+        val confirmed = getBody(confirmedResult, BudgetConstraintSetRs::class.java)
+        val travel = confirmed.categories.single { category -> category.category.id == travelCategory.id }
+        assertThat(travel.sourceKeys).isEmpty()
+        assertThat(travel.fundingLevels.map { level -> level.coverage })
+            .containsExactly(BigDecimal("0.600000"), BigDecimal("0.850000"), BigDecimal("1.000000"))
     }
 
     private fun saveRequest(suggested: BudgetConstraintSetRs): SaveBudgetConstraintsRq =

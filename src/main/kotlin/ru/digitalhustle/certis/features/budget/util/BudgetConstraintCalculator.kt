@@ -14,10 +14,12 @@ import ru.digitalhustle.certis.features.budget.model.BudgetCategoryFundingLevel
 import ru.digitalhustle.certis.features.budget.model.BudgetConstraintBaseline
 import ru.digitalhustle.certis.features.budget.model.BudgetConstraintSet
 import ru.digitalhustle.certis.features.budget.model.BudgetForecast
+import ru.digitalhustle.certis.features.budget.model.BudgetForecastCategory
 import ru.digitalhustle.certis.features.budget.model.BudgetForecastItem
 import ru.digitalhustle.certis.features.budget.model.BudgetPlan
 import ru.digitalhustle.certis.features.budget.model.BudgetPlanFeasibility
 import ru.digitalhustle.certis.features.budget.model.BudgetPlanningViolation
+import ru.digitalhustle.certis.features.category.api.CategorySnapshot
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.OffsetDateTime
@@ -59,6 +61,7 @@ class BudgetConstraintCalculator(
         suggestion: BudgetConstraintSet,
         forecast: BudgetForecast,
         data: SaveBudgetConstraintsData,
+        categorySnapshots: Map<UUID, CategorySnapshot>,
         revision: Int,
         planVersion: Long,
         createdAt: OffsetDateTime,
@@ -68,25 +71,28 @@ class BudgetConstraintCalculator(
             .groupBy { item -> requireNotNull(item.category).id }
             .mapValues { (_, items) -> items.sum() }
         val categories = data.categories.map { input ->
-            val source = requireNotNull(suggestions[input.categoryId])
-            val forecastAmount = requireNotNull(forecastAmounts[input.categoryId])
+            val source = suggestions[input.categoryId]
+            val snapshot = requireNotNull(categorySnapshots[input.categoryId])
+            val coverageBase = forecastAmounts[input.categoryId]
+                ?: input.fundingLevels.maxOfOrNull { level -> level.amount }
+                ?: input.requiredAmount
             BudgetCategoryConstraint(
                 id = UUID.randomUUID(),
-                category = source.category,
+                category = source?.category ?: snapshot.toForecastCategory(),
                 allocationType = input.allocationType,
                 constraintRole = input.constraintRole,
                 requiredAmount = input.requiredAmount,
                 priority = input.priority,
-                currentLimitAmount = source.currentLimitAmount,
+                currentLimitAmount = source?.currentLimitAmount ?: ZERO,
                 fundingLevels = input.fundingLevels.map { level ->
                     BudgetCategoryFundingLevel(
                         id = UUID.randomUUID(),
                         level = level.level,
                         amount = level.amount,
-                        coverage = coverage(level.amount, forecastAmount),
+                        coverage = coverage(level.amount, coverageBase),
                     )
                 },
-                sourceKeys = source.sourceKeys,
+                sourceKeys = source?.sourceKeys ?: emptyList(),
             )
         }.sortedBy { category -> category.category.name }
         val fingerprint = fingerprintCalculator.calculate(
@@ -237,6 +243,15 @@ class BudgetConstraintCalculator(
 
     private fun List<BudgetForecastItem>.amount(role: BudgetConstraintRole): BigDecimal =
         filter { item -> item.defaultConstraintRole == role }.sum()
+
+    private fun CategorySnapshot.toForecastCategory(): BudgetForecastCategory =
+        BudgetForecastCategory(
+            id = id,
+            type = type,
+            name = name,
+            icon = icon,
+            color = color,
+        )
 
     companion object {
         private const val MONEY_SCALE = 4

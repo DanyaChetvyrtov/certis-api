@@ -24,6 +24,7 @@ import ru.digitalhustle.certis.features.budget.model.BudgetForecastSummary
 import ru.digitalhustle.certis.features.budget.model.BudgetPlan
 import ru.digitalhustle.certis.features.budget.util.BudgetConstraintCalculator
 import ru.digitalhustle.certis.features.budget.util.BudgetConstraintFingerprintCalculator
+import ru.digitalhustle.certis.features.category.api.CategorySnapshot
 import ru.digitalhustle.certis.features.category.enums.CategoryType
 import ru.digitalhustle.certis.shared.enums.Currency
 import java.math.BigDecimal
@@ -66,6 +67,7 @@ class BudgetConstraintCalculatorTest {
                     BudgetFundingLevelData(BudgetFundingLevel.COMFORTABLE, BigDecimal("32000.00")),
                 ),
             ),
+            categorySnapshots = categorySnapshots(),
             revision = 1,
             planVersion = 2,
             createdAt = now,
@@ -87,6 +89,7 @@ class BudgetConstraintCalculatorTest {
             data = request(
                 listOf(BudgetFundingLevelData(BudgetFundingLevel.MINIMUM, BigDecimal("12000.00"))),
             ),
+            categorySnapshots = categorySnapshots(),
             revision = 1,
             planVersion = 2,
             createdAt = now,
@@ -118,6 +121,53 @@ class BudgetConstraintCalculatorTest {
         assertThat(comfortable.coverage).isEqualByComparingTo("1.000000")
     }
 
+    @Test
+    fun `should materialize a manual category outside the forecast`() {
+        val forecast = forecast("32000.00")
+        val suggestion = calculator.suggest(plan(), forecast, BudgetConstraintBaseline(BigDecimal.ZERO, emptyList()))
+        val manualCategory = CategorySnapshot(
+            id = UUID.randomUUID(),
+            type = CategoryType.EXPENSE,
+            name = "Travel",
+            icon = "transport",
+            color = "#2563EB",
+            archivedAt = null,
+        )
+        val manualConstraint = BudgetCategoryConstraintData(
+            categoryId = manualCategory.id,
+            allocationType = BudgetAllocationType.VARIABLE,
+            constraintRole = BudgetConstraintRole.FLEXIBLE,
+            requiredAmount = BigDecimal.ZERO,
+            priority = BudgetPriority.HIGH,
+            fundingLevels = listOf(
+                BudgetFundingLevelData(BudgetFundingLevel.MINIMUM, BigDecimal("6000.00")),
+                BudgetFundingLevelData(BudgetFundingLevel.BALANCED, BigDecimal("8500.00")),
+                BudgetFundingLevelData(BudgetFundingLevel.COMFORTABLE, BigDecimal("10000.00")),
+            ),
+        )
+        val baseRequest = request(
+            suggestion.categories.single().fundingLevels.map { level ->
+                BudgetFundingLevelData(level.level, level.amount)
+            },
+        )
+
+        val confirmed = calculator.confirm(
+            suggestion = suggestion,
+            forecast = forecast,
+            data = baseRequest.copy(categories = baseRequest.categories + manualConstraint),
+            categorySnapshots = categorySnapshots() + (manualCategory.id to manualCategory),
+            revision = 1,
+            planVersion = 2,
+            createdAt = now,
+        )
+
+        val manual = confirmed.categories.single { constraint -> constraint.category.id == manualCategory.id }
+        assertThat(manual.sourceKeys).isEmpty()
+        assertThat(manual.currentLimitAmount).isEqualByComparingTo(BigDecimal.ZERO)
+        assertThat(manual.fundingLevels.map { level -> level.coverage })
+            .containsExactly(BigDecimal("0.600000"), BigDecimal("0.850000"), BigDecimal("1.000000"))
+    }
+
     private fun request(levels: List<BudgetFundingLevelData>): SaveBudgetConstraintsData =
         SaveBudgetConstraintsData(
             planId = planId,
@@ -136,6 +186,17 @@ class BudgetConstraintCalculatorTest {
                 ),
             ),
         )
+
+    private fun categorySnapshots(): Map<UUID, CategorySnapshot> = mapOf(
+        category.id to CategorySnapshot(
+            id = category.id,
+            type = category.type,
+            name = category.name,
+            icon = category.icon,
+            color = category.color,
+            archivedAt = null,
+        ),
+    )
 
     private fun forecast(amount: String): BudgetForecast =
         BudgetForecast(
