@@ -86,12 +86,18 @@ class BudgetConstraintValidator {
 
     fun validateCategorySet(data: SaveBudgetConstraintsData, suggestion: BudgetConstraintSet) {
         val actual = data.categories.map { category -> category.categoryId }
-        val expected = suggestion.categories.map { category -> category.category.id }.toSet()
-        if (actual.distinct().size != actual.size || actual.toSet() != expected) {
+        val required = suggestion.categories.map { category -> category.category.id }.toSet()
+        val missing = required - actual.toSet()
+        if (actual.distinct().size != actual.size || missing.isNotEmpty()) {
             throw validationException(
-                message = "Constraints must contain every forecast expense category exactly once",
+                message =
+                    "Every forecast expense category is required once; extra active expense categories are allowed",
                 code = BudgetPlanningErrorCode.CONSTRAINTS_INCOMPLETE,
-                details = mapOf("expectedCategoryIds" to expected, "actualCategoryIds" to actual),
+                details = mapOf(
+                    "requiredCategoryIds" to required,
+                    "missingCategoryIds" to missing,
+                    "actualCategoryIds" to actual,
+                ),
             )
         }
     }
