@@ -21,7 +21,7 @@ plugins {
 }
 
 group = "ru.digital-hustle"
-version = "0.0.1"
+version = "1.0.0"
 description = "certis-api"
 
 fun dbProperty(
@@ -108,6 +108,7 @@ dependencies {
     testImplementation(libs.spring.security.test)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.assertj.core)
+    testImplementation(libs.archunit)
     testImplementation(libs.zonky.embedded.postgres)
     testImplementation(libs.zonky.embedded.database.spring.test)
     testRuntimeOnly(libs.junit.platform.launcher)

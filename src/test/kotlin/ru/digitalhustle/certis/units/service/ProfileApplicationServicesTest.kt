@@ -1,0 +1,676 @@
+package ru.digitalhustle.certis.units.service
+
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito.doThrow
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.Mockito.`when`
+import org.springframework.http.MediaType
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.web.multipart.MultipartFile
+import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
+import ru.digitalhustle.certis.exception.custom.NotFoundException
+import ru.digitalhustle.certis.features.profile.application.service.impl.ProfileManagementApplicationServiceImpl
+import ru.digitalhustle.certis.features.profile.application.service.impl.ProfilePhotoApplicationServiceImpl
+import ru.digitalhustle.certis.features.profile.application.service.impl.ProfilePhotoLifecycleManager
+import ru.digitalhustle.certis.features.profile.command.model.NewProfile
+import ru.digitalhustle.certis.features.profile.command.model.NewProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.command.model.ProcessedProfilePhoto
+import ru.digitalhustle.certis.features.profile.command.model.UpdateProfileData
+import ru.digitalhustle.certis.features.profile.command.service.ProfilePhotoMetaService
+import ru.digitalhustle.certis.features.profile.command.service.ProfileService
+import ru.digitalhustle.certis.features.profile.command.util.ProfilePhotoProcessor
+import ru.digitalhustle.certis.features.profile.exceptions.PhotoProcessingException
+import ru.digitalhustle.certis.features.profile.gateway.MinioGateway
+import ru.digitalhustle.certis.features.profile.model.Profile
+import ru.digitalhustle.certis.features.profile.model.ProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.model.objectName
+import ru.digitalhustle.certis.features.profile.query.service.ProfilePhotoMetaQueryService
+import ru.digitalhustle.certis.features.profile.query.service.ProfileRecordQueryService
+import ru.digitalhustle.certis.features.profile.query.service.impl.ProfileQueryServiceImpl
+import ru.digitalhustle.certis.features.profile.util.ProfilePhotoUrlProvider
+import ru.digitalhustle.certis.features.security.api.UserPreferencesCommand
+import ru.digitalhustle.certis.features.security.api.UserPreferencesQuery
+import ru.digitalhustle.certis.features.security.model.User
+import ru.digitalhustle.certis.shared.enums.Currency
+import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.util.UUID
+
+class ProfileApplicationServicesTest {
+
+    private val profileService = mock(ProfileService::class.java)
+    private val userPreferencesQuery = mock(UserPreferencesQuery::class.java)
+    private val userPreferencesCommand = mock(UserPreferencesCommand::class.java)
+    private val profilePhotoMetaService = mock(ProfilePhotoMetaService::class.java)
+    private val minioGateway = mock(MinioGateway::class.java)
+    private val profilePhotoProcessor = mock(ProfilePhotoProcessor::class.java)
+    private val profilePhotoUrlProvider = mock(ProfilePhotoUrlProvider::class.java)
+
+    private val profilePhotoLifecycleManager = ProfilePhotoLifecycleManager(
+        profilePhotoMetaService = profilePhotoMetaService,
+        minioGateway = minioGateway,
+        profilePhotoProcessor = profilePhotoProcessor,
+        profilePhotoUrlProvider = profilePhotoUrlProvider,
+    )
+    private val profileManagementApplicationService = ProfileManagementApplicationServiceImpl(
+        profileService = profileService,
+        userPreferencesQuery = userPreferencesQuery,
+        userPreferencesCommand = userPreferencesCommand,
+        profilePhotoSupport = profilePhotoLifecycleManager,
+    )
+    private val profilePhotoApplicationService = ProfilePhotoApplicationServiceImpl(
+        profileService = profileService,
+        profilePhotoLifecycleManager = profilePhotoLifecycleManager,
+    )
+
+    private val profileRecordQueryService = mock(ProfileRecordQueryService::class.java)
+    private val photoMetaQueryService = mock(ProfilePhotoMetaQueryService::class.java)
+    private val profileQueryService = ProfileQueryServiceImpl(
+        profileRecordQueryService,
+        userPreferencesQuery,
+        photoMetaQueryService,
+        minioGateway,
+        profilePhotoUrlProvider,
+    )
+
+    private companion object {
+        private const val NAME = "John"
+        private const val SURNAME = "Doe"
+        private const val PHOTO_URL = "http://localhost:9000/test-bucket/photo.jpg"
+        private const val CONTENT_TYPE = MediaType.IMAGE_JPEG_VALUE
+    }
+
+    @Test
+    fun `should get profile preview`() {
+        // given
+        val profile = createProfile()
+        val user = createUser(
+            id = profile.id,
+            preferredCurrency = Currency.EUR,
+        )
+        val photoMeta = createProfilePhotoMeta(profileId = profile.id)
+
+        `when`(profileRecordQueryService.getById(profile.id))
+            .thenReturn(profile)
+
+        `when`(userPreferencesQuery.getPreferredCurrency(profile.id))
+            .thenReturn(user.preferredCurrency)
+
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
+            .thenReturn(photoMeta)
+
+        `when`(profilePhotoUrlProvider.get(profile.id))
+            .thenReturn(PHOTO_URL)
+
+        // when
+        val profilePreview = profileQueryService.getProfilePreview(profile.id)
+
+        // then
+        assertThat(profilePreview.id).isEqualTo(profile.id)
+        assertThat(profilePreview.name).isEqualTo(profile.name)
+        assertThat(profilePreview.surname).isEqualTo(profile.surname)
+        assertThat(profilePreview.dateOfBirth).isEqualTo(profile.dateOfBirth)
+        assertThat(profilePreview.preferredCurrency).isEqualTo(user.preferredCurrency)
+        assertThat(profilePreview.photoUrl).isEqualTo(PHOTO_URL)
+    }
+
+    @Test
+    fun `should get profile photo`() {
+        // given
+        val profile = createProfile()
+        val photoMeta = createProfilePhotoMeta(profileId = profile.id)
+        val photoContent = "photo-content".toByteArray()
+
+        `when`(profileRecordQueryService.getById(profile.id))
+            .thenReturn(profile)
+
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
+            .thenReturn(photoMeta)
+
+        `when`(minioGateway.getPhoto(photoMeta.objectName))
+            .thenReturn(photoContent)
+
+        // when
+        val photo = profileQueryService.getPhoto(profile.id)
+
+        // then
+        assertThat(photo.content).isEqualTo(photoContent)
+        assertThat(photo.contentType).isEqualTo(photoMeta.contentType)
+    }
+
+    @Test
+    fun `should throw not found exception when profile photo is missing`() {
+        // given
+        val profile = createProfile()
+
+        `when`(profileRecordQueryService.getById(profile.id))
+            .thenReturn(profile)
+
+        `when`(photoMetaQueryService.getByProfileId(profile.id))
+            .thenReturn(null)
+
+        // when, then
+        assertThatThrownBy {
+            profileQueryService.getPhoto(profile.id)
+        }.isInstanceOf(NotFoundException::class.java)
+
+        verifyNoInteractions(minioGateway)
+    }
+
+    @Test
+    fun `should save profile`() {
+        // given
+        val newProfile = createNewProfile()
+        val profile = createProfile(id = newProfile.id)
+
+        `when`(profileService.save(newProfile))
+            .thenReturn(profile)
+
+        // when
+        val savedProfile = profileManagementApplicationService.saveProfile(newProfile, Currency.EUR)
+
+        // then
+        assertThat(savedProfile.id).isEqualTo(profile.id)
+        assertThat(savedProfile.preferredCurrency).isEqualTo(Currency.EUR)
+        assertThat(savedProfile.photoUrl).isNull()
+
+        verify(profileService)
+            .save(newProfile)
+
+        verify(userPreferencesCommand)
+            .updatePreferredCurrency(profile.id, Currency.EUR)
+    }
+
+    @Test
+    fun `should update profile`() {
+        // given
+        val updateProfileData = createUpdateProfileData()
+        val profile = createProfile(id = updateProfileData.id)
+
+        `when`(profileService.update(updateProfileData))
+            .thenReturn(profile)
+
+        // when
+        val updatedProfile = profileManagementApplicationService.updateProfile(updateProfileData, Currency.RUB)
+
+        // then
+        assertThat(updatedProfile.id).isEqualTo(profile.id)
+        assertThat(updatedProfile.preferredCurrency).isEqualTo(Currency.RUB)
+
+        verify(profileService)
+            .update(updateProfileData)
+
+        verify(userPreferencesCommand)
+            .updatePreferredCurrency(profile.id, Currency.RUB)
+    }
+
+    @Test
+    fun `should preserve preferred currency when profile update omits it`() {
+        // given
+        val updateProfileData = createUpdateProfileData()
+        val profile = createProfile(id = updateProfileData.id)
+        val user = createUser(
+            id = profile.id,
+            preferredCurrency = Currency.EUR,
+        )
+
+        `when`(profileService.update(updateProfileData))
+            .thenReturn(profile)
+
+        `when`(userPreferencesQuery.getPreferredCurrency(profile.id))
+            .thenReturn(user.preferredCurrency)
+
+        // when
+        val updatedProfile = profileManagementApplicationService.updateProfile(updateProfileData, null)
+
+        // then
+        assertThat(updatedProfile.preferredCurrency).isEqualTo(Currency.EUR)
+
+        verify(userPreferencesCommand, never())
+            .updatePreferredCurrency(profile.id, Currency.EUR)
+    }
+
+    @Test
+    fun `should upload photo`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(null)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        // when
+        val photoMeta = profilePhotoApplicationService.uploadPhoto(profileId, photo)
+
+        // then
+        assertThat(photoMeta).isEqualTo(savedPhotoMeta)
+
+        verify(minioGateway)
+            .savePhoto(processedPhoto.objectName, photo, processedPhoto.contentType)
+    }
+
+    @Test
+    fun `should delete uploaded photo when transaction rolls back`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(null)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        TransactionSynchronizationManager.initSynchronization()
+        try {
+            // when
+            profilePhotoApplicationService.uploadPhoto(profileId, photo)
+            TransactionSynchronizationManager.getSynchronizations()
+                .forEach { it.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK) }
+
+            // then
+            verify(minioGateway)
+                .deletePhoto(processedPhoto.objectName)
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization()
+        }
+    }
+
+    @Test
+    fun `should throw not found exception when uploading photo for missing profile`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+
+        doThrow(NotFoundException.entity("Profile"))
+            .`when`(profileService)
+            .requireExists(profileId)
+
+        // when, then
+        assertThatThrownBy {
+            profilePhotoApplicationService.uploadPhoto(profileId, photo)
+        }.isInstanceOf(NotFoundException::class.java)
+
+        verifyNoInteractions(profilePhotoProcessor)
+        verifyNoInteractions(minioGateway)
+    }
+
+    @Test
+    fun `should throw already exists exception when uploading duplicate photo`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(createProfilePhotoMeta(profileId = profileId))
+
+        // when, then
+        assertThatThrownBy {
+            profilePhotoApplicationService.uploadPhoto(profileId, photo)
+        }.isInstanceOf(EntityAlreadyExistsException::class.java)
+
+        verifyNoInteractions(profilePhotoProcessor)
+        verifyNoInteractions(minioGateway)
+    }
+
+    @Test
+    fun `should update photo`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val oldPhotoMeta = createProfilePhotoMeta(profileId = profileId)
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(oldPhotoMeta)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        // when
+        val photoMeta = profilePhotoApplicationService.updatePhoto(profileId, photo)
+
+        // then
+        assertThat(photoMeta).isEqualTo(savedPhotoMeta)
+
+        verify(profilePhotoMetaService)
+            .deleteByProfileId(profileId)
+
+        verify(minioGateway)
+            .savePhoto(processedPhoto.objectName, photo, processedPhoto.contentType)
+
+        verify(minioGateway)
+            .deletePhoto(oldPhotoMeta.objectName)
+    }
+
+    @Test
+    fun `should delete replaced photo only after transaction commit`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val oldPhotoMeta = createProfilePhotoMeta(profileId = profileId)
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(oldPhotoMeta)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        TransactionSynchronizationManager.initSynchronization()
+        try {
+            // when
+            profilePhotoApplicationService.updatePhoto(profileId, photo)
+
+            // then
+            verify(minioGateway, never())
+                .deletePhoto(oldPhotoMeta.objectName)
+
+            TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit)
+
+            verify(minioGateway)
+                .deletePhoto(oldPhotoMeta.objectName)
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization()
+        }
+    }
+
+    @Test
+    fun `should update photo when old photo does not exist`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(null)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        // when
+        val photoMeta = profilePhotoApplicationService.updatePhoto(profileId, photo)
+
+        // then
+        assertThat(photoMeta).isEqualTo(savedPhotoMeta)
+
+        verify(profilePhotoMetaService, never())
+            .deleteByProfileId(profileId)
+
+        verify(minioGateway, never())
+            .deletePhoto(org.mockito.ArgumentMatchers.anyString())
+    }
+
+    @Test
+    fun `should keep updated photo when deleting old photo fails`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+        val oldPhotoMeta = createProfilePhotoMeta(profileId = profileId)
+        val processedPhoto = createProcessedPhoto(profileId)
+        val savedPhotoMeta = createProfilePhotoMeta(
+            id = processedPhoto.meta.id,
+            profileId = profileId,
+            extension = processedPhoto.meta.extension,
+        )
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(oldPhotoMeta)
+
+        `when`(profilePhotoProcessor.process(profileId, photo))
+            .thenReturn(processedPhoto)
+
+        `when`(profilePhotoMetaService.save(processedPhoto.meta))
+            .thenReturn(savedPhotoMeta)
+
+        doThrow(PhotoProcessingException("Delete failed"))
+            .`when`(minioGateway)
+            .deletePhoto(oldPhotoMeta.objectName)
+
+        // when
+        val photoMeta = profilePhotoApplicationService.updatePhoto(profileId, photo)
+
+        // then
+        assertThat(photoMeta).isEqualTo(savedPhotoMeta)
+
+        verify(minioGateway)
+            .savePhoto(processedPhoto.objectName, photo, processedPhoto.contentType)
+    }
+
+    @Test
+    fun `should throw not found exception when updating photo for missing profile`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photo = createPhoto()
+
+        doThrow(NotFoundException.entity("Profile"))
+            .`when`(profileService)
+            .requireExists(profileId)
+
+        // when, then
+        assertThatThrownBy {
+            profilePhotoApplicationService.updatePhoto(profileId, photo)
+        }.isInstanceOf(NotFoundException::class.java)
+
+        verifyNoInteractions(profilePhotoProcessor)
+        verifyNoInteractions(minioGateway)
+    }
+
+    @Test
+    fun `should delete profile with photo`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photoMeta = createProfilePhotoMeta(profileId = profileId)
+
+        `when`(profileService.exists(profileId))
+            .thenReturn(true)
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(photoMeta)
+
+        // when
+        profileManagementApplicationService.deleteProfile(profileId)
+
+        // then
+        verify(profilePhotoMetaService)
+            .deleteByProfileId(profileId)
+
+        verify(profileService)
+            .delete(profileId)
+
+        verify(minioGateway)
+            .deletePhoto(photoMeta.objectName)
+    }
+
+    @Test
+    fun `should delete photo by profile id`() {
+        // given
+        val profileId = UUID.randomUUID()
+        val photoMeta = createProfilePhotoMeta(profileId = profileId)
+
+        `when`(profilePhotoMetaService.getByProfileId(profileId))
+            .thenReturn(photoMeta)
+
+        // when
+        profilePhotoApplicationService.deletePhotoByProfileId(profileId)
+
+        // then
+        verify(profilePhotoMetaService)
+            .deleteByProfileId(profileId)
+
+        verify(minioGateway)
+            .deletePhoto(photoMeta.objectName)
+    }
+
+    @Test
+    fun `should throw not found exception when deleting photo for missing profile`() {
+        // given
+        val profileId = UUID.randomUUID()
+
+        doThrow(NotFoundException.entity("Profile"))
+            .`when`(profileService)
+            .requireExists(profileId)
+
+        // when, then
+        assertThatThrownBy {
+            profilePhotoApplicationService.deletePhotoByProfileId(profileId)
+        }.isInstanceOf(NotFoundException::class.java)
+
+        verify(profilePhotoMetaService, never())
+            .deleteByProfileId(profileId)
+
+        verifyNoInteractions(minioGateway)
+    }
+
+    private fun createProcessedPhoto(profileId: UUID = UUID.randomUUID()): ProcessedProfilePhoto {
+        val newPhotoMeta = createNewProfilePhotoMeta(profileId = profileId)
+
+        return ProcessedProfilePhoto(
+            meta = newPhotoMeta,
+            objectName = "${newPhotoMeta.id}.${newPhotoMeta.extension}",
+            contentType = CONTENT_TYPE,
+        )
+    }
+
+    private fun createPhoto(): MultipartFile = mock(MultipartFile::class.java)
+
+    private fun createNewProfile(
+        id: UUID = UUID.randomUUID(),
+        name: String = NAME,
+        surname: String = SURNAME,
+        dateOfBirth: LocalDate = LocalDate.of(2000, 1, 1),
+    ): NewProfile =
+        NewProfile(
+            id = id,
+            name = name,
+            surname = surname,
+            dateOfBirth = dateOfBirth,
+        )
+
+    private fun createUpdateProfileData(
+        id: UUID = UUID.randomUUID(),
+        name: String = NAME,
+        surname: String = SURNAME,
+        dateOfBirth: LocalDate = LocalDate.of(2000, 1, 1),
+    ): UpdateProfileData =
+        UpdateProfileData(
+            id = id,
+            name = name,
+            surname = surname,
+            dateOfBirth = dateOfBirth,
+        )
+
+    private fun createProfile(
+        id: UUID = UUID.randomUUID(),
+        name: String = NAME,
+        surname: String = SURNAME,
+        dateOfBirth: LocalDate = LocalDate.of(2000, 1, 1),
+    ): Profile =
+        Profile(
+            id = id,
+            name = name,
+            surname = surname,
+            dateOfBirth = dateOfBirth,
+            updatedAt = OffsetDateTime.now(),
+        )
+
+    private fun createUser(
+        id: UUID = UUID.randomUUID(),
+        preferredCurrency: Currency = Currency.USD,
+    ): User =
+        User(
+            id = id,
+            email = "user@test.com",
+            passwordHash = "password_hash",
+            preferredCurrency = preferredCurrency,
+            lastLogin = OffsetDateTime.now(),
+            createdAt = OffsetDateTime.now(),
+        )
+
+    private fun createNewProfilePhotoMeta(
+        id: UUID = UUID.randomUUID(),
+        profileId: UUID = UUID.randomUUID(),
+        extension: String = "jpg",
+    ): NewProfilePhotoMeta =
+        NewProfilePhotoMeta(
+            id = id,
+            profileId = profileId,
+            originalFileName = "profile-photo",
+            extension = extension,
+            fileSize = 1024L,
+            width = 100,
+            height = 200,
+            contentType = CONTENT_TYPE,
+            url = PHOTO_URL,
+        )
+
+    private fun createProfilePhotoMeta(
+        id: UUID = UUID.randomUUID(),
+        profileId: UUID = UUID.randomUUID(),
+        extension: String = "jpg",
+    ): ProfilePhotoMeta =
+        ProfilePhotoMeta(
+            id = id,
+            profileId = profileId,
+            originalFileName = "profile-photo",
+            extension = extension,
+            fileSize = 1024L,
+            width = 100,
+            height = 200,
+            contentType = CONTENT_TYPE,
+            url = PHOTO_URL,
+            uploadedAt = OffsetDateTime.now(),
+        )
+}

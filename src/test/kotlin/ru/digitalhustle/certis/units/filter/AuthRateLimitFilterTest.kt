@@ -8,15 +8,16 @@ import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import ru.digitalhustle.certis.api.constants.PathConstants
+import ru.digitalhustle.certis.config.filter.AuthRateLimitFilter
 import ru.digitalhustle.certis.config.properties.AuthRateLimitProperties
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.constants.PathConstants
-import ru.digitalhustle.certis.filter.AuthRateLimitFilter
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.exception.ExceptionResponseProvider
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import ru.digitalhustle.certis.features.security.constants.SecurityErrorMessages as ErrorMessages
 
 class AuthRateLimitFilterTest {
 
@@ -30,7 +31,9 @@ class AuthRateLimitFilterTest {
             refresh = rule(capacity = 1),
         ),
         exceptionResponseProvider = ExceptionResponseProvider(
-            Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC),
+            ApplicationClock(
+                Clock.fixed(Instant.parse("2026-08-01T12:00:00Z"), ZoneOffset.UTC),
+            ),
         ),
         objectMapper = objectMapper,
     )

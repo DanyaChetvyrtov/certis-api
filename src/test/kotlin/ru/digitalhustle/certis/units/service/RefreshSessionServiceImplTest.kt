@@ -10,17 +10,20 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.config.properties.JwtProperties
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.exception.custom.InvalidTokenException
-import ru.digitalhustle.certis.model.entity.RefreshSession
-import ru.digitalhustle.certis.repository.RefreshSessionRepository
-import ru.digitalhustle.certis.service.domain.impl.RefreshSessionServiceImpl
+import ru.digitalhustle.certis.features.security.command.repository.RefreshSessionRepository
+import ru.digitalhustle.certis.features.security.command.service.impl.RefreshSessionServiceImpl
+import ru.digitalhustle.certis.features.security.exceptions.InvalidTokenException
+import ru.digitalhustle.certis.features.security.model.RefreshSession
+import ru.digitalhustle.certis.features.security.query.repository.RefreshSessionQueryRepository
+import ru.digitalhustle.certis.features.security.query.service.impl.RefreshSessionQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+import ru.digitalhustle.certis.features.security.constants.SecurityErrorMessages as ErrorMessages
 
 class RefreshSessionServiceImplTest {
 
@@ -33,8 +36,11 @@ class RefreshSessionServiceImplTest {
             accessDuration = ACCESS_DURATION,
             refreshDuration = REFRESH_DURATION,
         ),
-        clock = clock,
+        applicationClock = ApplicationClock(clock),
     )
+
+    private val queryRepository = mock(RefreshSessionQueryRepository::class.java)
+    private val queryService = RefreshSessionQueryServiceImpl(queryRepository, ApplicationClock(clock))
 
     private companion object {
         private val ACCESS_DURATION = Duration.ofMinutes(30)
@@ -50,10 +56,10 @@ class RefreshSessionServiceImplTest {
         // given
         val userId = UUID.randomUUID()
         val sessions = listOf(createSession(usedAt = null).copy(userId = userId))
-        `when`(repository.findActiveByUserId(userId, NOW)).thenReturn(sessions)
+        `when`(queryRepository.findActiveByUserId(userId, NOW)).thenReturn(sessions)
 
         // when
-        val result = service.getActiveByUserId(userId)
+        val result = queryService.getActiveByUserId(userId)
 
         // then
         assertThat(result).isEqualTo(sessions)

@@ -8,24 +8,31 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestControllerAdvice
-import ru.digitalhustle.certis.constants.ErrorMessages
-import ru.digitalhustle.certis.dto.response.ExceptionRs
-import ru.digitalhustle.certis.exception.custom.AccountClosedException
-import ru.digitalhustle.certis.exception.custom.AccountInUseException
-import ru.digitalhustle.certis.exception.custom.CategoryArchivedException
-import ru.digitalhustle.certis.exception.custom.CategoryInUseException
+import ru.digitalhustle.certis.api.constants.ApiErrorMessages
+import ru.digitalhustle.certis.api.dto.response.ExceptionRs
 import ru.digitalhustle.certis.exception.custom.DomainException
 import ru.digitalhustle.certis.exception.custom.EntityAlreadyExistsException
-import ru.digitalhustle.certis.exception.custom.InvalidPhotoException
-import ru.digitalhustle.certis.exception.custom.InvalidRecurringTransactionException
-import ru.digitalhustle.certis.exception.custom.InvalidTokenException
-import ru.digitalhustle.certis.exception.custom.InvalidTransactionException
-import ru.digitalhustle.certis.exception.custom.InvalidTransferException
-import ru.digitalhustle.certis.exception.custom.MissedTokenException
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.exception.custom.PasswordsDoNotMatchException
-import ru.digitalhustle.certis.exception.custom.UnsupportedPhotoMediaTypeException
-import ru.digitalhustle.certis.provider.ExceptionResponseProvider
+import ru.digitalhustle.certis.features.account.exceptions.AccountClosedException
+import ru.digitalhustle.certis.features.account.exceptions.AccountInUseException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetOptimizationConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanNotFoundException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningConflictException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningOptimizationNotFoundException
+import ru.digitalhustle.certis.features.budget.exceptions.BudgetPlanningValidationException
+import ru.digitalhustle.certis.features.budget.exceptions.InvalidBudgetException
+import ru.digitalhustle.certis.features.category.exceptions.CategoryArchivedException
+import ru.digitalhustle.certis.features.category.exceptions.CategoryInUseException
+import ru.digitalhustle.certis.features.goal.exceptions.InvalidGoalException
+import ru.digitalhustle.certis.features.profile.exceptions.InvalidPhotoException
+import ru.digitalhustle.certis.features.profile.exceptions.UnsupportedPhotoMediaTypeException
+import ru.digitalhustle.certis.features.security.constants.SecurityErrorMessages
+import ru.digitalhustle.certis.features.security.exceptions.InvalidTokenException
+import ru.digitalhustle.certis.features.security.exceptions.MissedTokenException
+import ru.digitalhustle.certis.features.security.exceptions.PasswordsDoNotMatchException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidRecurringTransactionException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidTransactionException
+import ru.digitalhustle.certis.features.transaction.exceptions.InvalidTransferException
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
@@ -43,7 +50,7 @@ class DomainExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
-            message = exception.message ?: ErrorMessages.PASSWORDS_MISMATCH,
+            message = exception.message ?: SecurityErrorMessages.PASSWORDS_MISMATCH,
         )
     }
 
@@ -53,7 +60,7 @@ class DomainExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
-            message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
+            message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
         )
     }
 
@@ -62,12 +69,37 @@ class DomainExceptionHandler(
         InvalidTransactionException::class,
         InvalidRecurringTransactionException::class,
         InvalidTransferException::class,
+        InvalidGoalException::class,
     )
     fun handleInvalidFinancialOperationException(exception: DomainException): ExceptionRs {
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createBadRequest(
-            message = exception.message ?: ErrorMessages.VALIDATION_FAILED,
+            message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ExceptionHandler(InvalidBudgetException::class)
+    fun handleInvalidBudgetException(exception: InvalidBudgetException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createResponse(
+            status = HttpStatus.UNPROCESSABLE_ENTITY,
+            message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ExceptionHandler(BudgetPlanningValidationException::class)
+    fun handleBudgetPlanningValidationException(exception: BudgetPlanningValidationException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createResponse(
+            status = HttpStatus.UNPROCESSABLE_ENTITY,
+            message = exception.message ?: ApiErrorMessages.VALIDATION_FAILED,
+            code = exception.code.name,
+            details = exception.details,
         )
     }
 
@@ -98,7 +130,33 @@ class DomainExceptionHandler(
         log.warn(exception) { exception.message.orEmpty() }
 
         return exceptionResponseProvider.createUnauthorized(
-            message = ErrorMessages.INVALID_CREDENTIALS,
+            message = SecurityErrorMessages.INVALID_CREDENTIALS,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(BudgetPlanNotFoundException::class)
+    fun handleBudgetPlanNotFoundException(exception: BudgetPlanNotFoundException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createNotFound(
+            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
+            code = exception.code.name,
+            details = exception.details,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(BudgetPlanningOptimizationNotFoundException::class)
+    fun handleBudgetPlanningOptimizationNotFoundException(
+        exception: BudgetPlanningOptimizationNotFoundException,
+    ): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createNotFound(
+            message = exception.message ?: HttpStatus.NOT_FOUND.reasonPhrase,
+            code = exception.code.name,
+            details = exception.details,
         )
     }
 
@@ -113,10 +171,23 @@ class DomainExceptionHandler(
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(BudgetPlanningConflictException::class)
+    fun handleBudgetPlanningConflictException(exception: BudgetPlanningConflictException): ExceptionRs {
+        log.warn(exception) { exception.message.orEmpty() }
+
+        return exceptionResponseProvider.createConflict(
+            message = exception.message ?: HttpStatus.CONFLICT.reasonPhrase,
+            code = exception.code.name,
+            details = exception.details,
+        )
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(
         EntityAlreadyExistsException::class,
         AccountClosedException::class,
         AccountInUseException::class,
+        BudgetOptimizationConflictException::class,
         CategoryArchivedException::class,
         CategoryInUseException::class,
     )

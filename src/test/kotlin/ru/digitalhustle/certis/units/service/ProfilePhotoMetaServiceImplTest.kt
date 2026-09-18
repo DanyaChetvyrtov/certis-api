@@ -9,10 +9,13 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.ProfilePhotoMeta
-import ru.digitalhustle.certis.model.profile.NewProfilePhotoMeta
-import ru.digitalhustle.certis.repository.ProfilePhotoMetaRepository
-import ru.digitalhustle.certis.service.domain.impl.ProfilePhotoMetaServiceImpl
+import ru.digitalhustle.certis.features.profile.command.model.NewProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.command.repository.ProfilePhotoMetaRepository
+import ru.digitalhustle.certis.features.profile.command.service.impl.ProfilePhotoMetaServiceImpl
+import ru.digitalhustle.certis.features.profile.model.ProfilePhotoMeta
+import ru.digitalhustle.certis.features.profile.query.repository.ProfilePhotoMetaQueryRepository
+import ru.digitalhustle.certis.features.profile.query.service.impl.ProfilePhotoMetaQueryServiceImpl
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.time.Clock
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -21,10 +24,16 @@ import java.util.UUID
 
 class ProfilePhotoMetaServiceImplTest {
 
+    private val photoQueryRepository = mock(ProfilePhotoMetaQueryRepository::class.java)
+    private val photoQueryService = ProfilePhotoMetaQueryServiceImpl(photoQueryRepository)
+
     private val profilePhotoMetaRepository = mock(ProfilePhotoMetaRepository::class.java)
     private val clock = Clock.fixed(Instant.parse("2026-08-16T12:00:00Z"), ZoneOffset.UTC)
 
-    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(profilePhotoMetaRepository, clock)
+    private val profilePhotoMetaService = ProfilePhotoMetaServiceImpl(
+        profilePhotoMetaRepository,
+        ApplicationClock(clock),
+    )
 
     private companion object {
         private const val ORIGINAL_FILE_NAME = "profile-photo"
@@ -41,16 +50,16 @@ class ProfilePhotoMetaServiceImplTest {
         // given
         val photoMeta = createProfilePhotoMeta()
 
-        `when`(profilePhotoMetaRepository.findById(photoMeta.id))
+        `when`(photoQueryRepository.findById(photoMeta.id))
             .thenReturn(photoMeta)
 
         // when
-        val foundPhotoMeta = profilePhotoMetaService.getById(photoMeta.id)
+        val foundPhotoMeta = photoQueryService.getById(photoMeta.id)
 
         // then
         assertThat(foundPhotoMeta).isEqualTo(photoMeta)
 
-        verify(profilePhotoMetaRepository)
+        verify(photoQueryRepository)
             .findById(photoMeta.id)
     }
 
@@ -59,15 +68,15 @@ class ProfilePhotoMetaServiceImplTest {
         // given
         val id = UUID.randomUUID()
 
-        `when`(profilePhotoMetaRepository.findById(id))
+        `when`(photoQueryRepository.findById(id))
             .thenReturn(null)
 
         // when, then
         assertThatThrownBy {
-            profilePhotoMetaService.getById(id)
+            photoQueryService.getById(id)
         }.isInstanceOf(NotFoundException::class.java)
 
-        verify(profilePhotoMetaRepository)
+        verify(photoQueryRepository)
             .findById(id)
     }
 
@@ -77,16 +86,16 @@ class ProfilePhotoMetaServiceImplTest {
         val profileId = UUID.randomUUID()
         val photoMeta = createProfilePhotoMeta(profileId = profileId)
 
-        `when`(profilePhotoMetaRepository.findByProfileId(profileId))
+        `when`(photoQueryRepository.findByProfileId(profileId))
             .thenReturn(photoMeta)
 
         // when
-        val foundPhotoMeta = profilePhotoMetaService.getByProfileId(profileId)
+        val foundPhotoMeta = photoQueryService.getByProfileId(profileId)
 
         // then
         assertThat(foundPhotoMeta).isEqualTo(photoMeta)
 
-        verify(profilePhotoMetaRepository)
+        verify(photoQueryRepository)
             .findByProfileId(profileId)
     }
 

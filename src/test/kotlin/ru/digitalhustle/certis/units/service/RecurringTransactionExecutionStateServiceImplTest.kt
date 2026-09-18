@@ -8,13 +8,14 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import ru.digitalhustle.certis.config.properties.RecurringTransactionProperties
-import ru.digitalhustle.certis.enums.RecurringTransactionFrequency
-import ru.digitalhustle.certis.enums.RecurringTransactionTemplateStatus
-import ru.digitalhustle.certis.enums.TransactionType
 import ru.digitalhustle.certis.exception.custom.NotFoundException
-import ru.digitalhustle.certis.model.entity.RecurringTransactionTemplate
-import ru.digitalhustle.certis.repository.RecurringTransactionTemplateRepository
-import ru.digitalhustle.certis.service.domain.impl.RecurringTransactionExecutionStateServiceImpl
+import ru.digitalhustle.certis.features.transaction.command.repository.RecurringTransactionTemplateRepository
+import ru.digitalhustle.certis.features.transaction.command.service.impl.RecurringTransactionExecutionStateServiceImpl
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionFrequency
+import ru.digitalhustle.certis.features.transaction.enums.RecurringTransactionTemplateStatus
+import ru.digitalhustle.certis.features.transaction.enums.TransactionType
+import ru.digitalhustle.certis.features.transaction.model.RecurringTransactionTemplate
+import ru.digitalhustle.certis.util.time.ApplicationClock
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Duration
@@ -38,7 +39,7 @@ class RecurringTransactionExecutionStateServiceImplTest {
             retryMaxDelay = Duration.ofHours(1),
         ),
     )
-    private val service = RecurringTransactionExecutionStateServiceImpl(repository, clock, properties)
+    private val service = RecurringTransactionExecutionStateServiceImpl(repository, properties, ApplicationClock(clock))
 
     @Test
     fun `should get recurring transaction template for update`() {
