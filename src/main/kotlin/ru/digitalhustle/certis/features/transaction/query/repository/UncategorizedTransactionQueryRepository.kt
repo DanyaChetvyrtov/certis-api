@@ -10,6 +10,7 @@ import ru.digitalhustle.certis.features.transaction.query.model.TransactionAccou
 import ru.digitalhustle.certis.features.transaction.query.model.UncategorizedTransaction
 import ru.digitalhustle.certis.features.transaction.query.model.UncategorizedTransactionFilter
 import ru.digitalhustle.certis.features.transaction.query.model.UncategorizedTransactionPage
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecifications
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -86,30 +87,28 @@ class UncategorizedTransactionQueryRepository(
         monthStart: OffsetDateTime,
         nextMonthStart: OffsetDateTime,
     ): Condition {
-        var condition = Tables.TRANSACTIONS.USER_ID.eq(userId)
-            .and(Tables.TRANSACTIONS.CATEGORY_ID.isNull())
-            .and(Tables.TRANSACTIONS.DELETED_AT.isNull())
-            .and(Tables.TRANSACTIONS.TRANSFER_ID.isNull())
-            .and(Tables.TRANSACTIONS.TYPE.eq(filter.type.name))
-            .and(Tables.TRANSACTIONS.OCCURRED_AT.ge(monthStart))
-            .and(Tables.TRANSACTIONS.OCCURRED_AT.lt(nextMonthStart))
-            .and(Tables.ACCOUNTS.CURRENCY.eq(filter.currency.name))
+        var specification =
+            TransactionSpecifications.ownedBy(userId) and
+                TransactionSpecifications.uncategorized() and
+                TransactionSpecifications.active() and
+                TransactionSpecifications.notTransfer() and
+                TransactionSpecifications.hasType(filter.type) and
+                TransactionSpecifications.occurredAtOrAfter(monthStart) and
+                TransactionSpecifications.occurredBefore(nextMonthStart)
 
         filter.accountId?.let { accountId ->
-            condition = condition.and(Tables.TRANSACTIONS.ACCOUNT_ID.eq(accountId))
+            specification = specification and TransactionSpecifications.fromAccount(accountId)
         }
 
         filter.search
             ?.trim()
             ?.takeIf(String::isNotEmpty)
             ?.let { search ->
-                condition = condition.and(
-                    Tables.TRANSACTIONS.MERCHANT.containsIgnoreCase(search)
-                        .or(Tables.TRANSACTIONS.NOTE.containsIgnoreCase(search)),
-                )
+                specification = specification and TransactionSpecifications.matchesSearchText(search)
             }
 
-        return condition
+        return specification.toCondition()
+            .and(Tables.ACCOUNTS.CURRENCY.eq(filter.currency.name))
     }
 
     private fun accountJoinCondition(): Condition =
