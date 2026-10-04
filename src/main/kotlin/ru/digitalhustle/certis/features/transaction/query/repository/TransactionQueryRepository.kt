@@ -6,6 +6,8 @@ import org.springframework.stereotype.Repository
 import ru.digitalhustle.certis.features.transaction.model.Transaction
 import ru.digitalhustle.certis.features.transaction.query.model.TransactionFilter
 import ru.digitalhustle.certis.features.transaction.query.model.TransactionPage
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecification
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecifications
 import java.util.UUID
 
 @Repository
@@ -16,37 +18,22 @@ class TransactionQueryRepository(
     fun findByIdAndUserId(
         id: UUID,
         userId: UUID,
-    ): Transaction? =
-        dsl.selectFrom(Tables.TRANSACTIONS)
-            .where(
-                Tables.TRANSACTIONS.ID.eq(id)
-                    .and(Tables.TRANSACTIONS.USER_ID.eq(userId))
-                    .and(Tables.TRANSACTIONS.DELETED_AT.isNull()),
-            )
+    ): Transaction? {
+        val specification =
+            TransactionSpecifications.hasId(id) and
+                TransactionSpecifications.ownedBy(userId) and
+                TransactionSpecifications.active()
+
+        return dsl.selectFrom(Tables.TRANSACTIONS)
+            .where(specification.toCondition())
             .fetchOneInto(Transaction::class.java)
+    }
 
     fun findAllByUserId(
         userId: UUID,
         filter: TransactionFilter,
     ): TransactionPage {
-        var condition = Tables.TRANSACTIONS.USER_ID.eq(userId)
-            .and(Tables.TRANSACTIONS.DELETED_AT.isNull())
-
-        filter.accountId?.let {
-            condition = condition.and(Tables.TRANSACTIONS.ACCOUNT_ID.eq(it))
-        }
-        filter.categoryId?.let {
-            condition = condition.and(Tables.TRANSACTIONS.CATEGORY_ID.eq(it))
-        }
-        filter.type?.let {
-            condition = condition.and(Tables.TRANSACTIONS.TYPE.eq(it.name))
-        }
-        filter.from?.let {
-            condition = condition.and(Tables.TRANSACTIONS.OCCURRED_AT.ge(it))
-        }
-        filter.to?.let {
-            condition = condition.and(Tables.TRANSACTIONS.OCCURRED_AT.le(it))
-        }
+        val condition = specification(userId, filter).toCondition()
 
         val items = dsl.selectFrom(Tables.TRANSACTIONS)
             .where(condition)
@@ -67,5 +54,32 @@ class TransactionQueryRepository(
             size = filter.size,
             totalElements = totalElements,
         )
+    }
+
+    private fun specification(
+        userId: UUID,
+        filter: TransactionFilter,
+    ): TransactionSpecification {
+        var specification =
+            TransactionSpecifications.ownedBy(userId) and
+                TransactionSpecifications.active()
+
+        filter.accountId?.let {
+            specification = specification and TransactionSpecifications.fromAccount(it)
+        }
+        filter.categoryId?.let {
+            specification = specification and TransactionSpecifications.inCategory(it)
+        }
+        filter.type?.let {
+            specification = specification and TransactionSpecifications.hasType(it)
+        }
+        filter.from?.let {
+            specification = specification and TransactionSpecifications.occurredAtOrAfter(it)
+        }
+        filter.to?.let {
+            specification = specification and TransactionSpecifications.occurredAtOrBefore(it)
+        }
+
+        return specification
     }
 }
