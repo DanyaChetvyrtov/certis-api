@@ -15,6 +15,7 @@ import ru.digitalhustle.certis.features.transaction.query.model.CashFlowPoint
 import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionAnalytics
 import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionAnalyticsFilter
 import ru.digitalhustle.certis.features.transaction.query.model.MonthlyTransactionTotal
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecifications
 import ru.digitalhustle.certis.shared.constants.MoneyConstants
 import ru.digitalhustle.certis.shared.enums.Currency
 import java.math.BigDecimal
@@ -130,13 +131,17 @@ class TransactionAnalyticsQueryRepository(
         currency: Currency,
         from: OffsetDateTime,
         toExclusive: OffsetDateTime,
-    ): Condition =
-        Tables.TRANSACTIONS.USER_ID.eq(userId)
-            .and(Tables.TRANSACTIONS.TRANSFER_ID.isNull())
-            .and(Tables.TRANSACTIONS.DELETED_AT.isNull())
-            .and(Tables.TRANSACTIONS.OCCURRED_AT.ge(from))
-            .and(Tables.TRANSACTIONS.OCCURRED_AT.lt(toExclusive))
+    ): Condition {
+        val specification =
+            TransactionSpecifications.ownedBy(userId) and
+                TransactionSpecifications.notTransfer() and
+                TransactionSpecifications.active() and
+                TransactionSpecifications.occurredAtOrAfter(from) and
+                TransactionSpecifications.occurredBefore(toExclusive)
+
+        return specification.toCondition()
             .and(Tables.ACCOUNTS.CURRENCY.eq(currency.name))
+    }
 
     private fun bucketStart(
         granularity: CashFlowGranularity,

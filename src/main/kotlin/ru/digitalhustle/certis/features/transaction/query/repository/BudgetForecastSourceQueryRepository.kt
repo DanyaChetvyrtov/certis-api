@@ -13,6 +13,8 @@ import ru.digitalhustle.certis.features.transaction.query.model.ForecastActualTr
 import ru.digitalhustle.certis.features.transaction.query.model.ForecastHistoricalCategoryAmount
 import ru.digitalhustle.certis.features.transaction.query.model.ForecastRecurringTemplate
 import ru.digitalhustle.certis.features.transaction.query.model.ForecastTransactionCategory
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecification
+import ru.digitalhustle.certis.features.transaction.query.specification.TransactionSpecifications
 import ru.digitalhustle.certis.shared.enums.Currency
 import java.time.OffsetDateTime
 import java.time.YearMonth
@@ -62,8 +64,13 @@ class BudgetForecastSourceQueryRepository(
         from: OffsetDateTime,
         toExclusive: OffsetDateTime,
         zoneId: ZoneId,
-    ): List<ForecastActualTransaction> =
-        dsl.select(
+    ): List<ForecastActualTransaction> {
+        val specification =
+            baseTransactionSpecification(userId) and
+                TransactionSpecifications.occurredAtOrAfter(from) and
+                TransactionSpecifications.occurredBefore(toExclusive)
+
+        return dsl.select(
             Tables.TRANSACTIONS.asterisk(),
             Tables.CATEGORIES.ID,
             Tables.CATEGORIES.NAME,
@@ -82,12 +89,12 @@ class BudgetForecastSourceQueryRepository(
                     .and(Tables.CATEGORIES.USER_ID.eq(Tables.TRANSACTIONS.USER_ID)),
             )
             .where(
-                baseTransactionCondition(userId, currency)
-                    .and(Tables.TRANSACTIONS.OCCURRED_AT.ge(from))
-                    .and(Tables.TRANSACTIONS.OCCURRED_AT.lt(toExclusive)),
+                specification.toCondition()
+                    .and(Tables.ACCOUNTS.CURRENCY.eq(currency.name)),
             )
             .orderBy(Tables.TRANSACTIONS.OCCURRED_AT.asc(), Tables.TRANSACTIONS.ID.asc())
             .fetch { record -> toActualTransaction(record, zoneId) }
+    }
 
     fun findHistoricalCategoryAmounts(
         userId: UUID,
@@ -103,6 +110,11 @@ class BudgetForecastSourceQueryRepository(
             DSL.inline(zoneId.id),
         )
         val totalAmount = DSL.sum(Tables.TRANSACTIONS.AMOUNT).`as`("total_amount")
+        val specification =
+            baseTransactionSpecification(userId) and
+                TransactionSpecifications.withoutRecurringTemplate() and
+                TransactionSpecifications.occurredAtOrAfter(from) and
+                TransactionSpecifications.occurredBefore(toExclusive)
 
         return dsl.select(
             Tables.TRANSACTIONS.TYPE,
@@ -125,10 +137,8 @@ class BudgetForecastSourceQueryRepository(
                     .and(Tables.CATEGORIES.USER_ID.eq(Tables.TRANSACTIONS.USER_ID)),
             )
             .where(
-                baseTransactionCondition(userId, currency)
-                    .and(Tables.TRANSACTIONS.RECURRING_TRANSACTION_TEMPLATE_ID.isNull())
-                    .and(Tables.TRANSACTIONS.OCCURRED_AT.ge(from))
-                    .and(Tables.TRANSACTIONS.OCCURRED_AT.lt(toExclusive)),
+                specification.toCondition()
+                    .and(Tables.ACCOUNTS.CURRENCY.eq(currency.name)),
             )
             .groupBy(
                 Tables.TRANSACTIONS.TYPE,
@@ -149,11 +159,10 @@ class BudgetForecastSourceQueryRepository(
             }
     }
 
-    private fun baseTransactionCondition(userId: UUID, currency: Currency) =
-        Tables.TRANSACTIONS.USER_ID.eq(userId)
-            .and(Tables.TRANSACTIONS.DELETED_AT.isNull())
-            .and(Tables.TRANSACTIONS.TRANSFER_ID.isNull())
-            .and(Tables.ACCOUNTS.CURRENCY.eq(currency.name))
+    private fun baseTransactionSpecification(userId: UUID): TransactionSpecification =
+        TransactionSpecifications.ownedBy(userId) and
+            TransactionSpecifications.active() and
+            TransactionSpecifications.notTransfer()
 
     private fun toRecurringTemplate(record: Record): ForecastRecurringTemplate =
         ForecastRecurringTemplate(
